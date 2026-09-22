@@ -768,6 +768,102 @@ class UserAccessToken(BaseModel):
     access_token: str
     token_type: str
 
+# ***** キャプチャ *****
+
+class Captures(BaseModel):
+    """キャプチャ一覧レスポンスを表すスキーマ"""
+    # キャプチャの総数
+    total: int
+    # キャプチャのリスト (ページネーション適用後)
+    captures: list[Capture]
+
+class Capture(BaseModel):
+    """キャプチャ画像のメタデータを表すスキーマ"""
+    # ファイル名 (拡張子含む)
+    filename: str
+    # ファイルサイズ (バイト)
+    file_size: int
+    # ファイルの最終更新日時 (= キャプチャ撮影日時の近似値)
+    file_modified_at: datetime
+    # MIME タイプ (image/jpeg or image/png)
+    mime_type: Literal['image/jpeg', 'image/png']
+    # 画像の幅 (ピクセル)
+    image_width: int
+    # 画像の高さ (ピクセル)
+    image_height: int
+    # EXIF XPComment から抽出したキャプチャメタデータ (EXIF がない場合は None)
+    capture_metadata: CaptureMetadata | None = None
+
+class CaptureMetadata(BaseModel):
+    """EXIF XPComment に格納されたキャプチャメタデータのスキーマ (クライアント側の ICaptureExifData に対応)"""
+    # キャプチャの撮影時刻 (ISO8601 フォーマット)
+    captured_at: str
+    # 番組開始時刻から換算したキャプチャ位置 (秒)
+    captured_playback_position: float
+    # チャンネルの network_id
+    network_id: int
+    # チャンネルの service_id
+    service_id: int
+    # 番組の event_id
+    event_id: int
+    # 番組名
+    title: str
+    # 番組概要
+    description: str
+    # 番組開始時刻 (ISO8601 フォーマット)
+    start_time: str
+    # 番組終了時刻 (ISO8601 フォーマット)
+    end_time: str
+    # 番組長 (秒)
+    duration: float
+    # 字幕のテキスト (字幕が表示されていなかった場合は None)
+    caption_text: str | None = None
+    # キャプチャに字幕が合成されているかどうか
+    is_caption_composited: bool
+    # キャプチャにコメントが合成されているかどうか
+    is_comment_composited: bool
+
+# ***** キャプチャフォルダ *****
+
+class CaptureFolders(BaseModel):
+    """キャプチャフォルダ一覧レスポンスを表すスキーマ"""
+    # フォルダの総数
+    total: int
+    # フォルダのリスト
+    folders: list[CaptureFolder]
+
+class CaptureFolder(BaseModel):
+    """キャプチャフォルダ情報を表すスキーマ"""
+    # フォルダ ID
+    id: int
+    # フォルダ名
+    name: str
+    # フォルダの表示順序
+    sort_order: int
+    # フォルダ内のキャプチャ数 (動的に算出)
+    capture_count: int = 0
+    # 作成日時
+    created_at: datetime
+    # 更新日時
+    updated_at: datetime
+
+class CaptureFolderCreateRequest(BaseModel):
+    """キャプチャフォルダ作成リクエストを表すスキーマ"""
+    # フォルダ名
+    name: str
+
+class CaptureFolderUpdateRequest(BaseModel):
+    """キャプチャフォルダ更新リクエストを表すスキーマ"""
+    # フォルダ名 (変更する場合のみ指定)
+    name: str | None = None
+    # 表示順序 (変更する場合のみ指定)
+    sort_order: int | None = None
+
+class CaptureBookmarkRequest(BaseModel):
+    """キャプチャブックマーク追加/削除リクエストを表すスキーマ"""
+    # 対象のキャプチャ画像のファイル名リスト (複数一括操作に対応)
+    filenames: list[str]
+
 # ***** バージョン情報 *****
 
 class VersionInformation(BaseModel):

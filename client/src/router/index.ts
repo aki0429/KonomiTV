@@ -75,6 +75,21 @@ const router = createRouter({
             component: () => import('@/views/Reservations/Reservations.vue'),
         },
         {
+            path: '/captures/',
+            name: 'Captures',
+            component: () => import('@/views/Captures.vue'),
+        },
+        {
+            path: '/captures/search',
+            name: 'Captures Search',
+            component: () => import('@/views/Captures.vue'),
+        },
+        {
+            path: '/captures/folders/:folder_id',
+            name: 'Captures Folder',
+            component: () => import('@/views/Captures.vue'),
+        },
+        {
             path: '/mylist/',
             name: 'Mylist',
             component: () => import('@/views/Mylist.vue'),
