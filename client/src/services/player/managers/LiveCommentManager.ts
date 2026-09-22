@@ -126,6 +126,15 @@ class LiveCommentManager implements PlayerManager {
         const settings_store = useSettingsStore();
         const user_store = useUserStore();
 
+        // IPTV の疑似チャンネルにはニコニコ実況のチャンネルが存在しないため、
+        // コメント API (/api/channels/{id}/jikkyo) を呼び出さずにここで終了する
+        if (channels_store.channel.current.type === 'IPTV') {
+            return {
+                is_success: false,
+                detail: 'このチャンネルはニコニコ実況に対応していません。',
+            };
+        }
+
         // サーバーから disconnect メッセージが送られてきた際のフラグ
         let is_disconnect_message_received = false;
 

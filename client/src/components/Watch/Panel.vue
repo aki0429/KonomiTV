@@ -23,6 +23,7 @@
             <Series class="watch-panel__content" v-if="playback_mode === 'Video'"
                 :class="{'watch-panel__content--active': panel_active_tab === 'Series'}" />
             <Comment class="watch-panel__content" :playback_mode="playback_mode"
+                v-if="is_iptv_channel === false"
                 :class="{'watch-panel__content--active': panel_active_tab === 'Comment'}" />
             <Twitter class="watch-panel__content" :playback_mode="playback_mode"
                 :class="{'watch-panel__content--active': panel_active_tab === 'Twitter'}" />
@@ -62,6 +63,7 @@
                 <span class="panel-navigation-button__text">シリーズ</span>
             </div>
             <div v-ripple class="panel-navigation-button"
+                 v-if="is_iptv_channel === false"
                  :class="{'panel-navigation-button--active': panel_active_tab === 'Comment'}"
                  @click="playback_mode === 'Live' ? playerStore.tv_panel_active_tab = 'Comment' : playerStore.video_panel_active_tab = 'Comment'">
                 <Icon class="panel-navigation-button__icon" icon="bi:chat-left-text-fill" width="29px" />
@@ -118,13 +120,22 @@ export default defineComponent({
     computed: {
         ...mapStores(useChannelsStore, usePlayerStore),
 
+        // ライブ視聴で IPTV の疑似チャンネルを視聴しているかどうか
+        // IPTV にはニコニコ実況のチャンネルが存在しないため、コメント機能を提供しない
+        is_iptv_channel(): boolean {
+            return this.playback_mode === 'Live' && this.channelsStore.channel.current.type === 'IPTV';
+        },
+
         // ライブ視聴なら tv_panel_active_tab を、ビデオ視聴なら video_panel_active_tab を返す
         panel_active_tab() {
-            if (this.playback_mode === 'Live') {
-                return this.playerStore.tv_panel_active_tab;
-            } else {
-                return this.playerStore.video_panel_active_tab;
+            const active_tab = this.playback_mode === 'Live'
+                ? this.playerStore.tv_panel_active_tab
+                : this.playerStore.video_panel_active_tab;
+            // IPTV チャンネルではコメントタブを提供していないため、選択されていたら番組情報タブとして扱う
+            if (this.is_iptv_channel === true && active_tab === 'Comment') {
+                return 'Program';
             }
+            return active_tab;
         }
     }
 });
