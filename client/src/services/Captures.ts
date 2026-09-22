@@ -6,6 +6,57 @@ import APIClient from '@/services/APIClient';
 import Utils, { Semaphore } from '@/utils';
 
 
+/** EXIF XPComment に格納されたキャプチャメタデータを表すインターフェイス (サーバー側の CaptureMetadata に対応) */
+export interface ICaptureMetadata {
+    captured_at: string;
+    captured_playback_position: number;
+    network_id: number;
+    service_id: number;
+    event_id: number;
+    title: string;
+    description: string;
+    start_time: string;
+    end_time: string;
+    duration: number;
+    caption_text: string | null;
+    is_caption_composited: boolean;
+    is_comment_composited: boolean;
+}
+
+/** キャプチャ画像の情報を表すインターフェイス (サーバー側の Capture に対応) */
+export interface ICapture {
+    filename: string;
+    file_size: number;
+    file_modified_at: string;
+    mime_type: 'image/jpeg' | 'image/png';
+    image_width: number;
+    image_height: number;
+    capture_metadata: ICaptureMetadata | null;
+}
+
+/** キャプチャ一覧レスポンスを表すインターフェイス (サーバー側の Captures に対応) */
+export interface ICaptures {
+    total: number;
+    captures: ICapture[];
+}
+
+/** キャプチャフォルダ一覧レスポンスを表すインターフェイス (サーバー側の CaptureFolders に対応) */
+export interface ICaptureFolders {
+    total: number;
+    folders: ICaptureFolder[];
+}
+
+/** キャプチャフォルダ情報を表すインターフェイス (サーバー側の CaptureFolder に対応) */
+export interface ICaptureFolder {
+    id: number;
+    name: string;
+    sort_order: number;
+    capture_count: number;
+    created_at: string;
+    updated_at: string;
+}
+
+
 class Captures {
 
     // 同時アップロード数の上限 & セマフォインスタンス
@@ -96,7 +147,177 @@ class Captures {
         }
     }
 
-    // TODO: キャプチャ管理機能の実装時に API を追加する
+    /**
+     * キャプチャ一覧を取得する
+     * @param order ソート順序 ('desc': 新しい順, 'asc': 古い順)
+     * @param page ページ番号 (1始まり)
+     * @param search 番組名・ファイル名・チャンネル名での部分一致検索キーワード (省略時は全件取得)
+     * @returns キャプチャ一覧情報 (取得に失敗した場合は null)
+     */
+    static async fetchCaptures(
+        order: 'desc' | 'asc' = 'desc',
+        page: number = 1,
+        search?: string,
+    ): Promise<ICaptures | null> {
+        // undefined のパラメータは axios が自動で除外するため、そのまま渡す
+        const response = await APIClient.get<ICaptures>('/captures', {
+            params: { order, page, search },
+        });
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, 'キャプチャ一覧の取得に失敗しました。');
+            return null;
+        }
+        return response.data;
+    }
+
+    /**
+     * キャプチャ画像の URL を取得する
+     * @param filename キャプチャ画像のファイル名
+     * @param thumbnail サムネイル画像を取得するかどうか
+     * @returns キャプチャ画像の URL
+     */
+    static getCaptureImageURL(filename: string, thumbnail: boolean = false): string {
+        const base = Utils.api_base_url;
+        const params = thumbnail ? '?thumbnail=true' : '';
+        return `${base}/captures/${encodeURIComponent(filename)}${params}`;
+    }
+
+    /**
+     * キャプチャ画像を削除する
+     * @param filename 削除するキャプチャ画像のファイル名
+     * @returns 削除に成功した場合は true
+     */
+    static async deleteCapture(filename: string): Promise<boolean> {
+        const response = await APIClient.delete(`/captures/${encodeURIComponent(filename)}`);
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, 'キャプチャの削除に失敗しました。');
+            return false;
+        }
+        return true;
+    }
+
+    // ==================== フォルダ CRUD ====================
+
+    /**
+     * ログインユーザーのキャプチャフォルダ一覧を取得する
+     * @returns フォルダ一覧情報 (取得に失敗した場合は null)
+     */
+    static async fetchFolders(): Promise<ICaptureFolders | null> {
+        const response = await APIClient.get<ICaptureFolders>('/captures/folders');
+        if (response.type === 'error') {
+            // 401 (未ログイン) や 404 (サーバー未対応) の場合はエラーメッセージを表示しない
+            if (response.status !== 401 && response.status !== 404) {
+                APIClient.showGenericError(response, 'キャプチャフォルダ一覧の取得に失敗しました。');
+            }
+            return null;
+        }
+        return response.data;
+    }
+
+    /**
+     * 新しいキャプチャフォルダを作成する
+     * @param name フォルダ名
+     * @returns 作成されたフォルダ情報 (作成に失敗した場合は null)
+     */
+    static async createFolder(name: string): Promise<ICaptureFolder | null> {
+        const response = await APIClient.post<ICaptureFolder>('/captures/folders', { name });
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, 'キャプチャフォルダの作成に失敗しました。');
+            return null;
+        }
+        return response.data;
+    }
+
+    /**
+     * キャプチャフォルダの名前や表示順序を更新する
+     * @param folderId 更新するフォルダの ID
+     * @param updates 更新する内容 (name, sort_order のいずれかまたは両方)
+     * @returns 更新後のフォルダ情報 (更新に失敗した場合は null)
+     */
+    static async updateFolder(
+        folderId: number,
+        updates: { name?: string; sort_order?: number },
+    ): Promise<ICaptureFolder | null> {
+        const response = await APIClient.put<ICaptureFolder>(`/captures/folders/${folderId}`, updates);
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, 'キャプチャフォルダの更新に失敗しました。');
+            return null;
+        }
+        return response.data;
+    }
+
+    /**
+     * キャプチャフォルダを削除する
+     * フォルダに紐付けられたブックマークも自動削除されるが、実際のキャプチャ画像は削除されない。
+     * @param folderId 削除するフォルダの ID
+     * @returns 削除に成功した場合は true
+     */
+    static async deleteFolder(folderId: number): Promise<boolean> {
+        const response = await APIClient.delete(`/captures/folders/${folderId}`);
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, 'キャプチャフォルダの削除に失敗しました。');
+            return false;
+        }
+        return true;
+    }
+
+    // ==================== フォルダ内キャプチャ操作 ====================
+
+    /**
+     * 指定されたフォルダ内のキャプチャ一覧を取得する
+     * @param folderId フォルダ ID
+     * @param order ソート順序 ('desc': 新しい順, 'asc': 古い順)
+     * @param page ページ番号 (1始まり)
+     * @returns キャプチャ一覧情報 (取得に失敗した場合は null)
+     */
+    static async fetchFolderCaptures(
+        folderId: number,
+        order: 'desc' | 'asc' = 'desc',
+        page: number = 1,
+    ): Promise<ICaptures | null> {
+        const response = await APIClient.get<ICaptures>(`/captures/folders/${folderId}/captures`, {
+            params: { order, page },
+        });
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, 'フォルダ内キャプチャ一覧の取得に失敗しました。');
+            return null;
+        }
+        return response.data;
+    }
+
+    /**
+     * 指定されたフォルダにキャプチャを一括追加する
+     * 既にフォルダ内に存在するキャプチャは無視される。
+     * @param folderId フォルダ ID
+     * @param filenames 追加するキャプチャ画像のファイル名リスト
+     * @returns 追加に成功した場合は true
+     */
+    static async addCapturesToFolder(folderId: number, filenames: string[]): Promise<boolean> {
+        const response = await APIClient.post(`/captures/folders/${folderId}/captures`, { filenames });
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, 'フォルダへのキャプチャ追加に失敗しました。');
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 指定されたフォルダからキャプチャを一括削除する
+     * CaptureBookmark レコードのみを削除し、実際のキャプチャ画像ファイルは削除しない。
+     * @param folderId フォルダ ID
+     * @param filenames 削除するキャプチャ画像のファイル名リスト
+     * @returns 削除に成功した場合は true
+     */
+    static async removeCapturesFromFolder(folderId: number, filenames: string[]): Promise<boolean> {
+        const response = await APIClient.delete(`/captures/folders/${folderId}/captures`, {
+            data: { filenames },
+        });
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, 'フォルダからのキャプチャ削除に失敗しました。');
+            return false;
+        }
+        return true;
+    }
 }
 
 export default Captures;
