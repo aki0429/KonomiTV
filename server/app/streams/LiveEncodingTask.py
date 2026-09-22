@@ -34,6 +34,7 @@ from app.streams.LivePSIDataArchiver import LivePSIDataArchiver
 from app.utils import GetMirakurunAPIEndpointURL, IPTVUtil
 from app.utils.edcb.EDCBTuner import EDCBTuner
 from app.utils.edcb.PipeStreamReader import PipeStreamReader
+from app.utils.HWEncC import IsHWEncCOptionAvailable
 
 
 if TYPE_CHECKING:
@@ -321,10 +322,13 @@ class LiveEncodingTask:
         ## --output-res は出力側の固定解像度であり、こちらは入力側の上限なので併用する
         ## BS4K は入力が 4K のため 3840×2160、それ以外のチャンネルは HD 上限の 1920×1080 とする
         ## (画質プリセットの出力解像度とは独立で、入力に現れうる最大解像度を確保する必要がある)
-        if channel_type == 'BS4K':
-            options.append('--adapt-resolution 3840x2160')
-        else:
-            options.append('--adapt-resolution 1920x1080')
+        ## --adapt-resolution は比較的新しいバージョンの HWEncC にのみ存在し、未対応のエンコーダーに指定すると
+        ## 起動に失敗してライブストリームを配信できなくなるため、対応している場合のみ付与する
+        if IsHWEncCOptionAvailable(encoder_type, '--adapt-resolution') is True:
+            if channel_type == 'BS4K':
+                options.append('--adapt-resolution 3840x2160')
+            else:
+                options.append('--adapt-resolution 1920x1080')
 
         # ストリームのマッピング
         ## 音声切り替えのため、主音声・副音声両方をエンコード後の TS に含む

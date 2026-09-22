@@ -26,6 +26,7 @@ from app import logging
 from app.config import Config
 from app.constants import LIBRARY_PATH, QUALITY, QUALITY_TYPES
 from app.schemas import KeyFrame
+from app.utils.HWEncC import IsHWEncCOptionAvailable
 from app.utils.TSKeyFrameSeeker import TSKeyFrameCollector
 
 
@@ -234,12 +235,15 @@ class VideoEncodingTask:
         ## --output-res は出力側の固定解像度であり、こちらは入力側の上限なので併用する
         ## 代表解像度が 4K 相当なら 3840×2160、それ以外は HD 上限の 1920×1080 とする
         ## (ファイル中の最大解像度は持っていないため、HD/4K の天井値で確保する)
-        recorded_video = self.video_stream.recorded_program.recorded_video
-        if (recorded_video.video_resolution_width >= 3840 or
-            recorded_video.video_resolution_height >= 2160):
-            options.append('--adapt-resolution 3840x2160')
-        else:
-            options.append('--adapt-resolution 1920x1080')
+        ## --adapt-resolution は比較的新しいバージョンの HWEncC にのみ存在し、未対応のエンコーダーに指定すると
+        ## 起動に失敗してエンコードが行えなくなるため、対応している場合のみ付与する
+        if IsHWEncCOptionAvailable(encoder_type, '--adapt-resolution') is True:
+            recorded_video = self.video_stream.recorded_program.recorded_video
+            if (recorded_video.video_resolution_width >= 3840 or
+                recorded_video.video_resolution_height >= 2160):
+                options.append('--adapt-resolution 3840x2160')
+            else:
+                options.append('--adapt-resolution 1920x1080')
 
         # ストリームのマッピング
         ## 音声切り替えのため、主音声・副音声両方をエンコード後の TS に含む
