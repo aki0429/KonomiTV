@@ -139,7 +139,7 @@ class ClientSettings(BaseModel):
 # config.yaml のバリデーションは設定データをこの Pydantic モデルに通すことで行う
 
 class _ServerSettingsGeneral(BaseModel):
-    backend: Literal['EDCB', 'Mirakurun'] = 'EDCB'
+    backend: Literal['EDCB', 'Mirakurun', 'IPTV'] = 'EDCB'
     always_receive_tv_from_mirakurun: bool = False
     edcb_url: Annotated[Url, UrlConstraints(allowed_schemes=['tcp'])] = Url('tcp://127.0.0.1:4510/')
     mirakurun_url: Annotated[Url, UrlConstraints(allowed_schemes=['http', 'https'])] = Url('http://127.0.0.1:40772/')
@@ -354,12 +354,33 @@ class _ServerSettingsVideo(BaseModel):
 class _ServerSettingsCapture(BaseModel):
     upload_folders: list[DirectoryPath] = []
 
+class _ServerSettingsIPTV(BaseModel):
+    # IPTV 機能を有効にするか
+    enabled: bool = True
+    # 取り込む M3U プレイリストの URL (またはローカルファイルの絶対パス) の一覧
+    # デフォルトでは iptv-org が公開している全チャンネルのプレイリストを利用する
+    # 特定の国のみを取り込む場合は、https://iptv-org.github.io/iptv/countries/<国コード>.m3u を指定する (例: 日本なら jp)
+    sources: list[str] = [
+        'https://iptv-org.github.io/iptv/index.m3u',
+    ]
+    # プレイリストの取得結果をキャッシュする時間 (秒)
+    cache_ttl: PositiveInt = 3600
+    # プレイリストやストリームの取得時のタイムアウト (秒)
+    request_timeout: Annotated[float, confloat(ge=1.0)] = 20.0
+    # IPTV のプレイリストやストリームの取得時に送信する User-Agent
+    # 一部の配信サーバーはブラウザ以外の User-Agent を拒否するため、既定でブラウザ相当の値を送信する
+    user_agent: str = (
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+        '(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+    )
+
 class ServerSettings(BaseModel):
     general: _ServerSettingsGeneral = _ServerSettingsGeneral()
     server: _ServerSettingsServer = _ServerSettingsServer()
     tv: _ServerSettingsTV = _ServerSettingsTV()
     video: _ServerSettingsVideo = _ServerSettingsVideo()
     capture: _ServerSettingsCapture = _ServerSettingsCapture()
+    iptv: _ServerSettingsIPTV = _ServerSettingsIPTV()
 
 
 # サーバー設定データと読み込み・保存用の関数

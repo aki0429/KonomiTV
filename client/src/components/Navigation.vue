@@ -12,6 +12,15 @@
                         <Icon class="navigation__link-icon" icon="fluent:tv-20-regular" width="26px" />
                         <span v-if="!iconOnly" class="navigation__link-text">テレビをみる</span>
                     </router-link>
+                    <router-link v-ripple class="navigation__link" active-class="navigation__link--active" to="/iptv/"
+                        :class="{
+                            'navigation__link--active': $route.path.startsWith('/iptv'),
+                            'navigation__link--icon-only': iconOnly,
+                        }"
+                        v-ftooltip.right="iconOnly ? 'IPTV' : ''">
+                        <Icon class="navigation__link-icon" icon="fluent:live-20-regular" width="26px" />
+                        <span v-if="!iconOnly" class="navigation__link-text">IPTV</span>
+                    </router-link>
                     <router-link v-ripple class="navigation__link" active-class="navigation__link--active" to="/videos/"
                         :class="{
                             'navigation__link--active': $route.path.startsWith('/videos'),

@@ -114,3 +114,29 @@ capture:
     upload_folders: [
         'E:\TV-Capture',
     ]
+
+# ================================= IPTV の設定 ==================================
+# インターネット上で公開されている M3U プレイリストを取り込み、KonomiTV で視聴するための設定です。
+# チューナー (EDCB / Mirakurun) のチャンネルとは独立して動作します。
+iptv:
+
+    # IPTV 機能を有効にするか
+    enabled: true
+
+    # 取り込む M3U プレイリストの URL (またはローカルファイルの絶対パス) の一覧
+    # デフォルトでは iptv-org が公開している全チャンネル (約1万チャンネル) を取り込みます。
+    # 特定の国のみを取り込む場合は、https://iptv-org.github.io/iptv/countries/<国コード>.m3u を指定してください (例: 日本なら jp) 。
+    # 追加のプレイリストは、クライアントの IPTV ページからも登録できます (server/data/iptv_sources.json に保存されます) 。
+    sources: [
+        'https://iptv-org.github.io/iptv/index.m3u',
+    ]
+
+    # プレイリストの取得結果をキャッシュする時間 (秒)
+    cache_ttl: 3600
+
+    # プレイリストやストリームの取得時のタイムアウト (秒)
+    request_timeout: 20.0
+
+    # IPTV のプレイリストやストリームの取得時に送信する User-Agent
+    # 一部の配信サーバーはブラウザ以外の User-Agent を拒否するため、既定でブラウザ相当の値を送信します。
+    user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
