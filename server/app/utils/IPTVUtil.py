@@ -58,6 +58,36 @@ _PLAYLIST_URI_PATTERN = re.compile(r'URI="([^"]+)"')
 # tvg-id (例: "NHKWorldJapan.jp@SD") から国コードを抽出するための正規表現
 _TVG_ID_COUNTRY_PATTERN = re.compile(r'\.([A-Za-z]{2})(?:@|$)')
 
+# HLS の EXT-X-STREAM-INF 行から解像度・ビットレート・コーデックを抽出するための正規表現
+_STREAM_INF_RESOLUTION_PATTERN = re.compile(r'RESOLUTION=(\d+)x(\d+)')
+_STREAM_INF_BANDWIDTH_PATTERN = re.compile(r'(?:AVERAGE-)?BANDWIDTH=(\d+)')
+_STREAM_INF_CODECS_PATTERN = re.compile(r'CODECS="([^"]+)"')
+
+# CODECS 属性の値 (avc1.4d401f など) から表示用のコーデック名への対応表
+_CODEC_NAME_PREFIXES: list[tuple[str, str]] = [
+    ('avc1', 'H.264'),
+    ('avc3', 'H.264'),
+    ('hvc1', 'H.265'),
+    ('hev1', 'H.265'),
+    ('mp4v', 'MPEG-4'),
+    ('mp2v', 'MPEG-2'),
+    ('av01', 'AV1'),
+    ('vp09', 'VP9'),
+]
+
+# 高さ (ピクセル) から画質名への対応表
+_HEIGHT_TO_QUALITY_NAME: list[tuple[int, str]] = [
+    (2160, '2160p'),
+    (1440, '1440p'),
+    (1080, '1080p'),
+    (720, '720p'),
+    (576, '576p'),
+    (540, '540p'),
+    (480, '480p'),
+    (360, '360p'),
+    (240, '240p'),
+]
+
 # プレイリストの URL (例: ".../countries/jp.m3u") から国コードを抽出するための正規表現
 _SOURCE_URL_COUNTRY_PATTERN = re.compile(r'/countries/([A-Za-z]{2})\.m3u', re.IGNORECASE)
 
@@ -104,6 +134,13 @@ _countries_by_code: dict[str, dict[str, str]] = {}
 
 # display_channel_id → IPTVChannel の対応表 (RefreshChannels() で再構築する)
 _channels_by_display_id: dict[str, IPTVChannel] = {}
+
+# チャンネルの元配信の画質の検出結果のキャッシュ (ストリームの URL → 検出結果)
+## 画質は頻繁には変わらないため、TTL は設けずプロセスが生きている間は再利用する
+_channel_qualities_cache: dict[str, dict] = {}
+
+# 画質の検出を同時に実行する数の上限
+QUALITY_DETECTION_CONCURRENCY = 8
 
 # ストリーム URL → 追加ヘッダーの対応表
 _stream_headers_by_url: dict[str, dict[str, str]] = {}
@@ -1046,3 +1083,174 @@ def ChannelToLiveChannelDict(channel: IPTVChannel) -> dict:
         'program_present': None,
         'program_following': None,
     }
+
+
+# ***** 元配信の画質の検出 *****
+
+
+def BuildQualityName(height: int | None) -> str | None:
+    """
+    映像の高さ (ピクセル) から、画質名 (例: '1080p') を生成する。
+
+    Args:
+        height (int | None): 映像の高さ (ピクセル)
+
+    Returns:
+        str | None: 画質名 (高さが不明な場合は None)
+    """
+
+    if height is None:
+        return None
+    for threshold, quality_name in _HEIGHT_TO_QUALITY_NAME:
+        if height >= threshold:
+            return quality_name
+    return f'{height}p'
+
+
+def BuildCodecName(codecs: str | None) -> str | None:
+    """
+    HLS の CODECS 属性の値 (例: 'avc1.4d401f,mp4a.40.2') から、映像コーデックの表示名を生成する。
+
+    Args:
+        codecs (str | None): CODECS 属性の値
+
+    Returns:
+        str | None: コーデックの表示名 (例: 'H.264') 。判定できなかった場合は None
+    """
+
+    if codecs is None:
+        return None
+    for codec in codecs.split(','):
+        codec = codec.strip().lower()
+        for prefix, codec_name in _CODEC_NAME_PREFIXES:
+            if codec.startswith(prefix):
+                return codec_name
+    return None
+
+
+def ParseHLSQualities(content: str) -> dict:
+    """
+    HLS のマスタープレイリストから、配信されている画質 (バリアント) の一覧を抽出する。
+
+    メディアプレイリスト (バリアントを含まないもの) の場合は空の一覧を返す。
+
+    Args:
+        content (str): HLS プレイリストの内容
+
+    Returns:
+        dict: {'qualities': [{'name', 'width', 'height', 'bandwidth'}, ...], 'codec': str | None}
+    """
+
+    qualities: list[dict] = []
+    codec: str | None = None
+
+    for line in content.splitlines():
+        if line.startswith('#EXT-X-STREAM-INF:') is False:
+            continue
+        resolution = _STREAM_INF_RESOLUTION_PATTERN.search(line)
+        bandwidth = _STREAM_INF_BANDWIDTH_PATTERN.search(line)
+        codecs = _STREAM_INF_CODECS_PATTERN.search(line)
+        width = int(resolution.group(1)) if resolution is not None else None
+        height = int(resolution.group(2)) if resolution is not None else None
+        if codec is None and codecs is not None:
+            codec = BuildCodecName(codecs.group(1))
+        qualities.append({
+            'name': BuildQualityName(height),
+            'width': width,
+            'height': height,
+            'bandwidth': int(bandwidth.group(1)) if bandwidth is not None else None,
+        })
+
+    # 解像度とビットレートの高い順に並べ、同じ画質名の重複を除外する
+    qualities.sort(key = lambda quality: (quality['height'] or 0, quality['bandwidth'] or 0), reverse = True)
+    unique_qualities: list[dict] = []
+    seen_names: set[str | None] = set()
+    for quality in qualities:
+        if quality['name'] in seen_names:
+            continue
+        seen_names.add(quality['name'])
+        unique_qualities.append(quality)
+
+    return {
+        'qualities': unique_qualities,
+        'codec': codec,
+    }
+
+
+async def DetectChannelQualities(channel: IPTVChannel) -> dict:
+    """
+    IPTV チャンネルの元配信の画質 (解像度・ビットレート) と映像コーデックを検出する。
+
+    検出結果はストリームの URL ごとにキャッシュし、2回目以降は再取得しない。
+    HLS のマスタープレイリスト以外 (メディアプレイリスト・mp4 など) からは画質を取得できないため、
+    その場合は空の一覧を返す。
+
+    Args:
+        channel (IPTVChannel): 検出する IPTV チャンネル
+
+    Returns:
+        dict: {'qualities': [...], 'codec': str | None, 'source_quality': str | None}
+    """
+
+    # キャッシュがあればそれを返す
+    if channel.url in _channel_qualities_cache:
+        return _channel_qualities_cache[channel.url]
+
+    result: dict = {'qualities': [], 'codec': None, 'source_quality': None}
+
+    # HLS のプレイリストを取得して解析する
+    try:
+        async with httpx.AsyncClient(
+            headers = {
+                'User-Agent': channel.user_agent or Config().iptv.user_agent,
+                **({'Referer': channel.referrer} if channel.referrer is not None else {}),
+            },
+            follow_redirects = True,
+            timeout = Config().iptv.request_timeout,
+        ) as client:
+            response = await client.get(channel.url)
+        if response.status_code == 200 and response.text.lstrip().startswith('#EXTM3U'):
+            parsed = ParseHLSQualities(response.text)
+            result['qualities'] = parsed['qualities']
+            result['codec'] = parsed['codec']
+            # 最も高画質なバリアントの画質を「元配信の画質」とする
+            if len(result['qualities']) > 0:
+                result['source_quality'] = result['qualities'][0]['name']
+    # 取得に失敗してもチャンネル一覧の取得自体は継続させる
+    except (httpx.NetworkError, httpx.TimeoutException) as ex:
+        logging.debug(f'Failed to detect IPTV channel qualities: {channel.name} ({ex})')
+
+    _channel_qualities_cache[channel.url] = result
+    return result
+
+
+async def DetectChannelsQualities(channels: list[IPTVChannel]) -> dict[str, dict]:
+    """
+    複数の IPTV チャンネルの元配信の画質を並行して検出する。
+
+    すべての検出が完了するまで待つが、1つのチャンネルの失敗が他に影響しないようにする。
+
+    Args:
+        channels (list[IPTVChannel]): 検出する IPTV チャンネルの一覧
+
+    Returns:
+        dict[str, dict]: チャンネルの id → 検出結果
+    """
+
+    semaphore = asyncio.Semaphore(QUALITY_DETECTION_CONCURRENCY)
+
+    async def detect(channel: IPTVChannel) -> tuple[str, dict]:
+        async with semaphore:
+            return channel.id, await DetectChannelQualities(channel)
+
+    results = await asyncio.gather(*[detect(channel) for channel in channels], return_exceptions = True)
+
+    detected: dict[str, dict] = {}
+    for result in results:
+        # 検出に失敗したチャンネルは結果に含めない
+        if isinstance(result, BaseException):
+            logging.debug(f'Failed to detect IPTV channel qualities: {result}')
+            continue
+        channel_id, qualities = result
+        detected[channel_id] = qualities
+    return detected

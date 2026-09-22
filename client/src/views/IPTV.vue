@@ -94,12 +94,25 @@
                                     {{ channel.name }}
                                 </div>
                                 <div class="iptv-channel-card__meta">
+                                    <span v-if="channel.source_quality !== null" class="iptv-channel-card__badge iptv-channel-card__badge--quality">
+                                        {{ channel.source_quality }}
+                                    </span>
+                                    <span v-if="channel.source_codec !== null" class="iptv-channel-card__badge">{{ channel.source_codec }}</span>
                                     <span v-if="channel.group !== null" class="iptv-channel-card__group">{{ channel.group }}</span>
                                     <span v-if="channel.is_geo_blocked" class="iptv-channel-card__badge">地域制限</span>
                                     <span v-if="channel.is_tvui_registered" class="iptv-channel-card__badge iptv-channel-card__badge--tv">
                                         TV 登録済み
                                     </span>
                                 </div>
+                            </div>
+                            <!-- 画質の選択 (元配信の画質に応じた選択肢を提示する) -->
+                            <div class="iptv-channel-card__quality" v-if="qualityOptions(channel).length > 0" @click.stop>
+                                <v-select class="iptv-channel-card__quality-select" color="primary"
+                                    bg-color="background" variant="solo" density="compact" hide-details
+                                    :items="qualityOptions(channel)" item-title="title" item-value="value"
+                                    :model-value="selectedQuality(channel)"
+                                    @update:model-value="setSelectedQuality(channel, $event)">
+                                </v-select>
                             </div>
                             <!-- テレビ視聴 UI で開くアイコン -->
                             <div class="iptv-channel-card__open">
@@ -187,6 +200,18 @@ const breadcrumbs = [
 // 1ページあたりの表示件数
 const PER_PAGE = 60;
 
+// KonomiTV のライブ画質 (画質名と縦解像度)
+// 視聴画面の画質リストと同じ並びにする (元配信の画質以下のものだけを提示する)
+const KONOMI_LIVE_QUALITIES: {name: string; height: number}[] = [
+    {name: '1080p', height: 1080},
+    {name: '810p', height: 810},
+    {name: '720p', height: 720},
+    {name: '540p', height: 540},
+    {name: '480p', height: 480},
+    {name: '360p', height: 360},
+    {name: '240p', height: 240},
+];
+
 // ==================== チャンネル一覧の状態 ====================
 
 const channels = ref<IIPTVChannel[]>([]);
@@ -205,6 +230,9 @@ const logo_errors = ref<Set<string>>(new Set());
 
 // テレビ視聴 UI を開こうとしているチャンネルの display_channel_id
 const opening_channel_id = ref<string | null>(null);
+
+// チャンネルごとに選択されている画質 (display_channel_id → 画質名)
+const quality_selections = ref<Record<string, string>>({});
 
 // ==================== 絞り込みの状態 ====================
 
@@ -259,6 +287,8 @@ async function fetchChannels(force_refresh: boolean = false): Promise<void> {
             page: page.value,
             per_page: PER_PAGE,
             refresh: force_refresh,
+            // 元配信の画質を検出して、チャンネルごとの画質設定に利用する
+            with_quality: true,
         });
         if (result === null) {
             return;
@@ -366,6 +396,55 @@ async function refreshAll(): Promise<void> {
 // ==================== テレビ視聴 UI で開く ====================
 
 /**
+ * チャンネルで選択できる画質の一覧を返す
+ *
+ * 元配信で配信されている画質のうち、映像の高さが元配信の最大の高さ以下のものを提示する
+ * (元配信より高い画質を選んでも、拡大されるだけで意味がないため) 。
+ *
+ * @param channel 対象のチャンネル
+ * @returns 画質の選択肢
+ */
+function qualityOptions(channel: IIPTVChannel): {title: string; value: string}[] {
+
+    const source_height = channel.qualities.length > 0 ? (channel.qualities[0].height ?? null) : null;
+    return KONOMI_LIVE_QUALITIES
+        .filter((quality) => source_height === null || quality.height <= source_height)
+        .map((quality) => ({title: quality.name, value: quality.name}));
+}
+
+/**
+ * チャンネルで選択されている画質を返す
+ *
+ * 未選択の場合は元配信の画質 (画質名が一致しない場合は最も高い画質) を返す。
+ *
+ * @param channel 対象のチャンネル
+ * @returns 選択されている画質の名前
+ */
+function selectedQuality(channel: IIPTVChannel): string {
+
+    const options = qualityOptions(channel);
+    const selected = quality_selections.value[channel.display_channel_id];
+    if (selected !== undefined && options.some((option) => option.value === selected)) {
+        return selected;
+    }
+    if (channel.source_quality !== null && options.some((option) => option.value === channel.source_quality)) {
+        return channel.source_quality;
+    }
+    return options[0]?.value ?? '1080p';
+}
+
+/**
+ * チャンネルの画質を設定する
+ *
+ * @param channel 対象のチャンネル
+ * @param quality 設定する画質の名前
+ */
+function setSelectedQuality(channel: IIPTVChannel, quality: string): void {
+
+    quality_selections.value = {...quality_selections.value, [channel.display_channel_id]: quality};
+}
+
+/**
  * IPTV チャンネルをテレビ視聴 UI (/tv/watch/) で開く
  *
  * 視聴画面はチャンネル情報を /api/channels から取得するため、
@@ -390,7 +469,11 @@ async function openInTVUI(channel: IIPTVChannel): Promise<void> {
             channel.is_tvui_registered = true;
         }
         // テレビ視聴画面へ遷移する
-        await router.push(`/tv/watch/${channel.display_channel_id}`);
+        // 選んだ画質をクエリで渡し、視聴画面のデフォルト画質として使ってもらう
+        await router.push({
+            path: `/tv/watch/${channel.display_channel_id}`,
+            query: {quality: selectedQuality(channel)},
+        });
     } finally {
         opening_channel_id.value = null;
     }
@@ -718,6 +801,29 @@ onMounted(async () => {
 
     &--tv {
         color: rgb(var(--v-theme-primary));
+    }
+
+    &--quality {
+        color: rgb(var(--v-theme-primary));
+        font-weight: 600;
+    }
+}
+
+.iptv-channel-card__quality {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    width: 104px;
+    @include smartphone-vertical {
+        display: none;
+    }
+}
+
+.iptv-channel-card__quality-select {
+    width: 100%;
+
+    :deep(.v-field) {
+        font-size: 12px;
     }
 }
 

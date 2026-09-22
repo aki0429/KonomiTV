@@ -26,6 +26,20 @@ export interface IIPTVChannel {
     is_hls: boolean;
     // テレビ視聴 UI に登録済みかどうか
     is_tvui_registered: boolean;
+    // 元配信の画質 (最も高画質なバリアントの画質名。取得できなかった場合は null)
+    source_quality: string | null;
+    // 元配信の映像コーデックの表示名 (例: 'H.264')
+    source_codec: string | null;
+    // 元配信で配信されている画質 (バリアント) の一覧 (解像度の高い順)
+    qualities: IIPTVQuality[];
+}
+
+/** IPTV の元配信の画質を表すインターフェイス (サーバー側の IPTVQuality に対応) */
+export interface IIPTVQuality {
+    name: string | null;
+    width: number | null;
+    height: number | null;
+    bandwidth: number | null;
 }
 
 /** IPTV チャンネル一覧レスポンスを表すインターフェイス (サーバー側の IPTVChannels に対応) */
@@ -97,6 +111,7 @@ export interface IIPTVChannelQuery {
     page?: number;
     per_page?: number;
     refresh?: boolean;
+    with_quality?: boolean;
 }
 
 
@@ -115,6 +130,7 @@ class IPTV {
             page: query.page ?? 1,
             per_page: query.per_page ?? 60,
             refresh: query.refresh ?? false,
+            with_quality: query.with_quality ?? false,
         };
         if (query.country !== undefined && query.country !== null && query.country !== '') {
             params.country = query.country;

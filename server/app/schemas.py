@@ -900,6 +900,22 @@ class IPTVChannel(BaseModel):
     is_hls: bool
     # テレビ視聴 UI に登録済みかどうか
     is_tvui_registered: bool = False
+    # 元配信の画質 (最も高画質なバリアントの画質名。取得できなかった場合は None)
+    source_quality: str | None = None
+    # 元配信の映像コーデックの表示名 (例: 'H.264'。取得できなかった場合は None)
+    source_codec: str | None = None
+    # 元配信で配信されている画質 (バリアント) の一覧 (解像度の高い順)
+    qualities: list[IPTVQuality] = []
+
+class IPTVQuality(BaseModel):
+    # 画質名 (例: '1080p')
+    name: str | None
+    # 映像の幅 (ピクセル)
+    width: int | None
+    # 映像の高さ (ピクセル)
+    height: int | None
+    # ビットレート (bps)
+    bandwidth: int | None
 
 class IPTVChannels(BaseModel):
     total: int

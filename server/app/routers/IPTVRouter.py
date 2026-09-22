@@ -248,6 +248,7 @@ async def IPTVChannelsAPI(
     page: Annotated[int, Query(ge=1, description='ページ番号 (1 始まり) 。')] = 1,
     per_page: Annotated[int, Query(ge=1, le=MAX_PER_PAGE, description='1ページあたりの件数。')] = DEFAULT_PER_PAGE,
     refresh: Annotated[bool, Query(description='キャッシュを無視してプレイリストを再取得するかどうか。')] = False,
+    with_quality: Annotated[bool, Query(description='各チャンネルの元配信の画質を検出して含めるかどうか。')] = False,
 ):
     """
     config.yaml の iptv セクションに設定された M3U プレイリストから IPTV のチャンネル一覧を取得する。<br>
@@ -294,6 +295,18 @@ async def IPTVChannelsAPI(
         channel_dict = IPTVUtil.ChannelToDict(channel)
         channel_dict['is_tvui_registered'] = channel_dict['display_channel_id'] in tvui_display_channel_ids
         channel_dicts.append(channel_dict)
+
+    # 元配信の画質を検出して含める
+    ## 画質の検出はストリームへのアクセスを伴うため、要求された場合のみ実行する (結果はサーバー側でキャッシュされる)
+    if with_quality is True:
+        detected_qualities = await IPTVUtil.DetectChannelsQualities(page_channels)
+        for channel_dict in channel_dicts:
+            qualities = detected_qualities.get(channel_dict['id'])
+            if qualities is None:
+                continue
+            channel_dict['source_quality'] = qualities['source_quality']
+            channel_dict['source_codec'] = qualities['codec']
+            channel_dict['qualities'] = qualities['qualities']
 
     return {
         'total': total,

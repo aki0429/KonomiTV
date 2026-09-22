@@ -132,8 +132,15 @@ export default defineComponent({
             }
 
             // PlayerController を初期化
+            // 画質が URL のクエリ (?quality=) で指定されている場合は、それをデフォルト画質として使う
+            // IPTV ページからチャンネルを開く際に、選んだ画質を引き継ぐために利用する
+            const quality_query = this.$route.query.quality;
             player_controller = new PlayerController('Live');
-            await player_controller.init();
+            await player_controller.init({
+                default_quality: typeof quality_query === 'string' && quality_query !== '' ? quality_query : null,
+                playback_rate: null,
+                seek_seconds: null,
+            });
         },
 
         // 再生セッションを破棄する
