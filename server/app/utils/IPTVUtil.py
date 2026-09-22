@@ -785,44 +785,85 @@ def GetChannelByDisplayChannelID(display_channel_id: str) -> IPTVChannel | None:
     return _channels_by_display_id.get(display_channel_id)
 
 
-def LoadTVUIChannelIDs() -> list[str]:
-    """テレビ視聴 UI に登録された IPTV チャンネルの display_channel_id の一覧を読み込む。"""
+def _LoadTVUIRegistry() -> dict[str, list[str]]:
+    """
+    テレビ視聴 UI への IPTV チャンネル登録を、ユーザーキーごとに読み込む。
+
+    保存形式は {ユーザーキー: [display_channel_id, ...]} の辞書。
+    旧形式 (グローバルな配列) のファイルが存在する場合は、ユーザーごとに分離できないため無視する。
+
+    Returns:
+        dict[str, list[str]]: ユーザーキー → 登録済みの display_channel_id の一覧
+    """
 
     if IPTV_TVUI_CHANNELS_PATH.exists() is False:
-        return []
+        return {}
     try:
         data = json.loads(IPTV_TVUI_CHANNELS_PATH.read_text(encoding='utf-8'))
-        if isinstance(data, list):
-            return [str(item) for item in data]
+        if isinstance(data, dict):
+            registry: dict[str, list[str]] = {}
+            for user_key, display_channel_ids in data.items():
+                if isinstance(display_channel_ids, list):
+                    registry[str(user_key)] = [str(item) for item in display_channel_ids]
+            return registry
     except (json.JSONDecodeError, OSError) as ex:
         logging.warning(f'Failed to load IPTV TV UI channels: {ex}')
-    return []
+    return {}
 
 
-def SaveTVUIChannelIDs(display_channel_ids: list[str]) -> None:
-    """テレビ視聴 UI に登録された IPTV チャンネルの display_channel_id の一覧を保存する。"""
+def _SaveTVUIRegistry(registry: dict[str, list[str]]) -> None:
+    """テレビ視聴 UI への IPTV チャンネル登録を、ユーザーキーごとに保存する。"""
 
     IPTV_TVUI_CHANNELS_PATH.parent.mkdir(parents=True, exist_ok=True)
     IPTV_TVUI_CHANNELS_PATH.write_text(
-        json.dumps(display_channel_ids, ensure_ascii=False, indent=2),
+        json.dumps(registry, ensure_ascii=False, indent=2),
         encoding = 'utf-8',
     )
 
 
-def RegisterTVUIChannel(display_channel_id: str) -> list[str]:
+def LoadTVUIChannelIDs(user_key: str) -> list[str]:
     """
-    IPTV チャンネルをテレビ視聴 UI に登録する (既に登録済みの場合は何もしない) 。
+    指定されたユーザーがテレビ視聴 UI に登録した IPTV チャンネルの display_channel_id の一覧を読み込む。
+
+    Args:
+        user_key (str): ユーザーを識別するキー (例: 'user:1')
+
+    Returns:
+        list[str]: 登録済みの display_channel_id の一覧
+    """
+
+    return _LoadTVUIRegistry().get(user_key, [])
+
+
+def SaveTVUIChannelIDs(user_key: str, display_channel_ids: list[str]) -> None:
+    """
+    指定されたユーザーの IPTV チャンネルの登録内容を保存する。
+
+    Args:
+        user_key (str): ユーザーを識別するキー (例: 'user:1')
+        display_channel_ids (list[str]): 保存する display_channel_id の一覧
+    """
+
+    registry = _LoadTVUIRegistry()
+    registry[user_key] = display_channel_ids
+    _SaveTVUIRegistry(registry)
+
+
+def RegisterTVUIChannel(user_key: str, display_channel_id: str) -> list[str]:
+    """
+    指定されたユーザーのテレビ視聴 UI に IPTV チャンネルを登録する (既に登録済みの場合は末尾に移動する) 。
 
     登録数が上限を超える場合は、古いものから削除する。
 
     Args:
+        user_key (str): ユーザーを識別するキー (例: 'user:1')
         display_channel_id (str): 登録する IPTV チャンネルの display_channel_id
 
     Returns:
         list[str]: 登録後の display_channel_id の一覧
     """
 
-    display_channel_ids = LoadTVUIChannelIDs()
+    display_channel_ids = LoadTVUIChannelIDs(user_key)
     # 既に登録済みの場合は一旦削除して末尾 (最新) に移動する
     if display_channel_id in display_channel_ids:
         display_channel_ids.remove(display_channel_id)
@@ -830,37 +871,62 @@ def RegisterTVUIChannel(display_channel_id: str) -> list[str]:
     # 上限を超えた分は古いものから削除する
     if len(display_channel_ids) > IPTV_TVUI_MAX_CHANNELS:
         display_channel_ids = display_channel_ids[-IPTV_TVUI_MAX_CHANNELS:]
-    SaveTVUIChannelIDs(display_channel_ids)
+    SaveTVUIChannelIDs(user_key, display_channel_ids)
     return display_channel_ids
 
 
-def UnregisterTVUIChannel(display_channel_id: str) -> list[str]:
+def UnregisterTVUIChannel(user_key: str, display_channel_id: str) -> list[str]:
     """
-    IPTV チャンネルをテレビ視聴 UI から削除する。
+    指定されたユーザーのテレビ視聴 UI から IPTV チャンネルを削除する。
 
     Args:
+        user_key (str): ユーザーを識別するキー (例: 'user:1')
         display_channel_id (str): 削除する IPTV チャンネルの display_channel_id
 
     Returns:
         list[str]: 削除後の display_channel_id の一覧
     """
 
-    display_channel_ids = LoadTVUIChannelIDs()
+    display_channel_ids = LoadTVUIChannelIDs(user_key)
     if display_channel_id in display_channel_ids:
         display_channel_ids.remove(display_channel_id)
-        SaveTVUIChannelIDs(display_channel_ids)
+        SaveTVUIChannelIDs(user_key, display_channel_ids)
     return display_channel_ids
 
 
-def GetTVUIChannels() -> list[IPTVChannel]:
-    """テレビ視聴 UI に登録された IPTV チャンネルの一覧を、登録順で返す。"""
+def GetTVUIChannels(user_key: str) -> list[IPTVChannel]:
+    """
+    指定されたユーザーがテレビ視聴 UI に登録した IPTV チャンネルの一覧を、登録順で返す。
+
+    Args:
+        user_key (str): ユーザーを識別するキー (例: 'user:1')
+
+    Returns:
+        list[IPTVChannel]: 登録済みの IPTV チャンネルの一覧
+    """
 
     channels: list[IPTVChannel] = []
-    for display_channel_id in LoadTVUIChannelIDs():
+    for display_channel_id in LoadTVUIChannelIDs(user_key):
         channel = GetChannelByDisplayChannelID(display_channel_id)
         if channel is not None:
             channels.append(channel)
     return channels
+
+
+def BuildUserKey(user_id: int | None) -> str:
+    """
+    テレビ視聴 UI の IPTV 登録をユーザーごとに分離するためのキーを生成する。
+
+    ログインしていない場合は 'anonymous' を返すが、呼び出し側でログイン必須とするかどうかを判断する。
+
+    Args:
+        user_id (int | None): ログイン中のユーザー ID (ログインしていない場合は None)
+
+    Returns:
+        str: ユーザーを識別するキー
+    """
+
+    return f'user:{user_id}' if user_id is not None else 'anonymous'
 
 
 def ChannelToLiveChannelDict(channel: IPTVChannel) -> dict:

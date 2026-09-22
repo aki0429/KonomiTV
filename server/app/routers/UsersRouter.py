@@ -13,12 +13,14 @@ from fastapi import (
     File,
     HTTPException,
     Path,
+    Request,
     Response,
     UploadFile,
     status,
 )
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security.utils import get_authorization_scheme_param
 from jose import JWTError, jwt
 from PIL import Image
 from tortoise.exceptions import IntegrityError
@@ -136,6 +138,42 @@ async def GetCurrentUser(token: Annotated[str, Depends(OAuth2PasswordBearer(toke
         )
 
     return current_user
+
+
+async def GetOptionalCurrentUser(request: Request) -> User | None:
+    """
+    リクエストに付与されたアクセストークンから、現在ログイン中のユーザーを取得する。
+
+    認証が必須ではない API (IPTV のチャンネル一覧など) で、ログインしている場合のみ
+    ユーザーごとの情報を返したいときに利用する。ログインしていない場合でも 401 にはせず None を返す。
+
+    Args:
+        request (Request): FastAPI の Request オブジェクト
+
+    Returns:
+        User | None: ログイン中のユーザー (ログインしていない場合は None)
+    """
+
+    # Authorization ヘッダー (Bearer トークン) を優先して取得する
+    access_token = None
+    if request.headers.get('Authorization') is not None:
+        _, access_token = get_authorization_scheme_param(request.headers.get('Authorization'))
+
+    # Authorization ヘッダーがない場合は Cookie から取得する
+    ## KonomiTV のクライアントは LocalStorage のアクセストークンを Authorization ヘッダーで送信するが、
+    ## Cookie でアクセストークンを保持している場合にも対応できるようにしておく
+    if access_token is None or access_token == '':
+        access_token = request.cookies.get('KonomiTV-AccessToken')
+
+    if access_token is None or access_token == '':
+        return None
+
+    # アクセストークンに紐づくユーザーアカウントを取得する
+    ## トークンが不正でもエラーにはせず、未ログインとして扱う
+    try:
+        return await GetCurrentUser(token=access_token)
+    except HTTPException:
+        return None
 
 
 async def GetCurrentAdminUser(current_user: Annotated[User, Depends(GetCurrentUser)]) -> User:
