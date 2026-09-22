@@ -5,7 +5,7 @@ import { computed, ref, shallowRef, watch } from 'vue';
 
 import type { Dayjs } from 'dayjs';
 
-import { ChannelType, ChannelTypePretty } from '@/services/Channels';
+import { ChannelTypePretty } from '@/services/Channels';
 import Programs, { ITimeTableChannel } from '@/services/Programs';
 import useChannelsStore from '@/stores/ChannelsStore';
 import useSettingsStore from '@/stores/SettingsStore';
@@ -21,7 +21,7 @@ export const CHANNEL_TYPE_DISPLAY_ORDER: ChannelTypePretty[] = ['ピン留め', 
  * 表示名から API 用チャンネルタイプへのマッピング (ChannelTypePretty -> ChannelType)
  * 'ピン留め' は API では channel_ids パラメータで指定するため、このマッピングには含まれない
  */
-const CHANNEL_TYPE_PRETTY_TO_API: Map<ChannelTypePretty, ChannelType> = new Map([
+const CHANNEL_TYPE_PRETTY_TO_API: Map<ChannelTypePretty, 'GR' | 'BS' | 'CS' | 'CATV' | 'SKY' | 'BS4K'> = new Map([
     ['地デジ', 'GR'],
     ['BS', 'BS'],
     ['CS', 'CS'],
@@ -236,6 +236,10 @@ const useTimeTableStore = defineStore('timetable', () => {
                 if (pinned_channels === undefined || pinned_channels.length === 0) {
                     continue;
                 }
+            }
+            // IPTV チャンネルは番組情報 (EPG) を持たないため、番組表のチャンネルタイプには追加しない
+            if (channel_type_pretty === 'IPTV') {
+                continue;
             }
             types.add(channel_type_pretty);
         }

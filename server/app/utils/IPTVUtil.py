@@ -32,6 +32,20 @@ IPTV_PROXY_PATH = '/api/iptv/proxy'
 # 追加登録した M3U プレイリストの URL を保存するファイル
 IPTV_USER_SOURCES_PATH = DATA_DIR / 'iptv_sources.json'
 
+# テレビ視聴 UI (TV ホーム / 視聴画面) に登録した IPTV チャンネルの display_channel_id を保存するファイル
+IPTV_TVUI_CHANNELS_PATH = DATA_DIR / 'iptv_tvui_channels.json'
+
+# IPTV チャンネルの display_channel_id のプレフィックス
+## クライアント側の ChannelUtils.getChannelType() は「英字 + 数字」の ID を前提としているため、
+## プレフィックスの後ろは必ず数字 (10 進数) にする
+IPTV_DISPLAY_CHANNEL_ID_PREFIX = 'iptv'
+
+# IPTV の疑似チャンネルの id のプレフィックス (通常のチャンネルの id と衝突しないようにする)
+IPTV_CHANNEL_ID_PREFIX = 'IPTV-'
+
+# テレビ視聴 UI に登録できる IPTV チャンネルの最大数
+IPTV_TVUI_MAX_CHANNELS = 200
+
 # 国コード (ISO 3166-1 alpha-2) から国名・国旗を取得するための iptv-org の API
 IPTV_COUNTRIES_API_URL = 'https://iptv-org.github.io/api/countries.json'
 
@@ -87,6 +101,9 @@ _channels: list[IPTVChannel] = []
 
 # 国コード → 国情報 (国名・国旗) の対応表
 _countries_by_code: dict[str, dict[str, str]] = {}
+
+# display_channel_id → IPTVChannel の対応表 (RefreshChannels() で再構築する)
+_channels_by_display_id: dict[str, IPTVChannel] = {}
 
 # ストリーム URL → 追加ヘッダーの対応表
 _stream_headers_by_url: dict[str, dict[str, str]] = {}
@@ -453,6 +470,8 @@ async def RefreshChannels(force: bool = False) -> list[IPTVChannel]:
         _stream_headers_by_host = headers_by_host
         _source_errors = errors
         _updated_at = time.time()
+        # display_channel_id との対応表を再構築する
+        _BuildDisplayChannelIDMap()
 
         logging.info(
             f'IPTV playlists update complete. ({len(channels)} channels, '
@@ -697,8 +716,190 @@ def ChannelToDict(channel: IPTVChannel) -> dict:
     data['stream_url'] = BuildProxyURL(channel.url)
     data['stream_type'] = DetectStreamType(channel.url)
     data['is_hls'] = data['stream_type'] == 'HLS'
+    # テレビ視聴 UI で再生するための疑似チャンネル ID
+    data['display_channel_id'] = BuildDisplayChannelID(channel.url)
     # 内部利用のみのフィールドは削除する
     data.pop('url', None)
     data.pop('user_agent', None)
     data.pop('referrer', None)
     return data
+
+
+# ***** テレビ視聴 UI との連携 *****
+
+
+def _BuildDisplayChannelIDMap() -> None:
+    """display_channel_id → IPTVChannel の対応表を再構築する (RefreshChannels() から呼ばれる) 。"""
+
+    global _channels_by_display_id
+    _channels_by_display_id = {BuildDisplayChannelID(channel.url): channel for channel in _channels}
+
+
+def BuildDisplayChannelID(url: str) -> str:
+    """
+    ストリームの URL から、IPTV チャンネルの display_channel_id を生成する。
+
+    クライアント側の ChannelUtils.getChannelType() は「英字 + 数字」の ID を前提としているため、
+    プレフィックス (iptv) の後ろは 10 進数の数字のみにする。
+
+    Args:
+        url (str): ストリームの URL
+
+    Returns:
+        str: display_channel_id (例: iptv123456789012345678)
+    """
+
+    return IPTV_DISPLAY_CHANNEL_ID_PREFIX + str(int(hashlib.sha1(url.encode('utf-8')).hexdigest()[:15], 16))
+
+
+def IsIPTVDisplayChannelID(display_channel_id: str) -> bool:
+    """
+    指定された display_channel_id が IPTV の疑似チャンネルのものかを判定する。
+
+    Args:
+        display_channel_id (str): 判定する display_channel_id
+
+    Returns:
+        bool: IPTV の疑似チャンネルなら True
+    """
+
+    if display_channel_id.startswith(IPTV_DISPLAY_CHANNEL_ID_PREFIX) is False:
+        return False
+    return display_channel_id[len(IPTV_DISPLAY_CHANNEL_ID_PREFIX):].isdigit()
+
+
+def GetChannelByDisplayChannelID(display_channel_id: str) -> IPTVChannel | None:
+    """
+    display_channel_id に一致する IPTV チャンネルを取得する。
+
+    Args:
+        display_channel_id (str): IPTV チャンネルの display_channel_id
+
+    Returns:
+        IPTVChannel | None: 一致する IPTV チャンネル (見つからなかった場合は None)
+    """
+
+    # まだ対応表が構築されていない場合はここで構築する
+    if _channels_by_display_id == {} and _channels:
+        _BuildDisplayChannelIDMap()
+    return _channels_by_display_id.get(display_channel_id)
+
+
+def LoadTVUIChannelIDs() -> list[str]:
+    """テレビ視聴 UI に登録された IPTV チャンネルの display_channel_id の一覧を読み込む。"""
+
+    if IPTV_TVUI_CHANNELS_PATH.exists() is False:
+        return []
+    try:
+        data = json.loads(IPTV_TVUI_CHANNELS_PATH.read_text(encoding='utf-8'))
+        if isinstance(data, list):
+            return [str(item) for item in data]
+    except (json.JSONDecodeError, OSError) as ex:
+        logging.warning(f'Failed to load IPTV TV UI channels: {ex}')
+    return []
+
+
+def SaveTVUIChannelIDs(display_channel_ids: list[str]) -> None:
+    """テレビ視聴 UI に登録された IPTV チャンネルの display_channel_id の一覧を保存する。"""
+
+    IPTV_TVUI_CHANNELS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    IPTV_TVUI_CHANNELS_PATH.write_text(
+        json.dumps(display_channel_ids, ensure_ascii=False, indent=2),
+        encoding = 'utf-8',
+    )
+
+
+def RegisterTVUIChannel(display_channel_id: str) -> list[str]:
+    """
+    IPTV チャンネルをテレビ視聴 UI に登録する (既に登録済みの場合は何もしない) 。
+
+    登録数が上限を超える場合は、古いものから削除する。
+
+    Args:
+        display_channel_id (str): 登録する IPTV チャンネルの display_channel_id
+
+    Returns:
+        list[str]: 登録後の display_channel_id の一覧
+    """
+
+    display_channel_ids = LoadTVUIChannelIDs()
+    # 既に登録済みの場合は一旦削除して末尾 (最新) に移動する
+    if display_channel_id in display_channel_ids:
+        display_channel_ids.remove(display_channel_id)
+    display_channel_ids.append(display_channel_id)
+    # 上限を超えた分は古いものから削除する
+    if len(display_channel_ids) > IPTV_TVUI_MAX_CHANNELS:
+        display_channel_ids = display_channel_ids[-IPTV_TVUI_MAX_CHANNELS:]
+    SaveTVUIChannelIDs(display_channel_ids)
+    return display_channel_ids
+
+
+def UnregisterTVUIChannel(display_channel_id: str) -> list[str]:
+    """
+    IPTV チャンネルをテレビ視聴 UI から削除する。
+
+    Args:
+        display_channel_id (str): 削除する IPTV チャンネルの display_channel_id
+
+    Returns:
+        list[str]: 削除後の display_channel_id の一覧
+    """
+
+    display_channel_ids = LoadTVUIChannelIDs()
+    if display_channel_id in display_channel_ids:
+        display_channel_ids.remove(display_channel_id)
+        SaveTVUIChannelIDs(display_channel_ids)
+    return display_channel_ids
+
+
+def GetTVUIChannels() -> list[IPTVChannel]:
+    """テレビ視聴 UI に登録された IPTV チャンネルの一覧を、登録順で返す。"""
+
+    channels: list[IPTVChannel] = []
+    for display_channel_id in LoadTVUIChannelIDs():
+        channel = GetChannelByDisplayChannelID(display_channel_id)
+        if channel is not None:
+            channels.append(channel)
+    return channels
+
+
+def ChannelToLiveChannelDict(channel: IPTVChannel) -> dict:
+    """
+    IPTV チャンネルを、/api/channels のレスポンス (LiveChannel) 用の辞書に変換する。
+
+    TV ホーム画面のチャンネルカードと、TV 視聴画面のチャンネル情報として利用される。
+    番組情報 (EPG) は存在しないため、program_present / program_following は None にする。
+
+    Args:
+        channel (IPTVChannel): 変換する IPTV チャンネル
+
+    Returns:
+        dict: LiveChannel 相当の辞書
+    """
+
+    display_channel_id = BuildDisplayChannelID(channel.url)
+    name = channel.name
+    if channel.country_name is not None:
+        name = f'{channel.name} ({channel.country_name})'
+
+    return {
+        'id': f'{IPTV_CHANNEL_ID_PREFIX}{display_channel_id}',
+        'display_channel_id': display_channel_id,
+        'network_id': 0,
+        'service_id': 0,
+        'transport_stream_id': None,
+        'remocon_id': 0,
+        # チャンネル番号には国コードを入れて、一覧で見分けやすくする
+        'channel_number': (channel.country or 'IPTV'),
+        'type': 'IPTV',
+        'name': name,
+        'terrestrial_regions': None,
+        'jikkyo_force': None,
+        'is_subchannel': False,
+        'is_radiochannel': False,
+        'is_watchable': True,
+        'is_display': True,
+        'viewer_count': 0,
+        'program_present': None,
+        'program_following': None,
+    }

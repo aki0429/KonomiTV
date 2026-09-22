@@ -33,9 +33,6 @@
                                 variant="solo" density="comfortable" hide-details
                                 :items="country_items" item-title="title" item-value="value"
                                 v-model="selected_country" @update:model-value="onCountryChange()">
-                                <template #item="{ props: item_props, item }">
-                                    <v-list-item v-bind="item_props" :title="item.raw.title"></v-list-item>
-                                </template>
                             </v-select>
                             <v-text-field class="iptv__search" color="primary" bg-color="background-lighten-1"
                                 variant="solo" density="comfortable" hide-details clearable
@@ -81,9 +78,10 @@
                                 {{ all_total === 0 ? 'ソース管理から M3U プレイリストを追加してください。' : '検索条件や国を変更してください。' }}
                             </div>
                         </div>
-                        <!-- チャンネルカード -->
+                        <!-- チャンネルカード (クリックするとテレビ視聴 UI で開く) -->
                         <div class="iptv-channel-card" v-for="channel in channels" :key="channel.id"
-                            @click="playChannel(channel)">
+                            :class="{'iptv-channel-card--opening': opening_channel_id === channel.display_channel_id}"
+                            @click="openInTVUI(channel)">
                             <div class="iptv-channel-card__logo">
                                 <img v-if="channel.logo_url !== null && logo_errors.has(channel.id) === false"
                                     :src="IPTV.getLogoURL(channel.logo_url) ?? ''" :alt="channel.name" loading="lazy"
@@ -98,9 +96,16 @@
                                 <div class="iptv-channel-card__meta">
                                     <span v-if="channel.group !== null" class="iptv-channel-card__group">{{ channel.group }}</span>
                                     <span v-if="channel.is_geo_blocked" class="iptv-channel-card__badge">地域制限</span>
-                                    <span v-if="channel.stream_type === 'DASH' || channel.stream_type === 'Other'"
-                                        class="iptv-channel-card__badge">{{ channel.stream_type }}</span>
+                                    <span v-if="channel.is_tvui_registered" class="iptv-channel-card__badge iptv-channel-card__badge--tv">
+                                        TV 登録済み
+                                    </span>
                                 </div>
+                            </div>
+                            <!-- テレビ視聴 UI で開くアイコン -->
+                            <div class="iptv-channel-card__open">
+                                <v-progress-circular v-if="opening_channel_id === channel.display_channel_id"
+                                    indeterminate color="primary" size="22"></v-progress-circular>
+                                <Icon v-else icon="fluent:arrow-right-20-regular" width="20px" />
                             </div>
                         </div>
                     </div>
@@ -113,39 +118,6 @@
                 </div>
             </div>
         </main>
-        <!-- プレイヤーダイアログ -->
-        <v-dialog class="iptv-player-dialog" v-model="player_dialog_open" max-width="1024" scrollable
-            @after-enter="onPlayerDialogAfterEnter" @keydown.esc="closePlayer()">
-            <v-card class="iptv-player" color="background-lighten-1">
-                <v-card-title class="iptv-player__header">
-                    <div class="iptv-player__channel">
-                        <div class="iptv-player__channel-name">{{ playing_channel?.name ?? '' }}</div>
-                        <div class="iptv-player__channel-group">
-                            {{ playing_channel?.country_flag ?? '' }} {{ playing_channel?.country_name ?? '' }}
-                            <span v-if="playing_channel?.group"> / {{ playing_channel?.group }}</span>
-                        </div>
-                    </div>
-                    <v-btn icon variant="text" @click="closePlayer()">
-                        <Icon icon="fluent:dismiss-20-regular" width="22px" />
-                    </v-btn>
-                </v-card-title>
-                <v-card-text class="iptv-player__body">
-                    <div class="iptv-player__video-wrapper">
-                        <video class="iptv-player__video" ref="video_element" controls autoplay playsinline></video>
-                        <!-- ローディング中 -->
-                        <div class="iptv-player__overlay" v-if="player_status === 'loading'">
-                            <v-progress-circular indeterminate color="primary" size="44"></v-progress-circular>
-                            <div class="iptv-player__overlay-text">ストリームに接続しています…</div>
-                        </div>
-                        <!-- 再生エラー -->
-                        <div class="iptv-player__overlay iptv-player__overlay--error" v-else-if="player_status === 'error'">
-                            <Icon icon="fluent:warning-20-regular" width="44px" height="44px" />
-                            <div class="iptv-player__overlay-text">{{ player_error }}</div>
-                        </div>
-                    </div>
-                </v-card-text>
-            </v-card>
-        </v-dialog>
         <!-- ソース管理ダイアログ -->
         <v-dialog class="iptv-source-dialog" v-model="source_dialog_open" max-width="760" scrollable>
             <v-card class="iptv-source" color="background-lighten-1">
@@ -192,9 +164,8 @@
 </template>
 <script lang="ts" setup>
 
-import Hls from 'hls.js';
-import mpegts from 'mpegts.js';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import HeaderBar from '@/components/HeaderBar.vue';
@@ -203,6 +174,9 @@ import SPHeaderBar from '@/components/SPHeaderBar.vue';
 import Message from '@/message';
 import IPTV, { IIPTVChannel, IIPTVCountry, IIPTVGroup, IIPTVSources } from '@/services/IPTV';
 import { dayjs } from '@/utils';
+
+// ルーター
+const router = useRouter();
 
 // パンくずリスト
 const breadcrumbs = [
@@ -228,6 +202,9 @@ const source_errors = ref<{url: string; message: string}[]>([]);
 
 // ロゴの読み込みに失敗したチャンネル ID のセット
 const logo_errors = ref<Set<string>>(new Set());
+
+// テレビ視聴 UI を開こうとしているチャンネルの display_channel_id
+const opening_channel_id = ref<string | null>(null);
 
 // ==================== 絞り込みの状態 ====================
 
@@ -256,24 +233,6 @@ const updated_at_text = computed(() => {
     }
     return dayjs(new Date(updated_at.value * 1000)).format('YYYY/MM/DD HH:mm:ss');
 });
-
-// ==================== プレイヤーの状態 ====================
-
-const player_dialog_open = ref(false);
-const playing_channel = ref<IIPTVChannel | null>(null);
-const player_status = ref<'loading' | 'playing' | 'error'>('loading');
-const player_error = ref('');
-const video_element = ref<HTMLVideoElement | null>(null);
-
-// 再生中の HLS / MPEG-TS のインスタンス (破棄用に保持する)
-let hls_instance: Hls | null = null;
-let mpegts_instance: mpegts.Player | null = null;
-// HLS の致命的エラーからの復帰を試行した回数
-let hls_recovery_count = 0;
-// MPEG-TS での再生へフォールバック済みかどうか
-let tried_mpegts_fallback = false;
-// 現在のチャンネルの再生を開始済みかどうか (nextTick と after-enter の両方から呼ばれるため、二重起動を防ぐ)
-let playback_started = false;
 
 // ==================== ソース管理の状態 ====================
 
@@ -404,6 +363,39 @@ async function refreshAll(): Promise<void> {
     Message.success('IPTV のプレイリストを再取得しました。');
 }
 
+// ==================== テレビ視聴 UI で開く ====================
+
+/**
+ * IPTV チャンネルをテレビ視聴 UI (/tv/watch/) で開く
+ *
+ * 視聴画面はチャンネル情報を /api/channels から取得するため、
+ * 事前にサーバー側へチャンネルを登録してから遷移する。
+ *
+ * @param channel 開く IPTV チャンネル
+ */
+async function openInTVUI(channel: IIPTVChannel): Promise<void> {
+
+    if (opening_channel_id.value !== null) {
+        return;
+    }
+
+    opening_channel_id.value = channel.display_channel_id;
+    try {
+        // まだテレビ視聴 UI に登録されていない場合は登録する
+        if (channel.is_tvui_registered === false) {
+            const is_registered = await IPTV.registerForTV(channel.display_channel_id);
+            if (is_registered === false) {
+                return;
+            }
+            channel.is_tvui_registered = true;
+        }
+        // テレビ視聴画面へ遷移する
+        await router.push(`/tv/watch/${channel.display_channel_id}`);
+    } finally {
+        opening_channel_id.value = null;
+    }
+}
+
 // ==================== ソース管理 ====================
 
 /**
@@ -471,266 +463,12 @@ async function removeSource(url: string): Promise<void> {
     }
 }
 
-// ==================== プレイヤー ====================
-
-/**
- * 現在の再生を停止し、関連するインスタンスを破棄する
- */
-function stopPlayback(): void {
-
-    // HLS のインスタンスを破棄
-    if (hls_instance !== null) {
-        hls_instance.destroy();
-        hls_instance = null;
-    }
-    // MPEG-TS のインスタンスを破棄
-    if (mpegts_instance !== null) {
-        mpegts_instance.destroy();
-        mpegts_instance = null;
-    }
-    // video 要素の再生を停止し、ソースを解放する
-    const video = video_element.value;
-    if (video !== null) {
-        video.pause();
-        video.removeAttribute('src');
-        video.load();
-    }
-    // フォールバックの状態をリセット
-    hls_recovery_count = 0;
-    tried_mpegts_fallback = false;
-    playback_started = false;
-}
-
-/**
- * 再生に失敗した際の共通処理
- * @param message エラーメッセージ
- */
-function failPlayback(message: string): void {
-    player_status.value = 'error';
-    player_error.value = message;
-}
-
-/**
- * HLS で再生を開始する
- * @param url ストリームの URL
- */
-function startHLS(url: string): void {
-
-    const video = video_element.value;
-    if (video === null) {
-        return;
-    }
-
-    // hls.js が使えない (Safari など) 場合は、ネイティブの HLS 再生を試す
-    if (Hls.isSupported() === false) {
-        startNative(url);
-        return;
-    }
-
-    hls_instance = new Hls({
-        enableWorker: true,
-        lowLatencyMode: false,
-        // メモリ使用量を抑えるため、バックバッファを短めにする
-        backBufferLength: 60,
-    });
-
-    // マニフェストの読み込みが完了したら再生を開始する
-    hls_instance.on(Hls.Events.MANIFEST_PARSED, () => {
-        player_status.value = 'playing';
-        video.play().catch(() => {
-            // 自動再生がブロックされた場合はエラーにせず、ユーザー操作での再生を待つ
-        });
-    });
-
-    // エラー発生時のハンドリング
-    hls_instance.on(Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal === false) {
-            return;
-        }
-        // ネットワークエラーは一度だけ復帰を試みる
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && hls_recovery_count < 1) {
-            hls_recovery_count += 1;
-            hls_instance?.startLoad();
-            return;
-        }
-        // メディアエラーは一度だけ復帰を試みる
-        if (data.type === Hls.ErrorTypes.MEDIA_ERROR && hls_recovery_count < 1) {
-            hls_recovery_count += 1;
-            hls_instance?.recoverMediaError();
-            return;
-        }
-        // それでも復帰できない場合
-        if (hls_instance !== null) {
-            hls_instance.destroy();
-            hls_instance = null;
-        }
-        // フォーマットが不明なストリームの場合は、MPEG-TS として再生を試す
-        if (tried_mpegts_fallback === false && playing_channel.value !== null && playing_channel.value.stream_type === 'Other') {
-            tried_mpegts_fallback = true;
-            startMPEGTS(url);
-            return;
-        }
-        failPlayback('このストリームは再生できませんでした。配信サーバーが停止しているか、再生に対応していない形式の可能性があります。');
-    });
-
-    hls_instance.loadSource(url);
-    hls_instance.attachMedia(video);
-}
-
-/**
- * MPEG-TS で再生を開始する
- * @param url ストリームの URL
- */
-function startMPEGTS(url: string): void {
-
-    const video = video_element.value;
-    if (video === null) {
-        return;
-    }
-
-    // mpegts.js が使えない場合はネイティブ再生を試す
-    if (mpegts.isSupported() === false) {
-        startNative(url);
-        return;
-    }
-
-    mpegts_instance = mpegts.createPlayer({
-        type: 'mpegts',
-        isLive: true,
-        url: url,
-    }, {
-        enableWorker: true,
-        liveBufferLatencyChasing: true,
-    });
-
-    mpegts_instance.on(mpegts.Events.ERROR, (error_type, error_detail) => {
-        // 再生に失敗した場合はエラー表示にする
-        if (mpegts_instance !== null) {
-            mpegts_instance.destroy();
-            mpegts_instance = null;
-        }
-        failPlayback(`このストリームは再生できませんでした。(${error_type} / ${error_detail})`);
-    });
-
-    mpegts_instance.attachMediaElement(video);
-    mpegts_instance.load();
-    player_status.value = 'playing';
-    const play_result = mpegts_instance.play();
-    // 自動再生がブロックされた場合はエラーにせず、ユーザー操作での再生を待つ
-    if (play_result instanceof Promise) {
-        play_result.catch(() => {});
-    }
-}
-
-/**
- * ネイティブの video 要素で再生を開始する (MP4 や Safari の HLS 向け)
- * @param url ストリームの URL
- */
-function startNative(url: string): void {
-
-    const video = video_element.value;
-    if (video === null) {
-        return;
-    }
-
-    video.src = url;
-    video.onloadedmetadata = () => {
-        player_status.value = 'playing';
-    };
-    video.onerror = () => {
-        failPlayback('このストリームは再生できませんでした。');
-    };
-    video.play().catch(() => {
-        // 自動再生がブロックされた場合はエラーにせず、ユーザー操作での再生を待つ
-    });
-}
-
-/**
- * 現在選択されているチャンネルの再生を、配信フォーマットに応じて開始する
- * playChannel() と onPlayerDialogAfterEnter() の両方から呼ばれる可能性があるため、二重起動を防ぐ
- */
-function startPlaybackForCurrentChannel(): void {
-
-    const channel = playing_channel.value;
-    if (channel === null || playback_started === true) {
-        return;
-    }
-    playback_started = true;
-
-    const url = IPTV.getStreamURL(channel.stream_url);
-    switch (channel.stream_type) {
-        case 'MPEGTS': {
-            startMPEGTS(url);
-            break;
-        }
-        case 'MP4': {
-            startNative(url);
-            break;
-        }
-        case 'DASH': {
-            // DASH は hls.js / mpegts.js では再生できない (Safari などのネイティブ再生にのみ対応)
-            startNative(url);
-            break;
-        }
-        default: {
-            // HLS と判定されたストリーム、および判定できないストリームは HLS として再生を試みる
-            startHLS(url);
-            break;
-        }
-    }
-}
-
-/**
- * 指定されたチャンネルの再生を開始する
- * @param channel 再生するチャンネル
- */
-async function playChannel(channel: IIPTVChannel): Promise<void> {
-
-    // 直前の再生を停止する
-    stopPlayback();
-
-    playing_channel.value = channel;
-    player_status.value = 'loading';
-    player_error.value = '';
-    player_dialog_open.value = true;
-
-    // video 要素が描画されるまで待ってから再生を開始する
-    // 遷移アニメーションが無効な環境では after-enter が発火しないことがあるため、こちらを主とする
-    await nextTick();
-    startPlaybackForCurrentChannel();
-}
-
-/**
- * プレイヤーダイアログが開ききった際に呼ばれる
- * nextTick で再生が始まっていない場合のフォールバックとして再生を開始する
- */
-function onPlayerDialogAfterEnter(): void {
-
-    if (player_dialog_open.value === true) {
-        startPlaybackForCurrentChannel();
-    }
-}
-
-/**
- * プレイヤーを閉じる
- */
-function closePlayer(): void {
-    stopPlayback();
-    player_dialog_open.value = false;
-    playing_channel.value = null;
-}
-
 // ==================== ライフサイクル ====================
 
 onMounted(async () => {
     await fetchCountries();
     await fetchGroups();
     await fetchChannels();
-});
-
-onBeforeUnmount(() => {
-    // 画面を離れる際は必ず再生を停止する
-    stopPlayback();
 });
 
 </script>
@@ -916,6 +654,11 @@ onBeforeUnmount(() => {
         transform: translateY(-2px);
         background: rgb(var(--v-theme-background-lighten-2));
     }
+
+    &--opening {
+        opacity: 0.7;
+        pointer-events: none;
+    }
 }
 
 .iptv-channel-card__logo {
@@ -942,6 +685,7 @@ onBeforeUnmount(() => {
     flex-direction: column;
     gap: 4px;
     min-width: 0;
+    flex-grow: 1;
 }
 
 .iptv-channel-card__name {
@@ -971,61 +715,22 @@ onBeforeUnmount(() => {
     padding: 1px 6px;
     border-radius: 999px;
     background: rgb(var(--v-theme-background-lighten-2));
-}
 
-.iptv-player__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.iptv-player__channel-name {
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.iptv-player__channel-group {
-    font-size: 12px;
-    color: rgb(var(--v-theme-gray));
-}
-
-.iptv-player__body {
-    padding: 0 0 8px;
-}
-
-.iptv-player__video-wrapper {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: #000;
-}
-
-.iptv-player__video {
-    width: 100%;
-    height: 100%;
-    background: #000;
-}
-
-.iptv-player__overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    color: #fff;
-    background: rgba(0, 0, 0, 0.6);
-
-    &--error {
-        text-align: center;
-        padding: 0 24px;
+    &--tv {
+        color: rgb(var(--v-theme-primary));
     }
 }
 
-.iptv-player__overlay-text {
-    font-size: 13px;
+.iptv-channel-card__open {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: rgb(var(--v-theme-gray));
+    background: rgb(var(--v-theme-background-lighten-2));
 }
 
 .iptv-source__header {

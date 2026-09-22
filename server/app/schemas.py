@@ -34,7 +34,7 @@ class Channel(PydanticModel):
     transport_stream_id: int | None
     remocon_id: int
     channel_number: str
-    type: Literal['GR', 'BS', 'CS', 'CATV', 'SKY', 'BS4K']
+    type: Literal['GR', 'BS', 'CS', 'CATV', 'SKY', 'BS4K', 'IPTV']
     name: str
     # terrestrial_regions: network_id から算出した地デジチャンネルの地域名のリスト (デバッグ用)
     # 広域放送局の場合は複数の地域名が含まれる
@@ -59,6 +59,8 @@ class LiveChannels(BaseModel):
     CATV: list[LiveChannel]
     SKY: list[LiveChannel]
     BS4K: list[LiveChannel]
+    # IPTV ページからテレビ視聴 UI に登録した IPTV チャンネル (疑似チャンネル)
+    IPTV: list[LiveChannel] = []
 
 # ***** 放送中/放送予定の番組 *****
 
@@ -784,10 +786,14 @@ class IPTVChannel(BaseModel):
     source_url: str
     # クライアントが再生に利用する、KonomiTV サーバーのプロキシ経由の URL
     stream_url: str
+    # テレビ視聴 UI (/tv/watch/) で再生するための疑似チャンネル ID
+    display_channel_id: str
     # ストリームの配信フォーマット (HLS / DASH / MP4 / MPEGTS / Other)
     stream_type: Literal['HLS', 'DASH', 'MP4', 'MPEGTS', 'Other']
     # ストリームが HLS (.m3u8) かどうか
     is_hls: bool
+    # テレビ視聴 UI に登録済みかどうか
+    is_tvui_registered: bool = False
 
 class IPTVChannels(BaseModel):
     total: int
@@ -826,3 +832,16 @@ class IPTVSources(BaseModel):
 
 class IPTVSourceAddRequest(BaseModel):
     url: str
+
+class IPTVTVUIChannel(BaseModel):
+    display_channel_id: str
+    name: str
+    logo_url: str | None
+    country_name: str | None
+
+class IPTVTVUIChannels(BaseModel):
+    total: int
+    channels: list[IPTVTVUIChannel]
+
+class IPTVTVUIRegisterRequest(BaseModel):
+    display_channel_id: str

@@ -23,6 +23,8 @@ export class ChannelUtils {
                 case 'CATV': return 'CATV';
                 case 'SKY': return 'SKY';
                 case 'BS4K': return 'BS4K';
+                // IPTV の疑似チャンネル (IPTV ページからテレビ視聴 UI に登録したチャンネル)
+                case 'IPTV': return 'IPTV';
                 // ChannelType のいずれにもマッチしない場合
                 default: return null;
             }

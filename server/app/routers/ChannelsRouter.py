@@ -18,7 +18,7 @@ from app.constants import HTTPX_CLIENT, JST, LOGO_DIR, VERSION
 from app.models.Channel import Channel
 from app.routers.UsersRouter import GetCurrentUser
 from app.streams.LiveStream import LiveStream
-from app.utils import GetMirakurunAPIEndpointURL, ParseDatetimeStringToJST
+from app.utils import GetMirakurunAPIEndpointURL, IPTVUtil, ParseDatetimeStringToJST
 from app.utils.edcb.CtrlCmdUtil import CtrlCmdUtil
 from app.utils.edcb.EDCBUtil import EDCBUtil
 from app.utils.JikkyoClient import JikkyoClient
@@ -125,6 +125,8 @@ async def ChannelsAPI():
         'CATV': [],
         'SKY': [],
         'BS4K': [],
+        # IPTV ページからテレビ視聴 UI に登録した IPTV チャンネルの疑似チャンネル
+        'IPTV': [],
     }
 
     # チャンネルごとに実行
@@ -247,6 +249,14 @@ async def ChannelsAPI():
         # せっかくチャンネルごとにループで回しているので、ここでチャンネルタイプごとの分類もやっておく
         ## 後から filter() で絞り込むのだと効率が悪い
         result[channel_dict['type']].append(channel_dict)
+
+    # IPTV ページからテレビ視聴 UI に登録された IPTV チャンネルを追加する
+    ## 番組情報 (EPG) は存在しないため、program_present / program_following は None になる
+    for iptv_channel in IPTVUtil.GetTVUIChannels():
+        iptv_channel_dict = IPTVUtil.ChannelToLiveChannelDict(iptv_channel)
+        # 現在の視聴者数を取得
+        iptv_channel_dict['viewer_count'] = LiveStream.getViewerCount(iptv_channel_dict['display_channel_id'])
+        result['IPTV'].append(iptv_channel_dict)
 
     # Pydantic v2 ではバリデーションが高速化されているため、通常通り Pydantic モデルを返す
     return schemas.LiveChannels.model_validate(result)
@@ -480,6 +490,37 @@ async def ChannelLogoAPI(
             'Cache-Control': CACHE_CONTROL,
             'ETag': GetETag(b'default'),
         })
+
+    # IPTV の疑似チャンネルの場合は、IPTV のロゴをプロキシして返す (取得できない場合は既定のロゴ)
+    if channel_id.startswith(IPTVUtil.IPTV_CHANNEL_ID_PREFIX):
+        iptv_channel = IPTVUtil.GetChannelByDisplayChannelID(channel_id[len(IPTVUtil.IPTV_CHANNEL_ID_PREFIX):])
+        if iptv_channel is not None and iptv_channel.logo_url is not None:
+            try:
+                async with HTTPX_CLIENT() as client:
+                    iptv_logo_response = await client.get(
+                        iptv_channel.logo_url,
+                        headers = {'User-Agent': Config().iptv.user_agent},
+                        timeout = 5,
+                    )
+                # ロゴが取得できた場合はそのまま返す
+                if iptv_logo_response.status_code == 200 and len(iptv_logo_response.content) > 0:
+                    logo_data = iptv_logo_response.content
+                    etag = GetETag(logo_data)
+                    if request.headers.get('If-None-Match') == etag:
+                        return Response(status_code=304)
+                    return Response(
+                        content = logo_data,
+                        media_type = iptv_logo_response.headers.get('Content-Type', 'image/png').split(';')[0],
+                        headers = {'Cache-Control': CACHE_CONTROL, 'ETag': etag},
+                    )
+            # 取得に失敗した場合は既定のロゴを利用する
+            except (httpx.NetworkError, httpx.TimeoutException):
+                pass
+        return FileResponse(LOGO_DIR / 'default.png', headers={
+            'Cache-Control': CACHE_CONTROL,
+            'ETag': GetETag(f'iptv-default{VERSION}'.encode()),
+        })
+
     channel = await GetChannel(channel_id)
 
     # ***** 同梱のロゴを利用（存在する場合）*****

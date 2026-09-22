@@ -23,6 +23,8 @@ const useChannelsStore = defineStore('channels', {
             CATV: [],
             SKY: [],
             BS4K: [],
+            // IPTV ページからテレビ視聴 UI に登録した IPTV チャンネル (疑似チャンネル)
+            IPTV: [],
         } as ILiveChannelsList,
 
         // 初回のチャンネル情報更新が実行された後かどうか
@@ -221,6 +223,10 @@ const useChannelsStore = defineStore('channels', {
             channels_list_with_pinned.set('CATV', []);
             channels_list_with_pinned.set('SKY', []);
             channels_list_with_pinned.set('BS4K', []);
+            // IPTV ページからテレビ視聴 UI に登録された IPTV チャンネルがある場合のみ、「IPTV」タブを追加する
+            if (this.channels_list.IPTV.length > 0) {
+                channels_list_with_pinned.set('IPTV', []);
+            }
 
             // channels_list に格納されているすべてのチャンネルに対しループを回し、
             // 順次 channels_list_with_pinned に追加していく
@@ -265,6 +271,10 @@ const useChannelsStore = defineStore('channels', {
                         }
                         case 'BS4K': {
                             channels_list_with_pinned.get('BS4K')?.push(channel);
+                            break;
+                        }
+                        case 'IPTV': {
+                            channels_list_with_pinned.get('IPTV')?.push(channel);
                             break;
                         }
                     }

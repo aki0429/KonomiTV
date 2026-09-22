@@ -88,6 +88,28 @@ def IsHLSPlaylist(url: str) -> bool:
     return urlparse(url).path.lower().endswith('.m3u8')
 
 
+def BuildTVUIResponse() -> dict:
+    """
+    テレビ視聴 UI に登録された IPTV チャンネルの一覧を、API レスポンス用の辞書に変換する。
+
+    Returns:
+        dict: {'total': 件数, 'channels': [IPTVTVUIChannel 相当の辞書, ...]}
+    """
+
+    channels: list[dict] = []
+    for channel in IPTVUtil.GetTVUIChannels():
+        channels.append({
+            'display_channel_id': IPTVUtil.BuildDisplayChannelID(channel.url),
+            'name': channel.name,
+            'logo_url': channel.logo_url,
+            'country_name': channel.country_name,
+        })
+    return {
+        'total': len(channels),
+        'channels': channels,
+    }
+
+
 async def ProxyStream(url: str, range_header: str | None = None) -> StreamingResponse:
     """
     指定された URL のストリームを取得し、レスポンスとして返す。
@@ -229,6 +251,16 @@ async def IPTVChannelsAPI(
     start = (page - 1) * per_page
     page_channels = filtered[start:start + per_page]
 
+    # テレビ視聴 UI に登録済みの display_channel_id の一覧 (各チャンネルの登録状態を返すために使う)
+    tvui_display_channel_ids = set(IPTVUtil.LoadTVUIChannelIDs())
+
+    # ページ内のチャンネルを辞書に変換する
+    channel_dicts: list[dict] = []
+    for channel in page_channels:
+        channel_dict = IPTVUtil.ChannelToDict(channel)
+        channel_dict['is_tvui_registered'] = channel_dict['display_channel_id'] in tvui_display_channel_ids
+        channel_dicts.append(channel_dict)
+
     return {
         'total': total,
         'page': page,
@@ -238,7 +270,7 @@ async def IPTVChannelsAPI(
         'updated_at': IPTVUtil.GetUpdatedAt() or None,
         'sources': IPTVUtil.GetAllSourceURLs(),
         'errors': IPTVUtil.GetSourceErrors(),
-        'channels': [IPTVUtil.ChannelToDict(channel) for channel in page_channels],
+        'channels': channel_dicts,
     }
 
 
@@ -408,6 +440,72 @@ async def IPTVSourceDeleteAPI(
         'config_sources': [item.strip() for item in Config().iptv.sources if item.strip() != ''],
         'user_sources': IPTVUtil.LoadUserSources(),
     }
+
+
+@router.get(
+    '/tvui',
+    summary = 'IPTV テレビ視聴 UI 登録チャンネル一覧 API',
+    response_description = 'テレビ視聴 UI に登録された IPTV チャンネルの一覧。',
+    response_model = schemas.IPTVTVUIChannels,
+)
+async def IPTVTVUIChannelsAPI():
+    """
+    テレビ視聴 UI (TV ホームの IPTV タブと /tv/watch/) に登録された IPTV チャンネルの一覧を取得する。
+    """
+
+    return BuildTVUIResponse()
+
+
+@router.post(
+    '/tvui',
+    summary = 'IPTV テレビ視聴 UI 登録 API',
+    response_description = '登録後の IPTV チャンネルの一覧。',
+    response_model = schemas.IPTVTVUIChannels,
+)
+async def IPTVTVUIRegisterAPI(
+    payload: schemas.IPTVTVUIRegisterRequest,
+):
+    """
+    IPTV チャンネルをテレビ視聴 UI に登録する。
+
+    登録したチャンネルは、TV ホームの「IPTV」タブと /tv/watch/{display_channel_id} で視聴できるようになる。
+    登録内容は server/data/iptv_tvui_channels.json に保存され、次回起動時にも引き継がれる。
+    """
+
+    if Config().iptv.enabled is False:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail = 'IPTV is disabled.')
+
+    # 登録前にチャンネルが存在するか確認する (プレイリストが未取得の場合はここで取得される)
+    await IPTVUtil.RefreshChannels()
+    channel = IPTVUtil.GetChannelByDisplayChannelID(payload.display_channel_id)
+    if channel is None:
+        raise HTTPException(
+            status_code = status.HTTP_404_NOT_FOUND,
+            detail = 'Specified IPTV channel was not found.',
+        )
+
+    # テレビ視聴 UI に登録する
+    IPTVUtil.RegisterTVUIChannel(payload.display_channel_id)
+    logging.info(f'IPTV channel registered to TV UI: {channel.name} ({payload.display_channel_id})')
+
+    return BuildTVUIResponse()
+
+
+@router.delete(
+    '/tvui',
+    summary = 'IPTV テレビ視聴 UI 登録解除 API',
+    response_description = '解除後の IPTV チャンネルの一覧。',
+    response_model = schemas.IPTVTVUIChannels,
+)
+async def IPTVTVUIUnregisterAPI(
+    display_channel_id: Annotated[str, Query(description='登録解除する IPTV チャンネルの display_channel_id。')],
+):
+    """
+    ﾃﾚﾋﾞ視聴 UI への IPTV チャンネルの登録を解除する。
+    """
+
+    IPTVUtil.UnregisterTVUIChannel(display_channel_id)
+    return BuildTVUIResponse()
 
 
 @router.get(
