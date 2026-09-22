@@ -16,7 +16,7 @@ from app import logging, schemas
 from app.config import Config
 from app.constants import HTTPX_CLIENT, JST, LOGO_DIR, VERSION
 from app.models.Channel import Channel
-from app.routers.UsersRouter import GetCurrentUser
+from app.routers.UsersRouter import GetCurrentUser, GetOptionalCurrentUser
 from app.streams.LiveStream import LiveStream
 from app.utils import GetMirakurunAPIEndpointURL, IPTVUtil, ParseDatetimeStringToJST
 from app.utils.edcb.CtrlCmdUtil import CtrlCmdUtil
@@ -57,9 +57,12 @@ async def GetChannel(channel_id: Annotated[str, Path(description='チャンネ�
     response_description = 'チャンネル情報。',
     response_model = schemas.LiveChannels,
 )
-async def ChannelsAPI():
+async def ChannelsAPI(
+    request: Request,
+):
     """
     地デジ (GR)・BS・CS・CATV・SKY (SPHD)・BS4K それぞれ全てのチャンネルの情報を取得する。
+    ログイン中のユーザーが IPTV ページからテレビ視聴 UI に登録した IPTV チャンネルも、IPTV タブ用に含める。
     """
 
     # 現在時刻
@@ -250,13 +253,15 @@ async def ChannelsAPI():
         ## 後から filter() で絞り込むのだと効率が悪い
         result[channel_dict['type']].append(channel_dict)
 
-    # IPTV ページからテレビ視聴 UI に登録された IPTV チャンネルを追加する
-    ## 番組情報 (EPG) は存在しないため、program_present / program_following は None になる
-    for iptv_channel in IPTVUtil.GetTVUIChannels():
-        iptv_channel_dict = IPTVUtil.ChannelToLiveChannelDict(iptv_channel)
-        # 現在の視聴者数を取得
-        iptv_channel_dict['viewer_count'] = LiveStream.getViewerCount(iptv_channel_dict['display_channel_id'])
-        result['IPTV'].append(iptv_channel_dict)
+    # ログイン中のユーザーが IPTV ページからテレビ視聴 UI に登録した IPTV チャンネルを追加する
+    ## 登録内容はユーザーごとに分離されているため、ログインしていない場合は何も追加しない
+    current_user = await GetOptionalCurrentUser(request)
+    if current_user is not None:
+        for iptv_channel in IPTVUtil.GetTVUIChannels(IPTVUtil.BuildUserKey(current_user.id)):
+            iptv_channel_dict = IPTVUtil.ChannelToLiveChannelDict(iptv_channel)
+            # 現在の視聴者数を取得
+            iptv_channel_dict['viewer_count'] = LiveStream.getViewerCount(iptv_channel_dict['display_channel_id'])
+            result['IPTV'].append(iptv_channel_dict)
 
     # Pydantic v2 ではバリデーションが高速化されているため、通常通り Pydantic モデルを返す
     return schemas.LiveChannels.model_validate(result)
