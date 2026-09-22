@@ -577,11 +577,22 @@ async def ChannelLogoAPI(
 )
 async def ChannelJikkyoWebSocketInfoAPI(
     request: Request,
-    channel: Annotated[Channel, Depends(GetChannel)],
+    channel_id: Annotated[str, Path(description='チャンネル ID (id or display_channel_id) 。ex: NID32736-SID1024, gr011')],
 ):
     """
     指定されたチャンネルに対応する、ニコニコ実況コメント送受信用 WebSocket API の情報を取得する。
     """
+
+    # IPTV の疑似チャンネルにはニコニコ実況のチャンネルが存在しないため、空の情報を返す
+    ## Depends を使うと GetChannel() が 422 エラーを送出してしまうため、意図的に手動で GetChannel() を実行している
+    if IPTVUtil.IsIPTVDisplayChannelID(channel_id):
+        return schemas.JikkyoWebSocketInfo(
+            watch_session_url = None,
+            comment_session_url = None,
+            is_nxjikkyo_exclusive = False,
+        )
+
+    channel = await GetChannel(channel_id)
 
     # もし Authorization ヘッダーがあるなら、ログイン中のユーザーアカウントを取得する
     current_user = None
