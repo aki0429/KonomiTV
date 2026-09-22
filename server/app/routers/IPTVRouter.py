@@ -15,10 +15,11 @@ from urllib.parse import urlparse
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query, status
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 
 from app import logging, schemas
 from app.config import Config
+from app.constants import LOGO_DIR
 from app.utils import IPTVUtil
 
 
@@ -80,6 +81,24 @@ def GetProxyRequestHeaders(url: str, range_header: str | None = None) -> dict[st
     if range_header is not None:
         headers['Range'] = range_header
     return headers
+
+
+def BuildDefaultLogoResponse() -> FileResponse:
+    """
+    ロゴが取得できなかった場合に返す、既定のロゴのレスポンスを生成する。
+
+    IPTV のチャンネルロゴはリンク切れになっていることが多いため、
+    404 を返す代わりに既定のロゴを返してブラウザのコンソールにエラーを出さないようにする。
+
+    Returns:
+        FileResponse: 既定のロゴのレスポンス
+    """
+
+    return FileResponse(
+        LOGO_DIR / 'default.png',
+        media_type = 'image/png',
+        headers = {'Cache-Control': 'public, max-age=3600'},
+    )
 
 
 def IsHLSPlaylist(url: str) -> bool:
@@ -553,18 +572,13 @@ async def IPTVLogoProxyAPI(
                 'User-Agent': Config().iptv.user_agent,
                 **PROXY_ACCEPT_HEADERS,
             })
-    except (httpx.NetworkError, httpx.TimeoutException) as ex:
-        raise HTTPException(
-            status_code = status.HTTP_502_BAD_GATEWAY,
-            detail = f'Failed to fetch IPTV channel logo: {type(ex).__name__}',
-        )
+    except (httpx.NetworkError, httpx.TimeoutException):
+        # 取得できなかった場合は既定のロゴを返す
+        return BuildDefaultLogoResponse()
 
-    # 上流がエラーを返した場合は 404 として扱う (ロゴが無いだけなので、クライアント側でフォールバックさせる)
+    # 上流がエラーを返した場合も既定のロゴを返す (ロゴが無いだけなので、クライアント側でエラーを出さない)
     if response.status_code != 200:
-        raise HTTPException(
-            status_code = status.HTTP_404_NOT_FOUND,
-            detail = f'The IPTV channel logo was not found. (HTTP Error {response.status_code})',
-        )
+        return BuildDefaultLogoResponse()
 
     return StreamingResponse(
         iter([response.content]),

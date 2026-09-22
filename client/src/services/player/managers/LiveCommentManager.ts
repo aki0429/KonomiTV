@@ -82,11 +82,20 @@ class LiveCommentManager implements PlayerManager {
      * ニコニコ実況または NX-Jikkyo に接続し、セッションを初期化する
      */
     public async init(): Promise<void> {
+        const channels_store = useChannelsStore();
         const player_store = usePlayerStore();
         const user_store = useUserStore();
 
         // 破棄済みかどうかのフラグを下ろす
         this.destroyed = false;
+
+        // IPTV の疑似チャンネルにはニコニコ実況のチャンネルが存在しないため、
+        // コメント API を呼び出さずに初期化を終了する (コメントタブも表示されない)
+        if (channels_store.channel.current.type === 'IPTV') {
+            player_store.live_comment_init_failed_message = 'このチャンネルはニコニコ実況に対応していません。';
+            console.log('[LiveCommentManager] IPTV channel: comments are not available.');
+            return;
+        }
 
         // ユーザー情報を事前にキャッシュさせておく
         await user_store.fetchUser();

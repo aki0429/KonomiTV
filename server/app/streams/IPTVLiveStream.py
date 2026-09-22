@@ -5,10 +5,14 @@ KonomiTV のテレビ視聴画面は、放送波 (EDCB / Mirakurun) のライブ
 `/api/streams/live/{display_channel_id}/{quality}/mpegts` から MPEG-TS を受け取って再生する。
 そのため IPTV のストリーム (主に HLS) を、再生前に MPEG-TS へ変換しておく必要がある。
 
-ここでは FFmpeg を 1 リクエストにつき 1 プロセス起動し、
+ここでは FFmpeg を 1 ストリームにつき 1 プロセス起動し、
 - 映像は再エンコードせずそのまま (copy)
 - 音声はブラウザで再生可能な AAC (ステレオ) に変換
-して MPEG-TS を標準出力へ流す。呼び出し側のジェネレーターが閉じられると FFmpeg も終了する。
+して MPEG-TS を標準出力へ流す。
+
+IPTV のストリームは配信元が停止していることが珍しくないため、最初のデータが届くまで待って、
+まったくデータが得られなかった場合は「ストリームを開けなかった」ことを呼び出し側に伝える
+(空のストリームを返すと、ブラウザ側が MSE のデマルチプレクサエラーで無限に再試行してしまう) 。
 """
 
 import asyncio
@@ -23,7 +27,10 @@ from app.utils.IPTVUtil import IPTVChannel
 # FFmpeg から一度に読み取るデータサイズ (バイト)
 READ_CHUNK_SIZE = 64 * 1024
 
-# FFmpeg が起動直後に終了してしまった場合にログへ残すエラーメッセージの最大長
+# 最初の MPEG-TS データが届くまで待つ最大時間 (秒)
+OPEN_TIMEOUT_SECONDS = 25.0
+
+# FFmpeg のエラー出力をログへ残す際の最大長
 MAX_STDERR_LOG_LENGTH = 500
 
 
@@ -64,54 +71,98 @@ def BuildFFmpegArguments(channel: IPTVChannel) -> list[str]:
     return args
 
 
-async def StreamIPTVAsMPEGTS(channel: IPTVChannel) -> AsyncIterator[bytes]:
+class IPTVMPEGTSStream:
     """
-    IPTV のストリームを FFmpeg で MPEG-TS に変換し、チャンク単位で yield する非同期ジェネレーター。
+    IPTV の 1 ストリームを FFmpeg で MPEG-TS に変換して配信するクラス。
 
-    呼び出し側がジェネレーターを閉じた (またはクライアントが切断した) 場合は、
-    finally で FFmpeg プロセスを確実に終了させる。
-
-    Args:
-        channel (IPTVChannel): 配信する IPTV チャンネル
-
-    Yields:
-        bytes: MPEG-TS のストリームデータ
+    open() で FFmpeg を起動して最初のデータが届くまで待ち、
+    iterate() で残りのデータを yield し、close() で FFmpeg を確実に終了させる。
     """
 
-    # FFmpeg を起動する
-    ## 標準エラー出力はパイプで受け取り、異常終了した場合のログ出力に使う
-    process = await asyncio.create_subprocess_exec(
-        *BuildFFmpegArguments(channel),
-        stdin = asyncio.subprocess.DEVNULL,
-        stdout = asyncio.subprocess.PIPE,
-        stderr = asyncio.subprocess.PIPE,
-    )
-    logging.info(f'[IPTVLiveStream] Started FFmpeg for "{channel.name}" (pid={process.pid})')
+    def __init__(self, channel: IPTVChannel) -> None:
+        """
+        Args:
+            channel (IPTVChannel): 配信する IPTV チャンネル
+        """
 
-    async def collect_stderr_and_wait() -> tuple[int, str]:
-        """FFmpeg の終了を待ち、標準エラー出力を回収する。"""
+        # 配信する IPTV チャンネル
+        self.channel = channel
 
-        stderr_text = ''
-        if process.stderr is not None:
-            stderr_text = (await process.stderr.read()).decode('utf-8', 'replace').strip()
-        returncode = await process.wait()
-        return returncode, stderr_text
+        # 起動した FFmpeg のプロセス (open() で設定される)
+        self._process: asyncio.subprocess.Process | None = None
 
-    # FFmpeg の終了待ちを別のタスクで行う
-    ## ジェネレーターがキャンセルされた場合でも、このタスクがプロセスを回収する
-    reaper_task = asyncio.ensure_future(collect_stderr_and_wait())
+        # FFmpeg の終了を待ち、標準エラー出力を回収するタスク
+        ## ジェネレーターがキャンセルされても、このタスクがプロセスを回収する
+        self._reaper_task: asyncio.Task[tuple[int, str]] | None = None
 
-    try:
-        # FFmpeg の出力をチャンク単位で転送する
-        assert process.stdout is not None
+    async def open(self, timeout: float = OPEN_TIMEOUT_SECONDS) -> bytes | None:
+        """
+        FFmpeg を起動し、最初の MPEG-TS データが届くまで待つ。
+
+        Args:
+            timeout (float): 最初のデータを待つ最大時間 (秒)
+
+        Returns:
+            bytes | None: 最初の MPEG-TS データ (取得できなかった場合は None)
+        """
+
+        self._process = await asyncio.create_subprocess_exec(
+            *BuildFFmpegArguments(self.channel),
+            stdin = asyncio.subprocess.DEVNULL,
+            stdout = asyncio.subprocess.PIPE,
+            stderr = asyncio.subprocess.PIPE,
+        )
+        logging.info(f'[IPTVLiveStream] Started FFmpeg for "{self.channel.name}" (pid={self._process.pid})')
+
+        # FFmpeg の終了待ちを別のタスクで行う
+        self._reaper_task = asyncio.ensure_future(self._collect_stderr_and_wait())
+
+        # 最初のデータが届くまで待つ
+        assert self._process.stdout is not None
+        try:
+            first_chunk = await asyncio.wait_for(self._process.stdout.read(READ_CHUNK_SIZE), timeout=timeout)
+        except TimeoutError:
+            logging.warning(f'[IPTVLiveStream] Timed out while opening the stream for "{self.channel.name}".')
+            await self.close()
+            return None
+
+        # データが得られなかった場合は FFmpeg が起動直後に終了している (配信元が停止しているなど)
+        if not first_chunk:
+            returncode, stderr_text = await self._collect_result()
+            logging.warning(
+                f'[IPTVLiveStream] Failed to open the stream for "{self.channel.name}". '
+                f'(rc={returncode}) {stderr_text[:MAX_STDERR_LOG_LENGTH]}'
+            )
+            self._process = None
+            return None
+
+        return first_chunk
+
+    async def iterate(self) -> AsyncIterator[bytes]:
+        """
+        残りの MPEG-TS データを yield する非同期ジェネレーター。
+
+        Yields:
+            bytes: MPEG-TS のストリームデータ
+        """
+
+        if self._process is None or self._process.stdout is None:
+            return
         while True:
-            chunk = await process.stdout.read(READ_CHUNK_SIZE)
+            chunk = await self._process.stdout.read(READ_CHUNK_SIZE)
             # 空のチャンクはストリームの終端 (FFmpeg が終了した) を意味する
             if not chunk:
                 break
             yield chunk
-    finally:
-        # 転送が終わったら (またはクライアントが切断したら) FFmpeg を必ず終了させる
+
+    async def close(self) -> None:
+        """FFmpeg を確実に終了させ、終了コードとエラー出力をログに残す。"""
+
+        process = self._process
+        if process is None:
+            return
+
+        # FFmpeg を終了させる
         if process.returncode is None:
             try:
                 process.kill()
@@ -122,13 +173,37 @@ async def StreamIPTVAsMPEGTS(channel: IPTVChannel) -> AsyncIterator[bytes]:
         ## ジェネレーターがキャンセルされている場合は wait_for が即座に CancelledError になるため、
         ## その場合でも kill() は実行済みなのでプロセスは残らない (回収タスクがバックグラウンドで終了させる)
         try:
-            returncode, stderr_text = await asyncio.wait_for(asyncio.shield(reaper_task), timeout=5.0)
-            logging.info(f'[IPTVLiveStream] FFmpeg for "{channel.name}" stopped. (pid={process.pid}, rc={returncode})')
+            returncode, stderr_text = await asyncio.wait_for(
+                asyncio.shield(self._reaper_task), timeout=5.0,
+            ) if self._reaper_task is not None else (process.returncode, '')
+            logging.info(f'[IPTVLiveStream] FFmpeg for "{self.channel.name}" stopped. (pid={process.pid}, rc={returncode})')
             # 異常終了していた場合は、原因調査のためにエラー出力をログに残す
             if returncode not in (0, -9) and stderr_text != '':
                 logging.warning(
-                    f'[IPTVLiveStream] FFmpeg failed for "{channel.name}": '
+                    f'[IPTVLiveStream] FFmpeg failed for "{self.channel.name}": '
                     f'{stderr_text[:MAX_STDERR_LOG_LENGTH]}'
                 )
         except (TimeoutError, asyncio.CancelledError):
-            logging.info(f'[IPTVLiveStream] FFmpeg for "{channel.name}" stopped. (pid={process.pid})')
+            logging.info(f'[IPTVLiveStream] FFmpeg for "{self.channel.name}" stopped. (pid={process.pid})')
+
+    async def _collect_stderr_and_wait(self) -> tuple[int, str]:
+        """FFmpeg の終了を待ち、標準エラー出力を回収する。"""
+
+        process = self._process
+        assert process is not None
+
+        stderr_text = ''
+        if process.stderr is not None:
+            stderr_text = (await process.stderr.read()).decode('utf-8', 'replace').strip()
+        returncode = await process.wait()
+        return returncode, stderr_text
+
+    async def _collect_result(self) -> tuple[int | None, str]:
+        """回収タスクの結果 (終了コードと標準エラー出力) を取得する。"""
+
+        if self._reaper_task is None:
+            return (self._process.returncode if self._process is not None else None), ''
+        try:
+            return await asyncio.wait_for(asyncio.shield(self._reaper_task), timeout=5.0)
+        except (TimeoutError, asyncio.CancelledError):
+            return (self._process.returncode if self._process is not None else None), ''

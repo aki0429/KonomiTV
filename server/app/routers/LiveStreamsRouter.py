@@ -12,7 +12,7 @@ from starlette.types import Receive
 
 from app import logging, schemas
 from app.models.Channel import Channel
-from app.streams.IPTVLiveStream import StreamIPTVAsMPEGTS
+from app.streams.IPTVLiveStream import IPTVMPEGTSStream
 from app.streams.LiveStream import LiveStream, LiveStreamStatus
 from app.streams.StreamEncodingOptions import (
     SplitQualityAndEncodingOptions,
@@ -96,9 +96,13 @@ def BuildIPTVLiveStreamStatus(display_channel_id: str) -> schemas.LiveStreamStat
     )
 
 
-def BuildIPTVMPEGTSResponse(request: Request, channel: IPTVChannel) -> StreamingResponse:
+async def BuildIPTVMPEGTSResponse(request: Request, channel: IPTVChannel) -> StreamingResponse:
     """
     IPTV チャンネルの MPEG-TS ストリームを配信する StreamingResponse を生成する。
+
+    配信元が停止しているなどでストリームを開けなかった場合は、空のストリームを返さずに
+    502 Bad Gateway を返す。空のストリームを返すと、ブラウザ側は MSE のデマルチプレクサエラー
+    (DEMUXER_ERROR_COULD_NOT_OPEN) として扱い、再生の再試行を繰り返してしまうため。
 
     Args:
         request (Request): クライアントからのリクエスト
@@ -106,17 +110,38 @@ def BuildIPTVMPEGTSResponse(request: Request, channel: IPTVChannel) -> Streaming
 
     Returns:
         StreamingResponse: MPEG-TS ストリームのレスポンス
+
+    Raises:
+        HTTPException: ストリームを開けなかった場合 (502 Bad Gateway)
     """
+
+    # FFmpeg を起動し、最初のデータが届くまで待つ
+    stream = IPTVMPEGTSStream(channel)
+    first_chunk = await stream.open()
+
+    # 最初のデータが届かなかった場合は、配信元が停止しているためエラーを返す
+    if first_chunk is None:
+        raise HTTPException(
+            status_code = status.HTTP_502_BAD_GATEWAY,
+            detail = 'Failed to open the IPTV stream. The stream may be offline or unavailable.',
+        )
 
     async def generator():
         """IPTV のストリームを読み取って出力するジェネレーター"""
 
-        async for stream_data in StreamIPTVAsMPEGTS(channel):
-            # クライアントが切断した場合はジェネレーターを終了する (FFmpeg も StreamIPTVAsMPEGTS 側で終了する)
-            if await request.is_disconnected():
-                logging.debug(f'[LiveStreamsRouter] IPTV request is disconnected. [display_channel_id: {channel.id}]')
-                break
-            yield stream_data
+        try:
+            # 最初に読み取ったデータを出力する
+            yield first_chunk
+            # 残りのデータを出力する
+            async for stream_data in stream.iterate():
+                # クライアントが切断した場合はジェネレーターを終了する (FFmpeg も close() で終了する)
+                if await request.is_disconnected():
+                    logging.debug(f'[LiveStreamsRouter] IPTV request is disconnected. [display_channel_id: {channel.id}]')
+                    break
+                yield stream_data
+        finally:
+            # FFmpeg を確実に終了させる
+            await stream.close()
 
     return StreamingResponse(generator(), media_type='video/mp2t')
 
@@ -406,7 +431,7 @@ async def LiveMPEGTSStreamAPI(
     # IPTV の疑似チャンネルの場合は、FFmpeg で MPEG-TS に変換して配信する
     iptv_channel = IPTVUtil.GetChannelByDisplayChannelID(display_channel_id)
     if iptv_channel is not None:
-        return BuildIPTVMPEGTSResponse(request, iptv_channel)
+        return await BuildIPTVMPEGTSResponse(request, iptv_channel)
 
     # 品質とオプション指定に対応する LiveStream に接続し、ライブストリームクライアントを取得する
     ## 接続時に Offline だった場合は自動的にエンコードタスクが起動される
