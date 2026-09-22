@@ -1,7 +1,6 @@
 
 import asyncio
 import copy
-import time
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, status
@@ -12,14 +11,12 @@ from starlette.types import Receive
 
 from app import logging, schemas
 from app.models.Channel import Channel
-from app.streams.IPTVLiveStream import StreamIPTVAsMPEGTS
 from app.streams.LiveStream import LiveStream, LiveStreamStatus
 from app.streams.StreamEncodingOptions import (
     SplitQualityAndEncodingOptions,
     StreamQualityWithOptions,
 )
 from app.utils import IPTVUtil
-from app.utils.IPTVUtil import IPTVChannel
 
 
 # ルーター
@@ -85,89 +82,6 @@ async def ValidateQuality(
     )
 
 
-# ***** IPTV の疑似チャンネル向けのヘルパー *****
-
-
-def BuildIPTVLiveStreamStatus(display_channel_id: str) -> schemas.LiveStreamStatus:
-    """
-    IPTV の疑似チャンネルのライブストリームステータスを生成する。
-
-    IPTV のストリームは KonomiTV のエンコードタスクを介さずに直接配信されるため、
-    状態は常に ONAir として扱う。
-
-    Args:
-        display_channel_id (str): IPTV チャンネルの display_channel_id
-
-    Returns:
-        schemas.LiveStreamStatus: ライブストリームのステータス
-    """
-
-    now = time.time()
-    return schemas.LiveStreamStatus(
-        status = 'ONAir',
-        detail = 'IPTV のストリームを配信しています。',
-        started_at = now,
-        updated_at = now,
-        client_count = LiveStream.getViewerCount(display_channel_id),
-    )
-
-
-def BuildIPTVMPEGTSResponse(request: Request, channel: IPTVChannel) -> StreamingResponse:
-    """
-    IPTV チャンネルの MPEG-TS ストリームを配信する StreamingResponse を生成する。
-
-    Args:
-        request (Request): クライアントからのリクエスト
-        channel (IPTVChannel): 配信する IPTV チャンネル
-
-    Returns:
-        StreamingResponse: MPEG-TS ストリームのレスポンス
-    """
-
-    async def generator():
-        """IPTV のストリームを読み取って出力するジェネレーター"""
-
-        async for stream_data in StreamIPTVAsMPEGTS(channel):
-            # クライアントが切断した場合はジェネレーターを終了する (FFmpeg も StreamIPTVAsMPEGTS 側で終了する)
-            if await request.is_disconnected():
-                logging.debug(f'[LiveStreamsRouter] IPTV request is disconnected. [display_channel_id: {channel.id}]')
-                break
-            yield stream_data
-
-    return StreamingResponse(generator(), media_type='video/mp2t')
-
-
-def BuildIPTVEventResponse(display_channel_id: str) -> EventSourceResponse:
-    """
-    IPTV の疑似チャンネルのイベントストリームを生成する。
-
-    IPTV のストリームはエンコードタスクの状態変化を持たないため、
-    初回に ONAir のステータスを 1 回送信したあとは接続を維持するだけにする。
-
-    Args:
-        display_channel_id (str): IPTV チャンネルの display_channel_id
-
-    Returns:
-        EventSourceResponse: イベントストリームのレスポンス
-    """
-
-    async def generator():
-        """イベントストリームを出力するジェネレーター"""
-
-        # 初回接続時に必ず現在のステータスを返す
-        yield {
-            'event': 'initial_update',
-            'data': BuildIPTVLiveStreamStatus(display_channel_id).model_dump_json(),
-        }
-
-        # 以降はステータスが変わらないため、接続を維持するだけにする
-        ## keep-alive のコメントは EventSourceResponse が定期的に送信してくれる
-        while True:
-            await asyncio.sleep(10)
-
-    return EventSourceResponse(generator())
-
-
 @router.get(
     '',
     summary = 'ライブストリーム一覧 API',
@@ -213,10 +127,6 @@ async def LiveStreamAPI(
     ライブストリーム イベント API にて配信されるイベントと同一のデータだが、一回限りの取得である点が異なる。
     """
 
-    # IPTV の疑似チャンネルの場合は、常に ONAir 状態として扱う
-    if IPTVUtil.IsIPTVDisplayChannelID(display_channel_id):
-        return BuildIPTVLiveStreamStatus(display_channel_id)
-
     # 品質とオプション指定に対応する LiveStream を取得する
     # ステータスを取得したいだけなので、接続はしない
     live_stream = LiveStream(display_channel_id, stream_quality.quality, stream_quality.encoding_options)
@@ -253,10 +163,6 @@ async def LiveStreamEventAPI(
     どのイベントでも配信される JSON 構造は同じ。<br>
     ステータスが Offline になった、あるいは既にそうなっている時は、status_update イベントが配信された後に接続を終了する。
     """
-
-    # IPTV の疑似チャンネルの場合は、状態変化が無いイベントストリームを返す
-    if IPTVUtil.IsIPTVDisplayChannelID(display_channel_id):
-        return BuildIPTVEventResponse(display_channel_id)
 
     # 品質とオプション指定に対応する LiveStream を取得する
     # ステータスを取得したいだけなので、接続はしない
@@ -345,10 +251,6 @@ async def LivePSIArchivedDataAPI(
     何らかの理由でライブストリームが終了しない限り、継続的にレスポンスが出力される（ストリーミング）。
     """
 
-    # IPTV の疑似チャンネルには PSI/SI アーカイブデータが存在しないため、空のレスポンスを返す
-    if IPTVUtil.IsIPTVDisplayChannelID(display_channel_id):
-        return Response(content = b'', media_type = 'application/octet-stream')
-
     # 品質とオプション指定に対応する LiveStream を取得する
     # PSI/SI アーカイブデータを取得したいだけなので、接続はしない
     live_stream = LiveStream(display_channel_id, stream_quality.quality, stream_quality.encoding_options)
@@ -418,11 +320,6 @@ async def LiveMPEGTSStreamAPI(
 
     何らかの理由でライブストリームが終了しない限り、継続的にレスポンスが出力される（ストリーミング）。
     """
-
-    # IPTV の疑似チャンネルの場合は、FFmpeg で MPEG-TS に変換して配信する
-    iptv_channel = IPTVUtil.GetChannelByDisplayChannelID(display_channel_id)
-    if iptv_channel is not None:
-        return BuildIPTVMPEGTSResponse(request, iptv_channel)
 
     # 品質とオプション指定に対応する LiveStream に接続し、ライブストリームクライアントを取得する
     ## 接続時に Offline だった場合は自動的にエンコードタスクが起動される

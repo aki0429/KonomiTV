@@ -31,7 +31,7 @@ from app.constants import (
 )
 from app.models.Channel import Channel
 from app.streams.LivePSIDataArchiver import LivePSIDataArchiver
-from app.utils import GetMirakurunAPIEndpointURL
+from app.utils import GetMirakurunAPIEndpointURL, IPTVUtil
 from app.utils.edcb.EDCBTuner import EDCBTuner
 from app.utils.edcb.PipeStreamReader import PipeStreamReader
 
@@ -568,7 +568,12 @@ class LiveEncodingTask:
             self.live_stream.setStatus('Standby', 'エンコードタスクを起動しています…')
 
         # チャンネル情報からサービス ID とネットワーク ID を取得する
-        channel = cast(Channel, await Channel.filter(display_channel_id=self.live_stream.display_channel_id).first())
+        ## IPTV の疑似チャンネルの場合は DB にチャンネルが存在しないため、IPTV の情報からチャンネル相当のオブジェクトを生成する
+        iptv_channel = IPTVUtil.GetChannelByDisplayChannelID(self.live_stream.display_channel_id)
+        if iptv_channel is not None:
+            channel = cast(Channel, IPTVUtil.BuildEncodingChannel(iptv_channel))
+        else:
+            channel = cast(Channel, await Channel.filter(display_channel_id=self.live_stream.display_channel_id).first())
 
         # 現在の番組情報を取得する
         program_present = (await channel.getCurrentAndNextProgram())[0]
@@ -579,7 +584,8 @@ class LiveEncodingTask:
 
         # PSI/SI データアーカイバーを初期化
         ## psisiarc は API リクエストがある度に都度起動される
-        self.live_stream.psi_data_archiver = LivePSIDataArchiver(channel.service_id)
+        ## IPTV のストリームには日本のデータ放送が存在しないため、IPTV では初期化しない
+        self.live_stream.psi_data_archiver = LivePSIDataArchiver(channel.service_id) if iptv_channel is None else None
 
         # ***** tsreadex プロセスの作成と実行 *****
 
@@ -593,7 +599,8 @@ class LiveEncodingTask:
             # 特定サービスのみを選択して出力するフィルタを有効にする
             ## 有効にすると、特定のストリームのみ PID を固定して出力される
             ## 視聴対象のチャンネルのサービス ID を指定する
-            '-n', f'{channel.service_id}' if CONFIG.tv.debug_mode_ts_path is None else '-1',
+            ## IPTV のストリームは日本の放送波ではないため、サービス単位のフィルタは行わない (-1)
+            '-n', f'{channel.service_id}' if (CONFIG.tv.debug_mode_ts_path is None and iptv_channel is None) else '-1',
         ]
 
         # オリジナル画質 (mpeg2toh264 で再生) の場合はエンコーダーを通す必要自体がないので、
@@ -686,7 +693,8 @@ class LiveEncodingTask:
         # チューナーの起動にも時間がかかるが、エンコーダーの起動は非同期なのに対し、チューナーの起動は EDCB の場合は同期的
 
         # フル HD 放送が行われているチャンネルかを取得
-        is_fullhd_channel = self.isFullHDChannel(channel.network_id, channel.service_id)
+        ## IPTV のストリームは 1920x1080 のプログレッシブが一般的なので、フル HD として扱う
+        is_fullhd_channel = True if iptv_channel is not None else self.isFullHDChannel(channel.network_id, channel.service_id)
 
         ## ラジオチャンネルでは HW エンコードの意味がないため、FFmpeg に固定する
         if channel.is_radiochannel is True:
@@ -809,13 +817,30 @@ class LiveEncodingTask:
         ## ref: https://docs.astral.sh/ruff/rules/asyncio-dangling-task/
         background_tasks: set[asyncio.Task[None]] = set()
 
+        # IPTV の疑似チャンネルの場合に起動する変換プロセス (終了処理のために保持する)
+        iptv_process: asyncio.subprocess.Process | None = None
+
         # チューナー起動フェーズから Controller 実行までを CancelledError から保護する
         # チャンネル切り替え時に LiveStream.connect() からこのタスクがキャンセルされると、チューナー起動フェーズで
         # await している箇所 (EDCBTuner.setChannel() / EDCBTuner.connect() など) で CancelledError が発生する可能性がある
         # CancelledError をキャッチしないとエンコーダープロセスの終了処理に到達せず、プロセスがリークしてしまう
         try:
+            # IPTV の疑似チャンネル
+            ## IPTV のストリームを MPEG-2 TS に変換し、その標準出力を放送波の TS と同じように扱う
+            ## 以降は既存の処理 (tsreadex → エンコーダー) がそのまま動く
+            if iptv_channel is not None:
+                self.live_stream.setStatus('Standby', 'IPTV のストリームに接続しています…')
+                iptv_process = await asyncio.create_subprocess_exec(
+                    *IPTVUtil.BuildTSConversionArguments(iptv_channel),
+                    stdin = asyncio.subprocess.DEVNULL,
+                    stdout = asyncio.subprocess.PIPE,
+                    stderr = asyncio.subprocess.PIPE,
+                )
+                assert iptv_process.stdout is not None
+                stream_reader = iptv_process.stdout
+
             # Mirakurun バックエンド
-            if BACKEND_TYPE == 'Mirakurun':
+            elif BACKEND_TYPE == 'Mirakurun':
 
                 # チューナーを確保できるまで待機する
                 ## 確保できなかった場合でも共聴で受信できる可能性があるので、戻り値は無視する
@@ -1041,6 +1066,13 @@ class LiveEncodingTask:
                 if BACKEND_TYPE == 'Mirakurun' and response is not None and session is not None:
                     await session.close()
                     response.close()
+
+                # IPTV: 変換用の FFmpeg プロセスを終了する
+                if iptv_process is not None and iptv_process.returncode is None:
+                    try:
+                        iptv_process.kill()
+                    except Exception:
+                        pass
 
             # タスクを非同期で実行
             background_tasks.add(asyncio.create_task(Reader()))

@@ -420,11 +420,15 @@ class PlayerController {
                     // 通常のチャンネルの場合
                     } else {
                         // mpeg2toh264 によるオリジナル画質は常に画質リストの先頭に追加する
-                        qualities.push({
-                            name: 'Original (MPEG-2)',
-                            type: 'mpeg2toh264',
-                            url: `${streaming_api_base_url}/original/mpegts`,
-                        });
+                        // ただし IPTV の疑似チャンネルは配信元の映像コーデックが MPEG-2 とは限らない (H.264 など) ため、
+                        // オリジナル画質は提供しない (MPEG-2 の IPTV も、通常の画質ではサーバー側でトランスコードされて再生できる)
+                        if (channels_store.channel.current.type !== 'IPTV') {
+                            qualities.push({
+                                name: 'Original (MPEG-2)',
+                                type: 'mpeg2toh264',
+                                url: `${streaming_api_base_url}/original/mpegts`,
+                            });
+                        }
                         // 画質リストを作成
                         for (const quality_name of LIVE_STREAMING_QUALITIES) {
                             qualities.push({
@@ -440,7 +444,8 @@ class PlayerController {
                     // デフォルト画質に original が指定されている場合、ラジオチャンネルを除きデフォルト画質を "Original (MPEG-2)" に設定する
                     if (this.quality_profile.tv_streaming_quality === 'original') {
                         // ラジオチャンネルは mpeg2toh264 に対応していないため、1080p 固定 (実際には映像エンコードは行われない)
-                        default_quality = channels_store.channel.current.is_radiochannel === true ? '1080p' : 'Original (MPEG-2)';
+                        // IPTV の疑似チャンネルはオリジナル画質を提供していないため、1080p にする
+                        default_quality = (channels_store.channel.current.is_radiochannel === true || channels_store.channel.current.type === 'IPTV') ? '1080p' : 'Original (MPEG-2)';
                     } else {
                         // DPlayer は表示名と完全一致する画質を選ぶため、1080p-60fps のみ表示名へ変換する
                         default_quality = this.quality_profile.tv_streaming_quality === '1080p-60fps' ?

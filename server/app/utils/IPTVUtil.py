@@ -16,14 +16,14 @@ import re
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 from urllib.parse import quote, urljoin, urlparse
 
 import httpx
 
 from app import logging
 from app.config import Config
-from app.constants import DATA_DIR
+from app.constants import DATA_DIR, LIBRARY_PATH
 
 
 # IPTV ストリームをプロキシする API のパス (IPTVRouter と一致させる必要がある)
@@ -927,6 +927,83 @@ def BuildUserKey(user_id: int | None) -> str:
     """
 
     return f'user:{user_id}' if user_id is not None else 'anonymous'
+
+
+# ***** ライブエンコード処理 (LiveEncodingTask) との連携 *****
+
+
+def BuildTSConversionArguments(channel: IPTVChannel) -> list[str]:
+    """
+    IPTV のストリームを MPEG-2 TS に変換する FFmpeg の引数を組み立てる。
+
+    KonomiTV の既存のライブエンコード処理 (LiveEncodingTask) は放送波の MPEG-2 TS を
+    入力として受け取るため、IPTV のストリーム (主に HLS) を MPEG-2 TS に変換して渡す。
+    ここではコンテナの変換のみを行い、映像・音声は再エンコードしない
+    (画質ごとの H.264 への変換は、後段の LiveEncodingTask のエンコーダーが行う) 。
+
+    Args:
+        channel (IPTVChannel): 変換する IPTV チャンネル
+
+    Returns:
+        list[str]: FFmpeg の引数
+    """
+
+    args = [
+        LIBRARY_PATH['FFmpeg'],
+        '-hide_banner',
+        '-loglevel', 'error',
+        # 配信サーバーによっては User-Agent / Referer を要求するため、プレイリストの指定を反映する
+        '-user_agent', Config().iptv.user_agent,
+    ]
+    if channel.referrer is not None:
+        args += ['-referer', channel.referrer]
+    args += [
+        # ライブストリームではタイムスタンプが欠落することがあるため、必要に応じて生成させる
+        '-fflags', '+genpts',
+        '-i', channel.url,
+        # 映像・音声は再エンコードせず、MPEG-2 TS に詰め替えるだけにする
+        '-c', 'copy',
+        '-f', 'mpegts',
+        'pipe:1',
+    ]
+    return args
+
+
+def BuildEncodingChannel(channel: IPTVChannel) -> Any:
+    """
+    IPTV チャンネルを、既存のライブエンコード処理 (LiveEncodingTask) が扱える
+    Channel モデル相当のオブジェクト (未保存) に変換する。
+
+    LiveEncodingTask は放送波のチャンネル情報 (Channel モデル) を前提として実装されているため、
+    IPTV チャンネルをそれと同じ形に変換して既存の処理にそのまま載せる。
+
+    Args:
+        channel (IPTVChannel): 変換する IPTV チャンネル
+
+    Returns:
+        Any: Channel モデルのインスタンス (DB には保存しない)
+    """
+
+    # 循環インポートを避けるため、関数内でインポートする
+    from app.models.Channel import Channel
+
+    display_channel_id = BuildDisplayChannelID(channel.url)
+    encoding_channel: Any = Channel()
+    encoding_channel.id = f'{IPTV_CHANNEL_ID_PREFIX}{display_channel_id}'
+    encoding_channel.display_channel_id = display_channel_id
+    # 放送波ではないため、チューナーに関連する値は 0 / None にする
+    encoding_channel.network_id = 0
+    encoding_channel.service_id = 0
+    encoding_channel.transport_stream_id = None
+    encoding_channel.remocon_id = 0
+    encoding_channel.channel_number = channel.country or 'IPTV'
+    # エンコードオプションはチャンネルタイプで分岐するため、地デジ相当として扱う
+    encoding_channel.type = 'GR'
+    encoding_channel.name = channel.name
+    encoding_channel.is_subchannel = False
+    encoding_channel.is_radiochannel = False
+    encoding_channel.is_watchable = True
+    return encoding_channel
 
 
 def ChannelToLiveChannelDict(channel: IPTVChannel) -> dict:
