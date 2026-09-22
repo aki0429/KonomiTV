@@ -4,10 +4,10 @@ import { IProgram, IProgramDefault } from '@/services/Programs';
 
 
 /** チャンネルタイプの型 */
-export type ChannelType = 'GR' | 'BS' | 'CS' | 'CATV' | 'SKY' | 'BS4K';
+export type ChannelType = 'GR' | 'BS' | 'CS' | 'CATV' | 'SKY' | 'BS4K' | 'IPTV';
 
 // チャンネルタイプの型 (実際のチャンネルリストに表示される表現)
-export type ChannelTypePretty = 'ピン留め' | '地デジ' | 'BS' | 'CS' | 'CATV' | 'SKY' | 'BS4K';
+export type ChannelTypePretty = 'ピン留め' | '地デジ' | 'BS' | 'CS' | 'CATV' | 'SKY' | 'BS4K' | 'IPTV';
 
 /** 地デジ放送エリアの型 (北海道は7分割、計53選択肢) */
 export type TerrestrialRegion =
@@ -82,6 +82,8 @@ export interface ILiveChannelsList {
     CATV: ILiveChannel[];
     SKY: ILiveChannel[];
     BS4K: ILiveChannel[];
+    // IPTV ページからテレビ視聴 UI に登録した IPTV チャンネル (疑似チャンネル)
+    IPTV: ILiveChannel[];
 }
 
 /** ニコニコ実況の WebSocket API の情報を表すインターフェイス */

@@ -20,8 +20,12 @@ export interface IIPTVChannel {
     is_geo_blocked: boolean;
     source_url: string;
     stream_url: string;
+    // テレビ視聴 UI (/tv/watch/) で再生するための疑似チャンネル ID
+    display_channel_id: string;
     stream_type: IPTVStreamType;
     is_hls: boolean;
+    // テレビ視聴 UI に登録済みかどうか
+    is_tvui_registered: boolean;
 }
 
 /** IPTV チャンネル一覧レスポンスを表すインターフェイス (サーバー側の IPTVChannels に対応) */
@@ -69,6 +73,20 @@ export interface IIPTVGroups {
 export interface IIPTVSources {
     config_sources: string[];
     user_sources: string[];
+}
+
+/** テレビ視聴 UI に登録された IPTV チャンネルを表すインターフェイス (サーバー側の IPTVTVUIChannel に対応) */
+export interface IIPTVTVUIChannel {
+    display_channel_id: string;
+    name: string;
+    logo_url: string | null;
+    country_name: string | null;
+}
+
+/** テレビ視聴 UI に登録された IPTV チャンネル一覧レスポンスを表すインターフェイス (サーバー側の IPTVTVUIChannels に対応) */
+export interface IIPTVTVUIChannels {
+    total: number;
+    channels: IIPTVTVUIChannel[];
 }
 
 /** IPTV チャンネル一覧取得時のクエリパラメーター */
@@ -231,6 +249,26 @@ class IPTV {
         }
 
         return response.data;
+    }
+
+    /**
+     * IPTV チャンネルをテレビ視聴 UI (/tv/watch/) で再生できるように登録する
+     * @param display_channel_id 登録する IPTV チャンネルの display_channel_id
+     * @returns 登録に成功したかどうか
+     */
+    static async registerForTV(display_channel_id: string): Promise<boolean> {
+
+        const response = await APIClient.post<IIPTVTVUIChannels>('/iptv/tvui', {display_channel_id: display_channel_id}, {
+            // プレイリストが未取得の場合はサーバー側で取得されるため、タイムアウトを 90 秒に伸ばす
+            timeout: 90 * 1000,
+        });
+
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, 'IPTV チャンネルをテレビ視聴 UI に登録できませんでした。');
+            return false;
+        }
+
+        return true;
     }
 
     /**
