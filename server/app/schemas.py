@@ -764,5 +764,65 @@ class VersionInformation(BaseModel):
     version: str
     latest_version: str | None
     environment: Literal['Windows', 'Linux', 'Linux-Docker', 'Linux-ARM']
-    backend: Literal['EDCB', 'Mirakurun']
+    backend: Literal['EDCB', 'Mirakurun', 'IPTV']
     encoder: Literal['FFmpeg', 'QSVEncC', 'NVEncC', 'VCEEncC', 'rkmppenc']
+
+# ***** IPTV *****
+
+class IPTVChannel(BaseModel):
+    id: str
+    name: str
+    logo_url: str | None
+    group: str | None
+    # 国コード (ISO 3166-1 alpha-2) ・国名・国旗
+    country: str | None
+    country_name: str | None
+    country_flag: str | None
+    tvg_id: str | None
+    language: str | None
+    is_geo_blocked: bool
+    source_url: str
+    # クライアントが再生に利用する、KonomiTV サーバーのプロキシ経由の URL
+    stream_url: str
+    # ストリームの配信フォーマット (HLS / DASH / MP4 / MPEGTS / Other)
+    stream_type: Literal['HLS', 'DASH', 'MP4', 'MPEGTS', 'Other']
+    # ストリームが HLS (.m3u8) かどうか
+    is_hls: bool
+
+class IPTVChannels(BaseModel):
+    total: int
+    page: int
+    per_page: int
+    max_page: int
+    all_total: int
+    updated_at: float | None
+    sources: list[str]
+    errors: dict[str, str]
+    channels: list[IPTVChannel]
+
+class IPTVCountry(BaseModel):
+    code: str
+    name: str
+    flag: str
+    count: int
+
+class IPTVCountries(BaseModel):
+    total: int
+    updated_at: float | None
+    all_total: int
+    countries: list[IPTVCountry]
+
+class IPTVGroup(BaseModel):
+    name: str
+    count: int
+
+class IPTVGroups(BaseModel):
+    total: int
+    groups: list[IPTVGroup]
+
+class IPTVSources(BaseModel):
+    config_sources: list[str]
+    user_sources: list[str]
+
+class IPTVSourceAddRequest(BaseModel):
+    url: str

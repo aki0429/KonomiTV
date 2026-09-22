@@ -27,6 +27,7 @@ from app.routers import (
     CapturesRouter,
     ChannelsRouter,
     DataBroadcastingRouter,
+    IPTVRouter,
     LiveStreamsRouter,
     MaintenanceRouter,
     NiconicoRouter,
@@ -43,6 +44,7 @@ from app.routers import (
     VideoStreamsRouter,
 )
 from app.streams.LiveStream import LiveStream
+from app.utils import IPTVUtil
 from app.utils.edcb.EDCBTuner import EDCBTuner
 from app.utils.FastAPITaskUtil import repeat_every
 
@@ -78,6 +80,7 @@ app.include_router(ReservationConditionsRouter.router)
 app.include_router(RecordingPresetsRouter.router)
 app.include_router(CapturesRouter.router)
 app.include_router(DataBroadcastingRouter.router)
+app.include_router(IPTVRouter.router)
 app.include_router(NiconicoRouter.router)
 app.include_router(TwitterRouter.router)
 app.include_router(BlueskyRouter.router)
@@ -262,6 +265,19 @@ async def UpdateChannelAndProgram():
 @repeat_every(seconds=0.5 * 60, wait_first=0.5 * 60, logger=logging.logger)
 async def UpdateChannelJikkyoStatus():
     await Channel.updateJikkyoStatus()
+
+# サーバー起動時と、その後は定期的に IPTV のプレイリストを取得する
+## キャッシュの有効期限が切れていなければ再取得されない
+@app.on_event('startup')
+@repeat_every(seconds=0.5 * 60, wait_first=1, logger=logging.logger)
+async def UpdateIPTVChannels():
+
+    # IPTV 機能が無効の場合は何もしない
+    if CONFIG.iptv.enabled is False:
+        return
+
+    # プレイリストを取得する
+    await IPTVUtil.RefreshChannels()
 
 # サーバーの終了時に実行する
 cleanup = False

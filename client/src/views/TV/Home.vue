@@ -17,6 +17,11 @@
                         </v-btn>
                         <div class="channels-tab__highlight"></div>
                     </div>
+                    <!-- テレビを見る UI から IPTV ページを開くための導線 -->
+                    <router-link v-ripple class="channels-tab__iptv" to="/iptv/">
+                        <Icon icon="fluent:live-20-regular" width="22px" />
+                        <span class="channels-tab__iptv-text">IPTV</span>
+                    </router-link>
                 </div>
                 <Swiper class="channels-list" :space-between="32" :auto-height="true" :touch-start-prevent-default="false"
                     :observer="true" :observe-parents="true"
@@ -113,6 +118,13 @@
             <div class="floating-button__content">
                 <Icon class="floating-button__icon" icon="fluent:calendar-20-regular" width="26px" />
                 <div class="floating-button__text">番組表</div>
+            </div>
+        </div>
+        <!-- テレビを見る UI から IPTV ページを開くための導線 (スマホ縦画面用) -->
+        <div v-ripple class="floating-button floating-button--iptv" @click="$router.push('/iptv/')">
+            <div class="floating-button__content">
+                <Icon class="floating-button__icon" icon="fluent:live-20-regular" width="26px" />
+                <div class="floating-button__text">IPTV</div>
             </div>
         </div>
     </div>
@@ -401,6 +413,40 @@ export default defineComponent({
                 transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.5, 1);
                 transform: translateX(calc(100% * var(--active-tab-index, 0)));
                 will-change: transform;
+            }
+        }
+
+        // テレビを見る UI から IPTV ページを開くボタン
+        // タブの中央寄せレイアウトを崩さないよう、絶対配置で右端に置く
+        .channels-tab__iptv {
+            display: flex;
+            align-items: center;
+            position: absolute;
+            right: 0;
+            top: 0;
+            height: 100%;
+            padding: 0 14px;
+            border-radius: 8px;
+            color: rgb(var(--v-theme-text-darken-1));
+            text-decoration: none;
+            cursor: pointer;
+            z-index: 6;
+            @include smartphone-horizontal {
+                padding: 0 10px;
+            }
+            @include smartphone-vertical {
+                // スマホ縦画面ではタブが横スクロールするため、フローティングボタンに任せる
+                display: none;
+            }
+
+            &:hover {
+                background: rgb(var(--v-theme-background-lighten-2));
+            }
+
+            &-text {
+                margin-left: 6px;
+                font-size: 15px;
+                font-weight: bold;
             }
         }
     }
@@ -1040,6 +1086,11 @@ export default defineComponent({
         font-size: 16px;
         font-weight: 500;
     }
+}
+
+// IPTV ボタンは番組表ボタンの上に重ねて表示する
+.floating-button--iptv {
+    bottom: calc(72px + 60px + env(safe-area-inset-bottom));
 }
 
 </style>
