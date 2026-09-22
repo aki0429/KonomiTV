@@ -17,6 +17,7 @@ from app.streams.LiveEncodingTask import LiveEncodingTask
 from app.streams.LivePSIDataArchiver import LivePSIDataArchiver
 from app.streams.StreamEncodingOptions import StreamEncodingOptions
 from app.utils.edcb.EDCBTuner import EDCBTuner
+from app.utils.IPTVUtil import GetChannelByDisplayChannelID
 
 
 class LiveStreamClient:
@@ -371,8 +372,14 @@ class LiveStream:
                 Config().general.always_receive_tv_from_mirakurun is False
             )
 
+            # IPTV の疑似チャンネルかどうか
+            ## IPTV の疑似チャンネルはチューナーを一切利用しないため、チューナーリソースの管理対象から除外する
+            ## 除外しないと IPTV のライブストリームに他チャンネルの EDCB チューナーが引き継がれてしまい、
+            ## 引き継がれた時点で切断済みのチューナーを検知してエンコードタスクを再起動し続ける (ER-05)
+            is_iptv_channel = GetChannelByDisplayChannelID(self.display_channel_id) is not None
+
             # EDCB バックエンドの場合は、再利用できるチューナーがあれば取得しておく
-            if should_start_task is True and is_edcb_backend is True:
+            if should_start_task is True and is_edcb_backend is True and is_iptv_channel is False:
 
                 # チューナー再利用の対象になりうる Standby / ONAir / Idling のストリームを探す
                 # (クライアントが 0 のもののみを対象にする)
@@ -470,7 +477,7 @@ class LiveStream:
             ## Mirakurun バックエンドではチューナーインスタンスの直接移譲はできないため、
             ## Idling ストリームを Offline にして Controller の自然終了 → Reader 内での HTTP セッション切断を通じて
             ## Mirakurun/mirakc 側でチューナーが解放されるのを待つ形になる
-            elif should_start_task is True and is_edcb_backend is False:
+            elif should_start_task is True and is_edcb_backend is False and is_iptv_channel is False:
 
                 # 画質切り替えなどタイミングの問題で Idling なストリームがない事もあるので、リトライする
                 ## ONAir (client_count == 0) のストリームが存在する場合、近いタイミングで Idling に遷移する可能性があるため
