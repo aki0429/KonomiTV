@@ -1,6 +1,7 @@
 
 import asyncio
 import pathlib
+import re
 import uuid
 from datetime import datetime, timedelta
 from typing import Annotated, BinaryIO
@@ -26,6 +27,7 @@ from PIL import Image
 from tortoise.exceptions import IntegrityError
 
 from app import logging, schemas
+from app.config import Config
 from app.constants import (
     ACCOUNT_ICON_DEFAULT_DIR,
     ACCOUNT_ICON_DIR,
@@ -138,6 +140,78 @@ async def GetCurrentUser(token: Annotated[str, Depends(OAuth2PasswordBearer(toke
         )
 
     return current_user
+
+
+# 未ログインユーザーを識別するための匿名 ID を保存する Cookie の名前
+ANONYMOUS_ID_COOKIE_NAME = 'KonomiTV-AnonymousID'
+
+# 匿名 ID の Cookie の有効期間 (秒)
+## 6ヶ月。サイトにアクセスする度にこの期間が延長される (スライディング期限)
+ANONYMOUS_ID_COOKIE_MAX_AGE = 60 * 60 * 24 * 30 * 6
+
+# 匿名 ID は UUID v4 の形式のものだけを受け付ける
+## クライアントから送られてきた任意の値をそのまま識別子にしないための対策
+_ANONYMOUS_ID_PATTERN = re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+
+
+def IsValidAnonymousID(anonymous_id: str) -> bool:
+    """
+    指定された文字列が匿名 ID として有効 (UUID v4 の形式) かを判定する。
+
+    Args:
+        anonymous_id (str): 判定する文字列
+
+    Returns:
+        bool: 有効なら True
+    """
+
+    return _ANONYMOUS_ID_PATTERN.match(anonymous_id.lower()) is not None
+
+
+async def ResolveUserKey(request: Request, response: Response) -> str:
+    """
+    API の呼び出し元を識別するキーを返す。
+
+    - ログイン中のユーザーがいる場合は 'user:{ユーザー ID}'
+    - 未ログインの場合は Cookie に保存された匿名 ID を使い 'anon:{匿名 ID}'
+
+    匿名 ID の Cookie がない (または不正な) 場合は新規に発行し、
+    アクセスの度に有効期限を 6ヶ月に延長する。
+
+    Args:
+        request (Request): FastAPI の Request オブジェクト
+        response (Response): FastAPI の Response オブジェクト (Cookie の設定に利用する)
+
+    Returns:
+        str: 呼び出し元を識別するキー
+    """
+
+    # ログイン中のユーザーがいればそのユーザー ID を使う
+    current_user = await GetOptionalCurrentUser(request)
+    if current_user is not None:
+        return f'user:{current_user.id}'
+
+    # ログインしていない場合は Cookie の匿名 ID を使う
+    ## Cookie がない場合や不正な値の場合は新規に発行する
+    anonymous_id = request.cookies.get(ANONYMOUS_ID_COOKIE_NAME)
+    if anonymous_id is None or IsValidAnonymousID(anonymous_id) is False:
+        anonymous_id = str(uuid.uuid4())
+
+    # Cookie を設定する (毎回呼ばれるため、アクセスの度に有効期限が6ヶ月延長される)
+    response.set_cookie(
+        key = ANONYMOUS_ID_COOKIE_NAME,
+        value = anonymous_id,
+        max_age = ANONYMOUS_ID_COOKIE_MAX_AGE,
+        expires = ANONYMOUS_ID_COOKIE_MAX_AGE,
+        path = '/',
+        # JavaScript からは参照する必要がないため HttpOnly にする
+        httponly = True,
+        # このアプリは常に HTTPS で利用される
+        secure = True,
+        # 開発環境ではクライアント (:7001) と API (:7000) が別オリジンになるため SameSite=None にする
+        samesite = 'none' if Config().general.debug is True else 'lax',
+    )
+    return f'anon:{anonymous_id}'
 
 
 async def GetOptionalCurrentUser(request: Request) -> User | None:

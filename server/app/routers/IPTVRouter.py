@@ -14,14 +14,18 @@ from typing import Annotated
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
+from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi.responses import (
+    FileResponse,
+    PlainTextResponse,
+    Response,
+    StreamingResponse,
+)
 
 from app import logging, schemas
 from app.config import Config
 from app.constants import LOGO_DIR
-from app.models.User import User
-from app.routers.UsersRouter import GetCurrentUser, GetOptionalCurrentUser
+from app.routers.UsersRouter import ResolveUserKey
 from app.utils import IPTVUtil
 
 
@@ -237,6 +241,7 @@ async def ProxyStream(url: str, range_header: str | None = None) -> StreamingRes
 )
 async def IPTVChannelsAPI(
     request: Request,
+    response: Response,
     country: Annotated[str | None, Query(description='国コード (ISO 3166-1 alpha-2) で絞り込む。')] = None,
     group: Annotated[str | None, Query(description='グループ名で絞り込む。')] = None,
     search: Annotated[str | None, Query(description='チャンネル名の部分一致キーワードで絞り込む。')] = None,
@@ -278,9 +283,10 @@ async def IPTVChannelsAPI(
 
     # ログイン中のユーザーを取得する
     ## テレビ視聴 UI への登録状態はユーザーごとに異なるため、ログインしていない場合はすべて未登録として扱う
-    current_user = await GetOptionalCurrentUser(request)
-    user_key = IPTVUtil.BuildUserKey(current_user.id if current_user is not None else None)
-    tvui_display_channel_ids = set(IPTVUtil.LoadTVUIChannelIDs(user_key)) if current_user is not None else set()
+    # 呼び出し元を識別するキーを取得する
+    ## ログイン中のユーザー、または Cookie の匿名 ID ごとに登録状態が分離される
+    user_key = await ResolveUserKey(request, response)
+    tvui_display_channel_ids = set(IPTVUtil.LoadTVUIChannelIDs(user_key))
 
     # ページ内のチャンネルを辞書に変換する
     channel_dicts: list[dict] = []
@@ -477,15 +483,17 @@ async def IPTVSourceDeleteAPI(
     response_model = schemas.IPTVTVUIChannels,
 )
 async def IPTVTVUIChannelsAPI(
-    current_user: Annotated[User, Depends(GetCurrentUser)],
+    request: Request,
+    response: Response,
 ):
     """
     テレビ視聴 UI (TV ホームの IPTV タブと /tv/watch/) に登録された IPTV チャンネルの一覧を取得する。
 
-    登録内容はユーザーごとに分離されており、他のユーザーの登録内容は返さない。
+    登録内容は呼び出し元 (ログイン中のユーザー、または Cookie の匿名 ID) ごとに分離されており、
+    他のユーザーの登録内容は返さない。
     """
 
-    return BuildTVUIResponse(IPTVUtil.BuildUserKey(current_user.id))
+    return BuildTVUIResponse(await ResolveUserKey(request, response))
 
 
 @router.post(
@@ -496,13 +504,14 @@ async def IPTVTVUIChannelsAPI(
 )
 async def IPTVTVUIRegisterAPI(
     payload: schemas.IPTVTVUIRegisterRequest,
-    current_user: Annotated[User, Depends(GetCurrentUser)],
+    request: Request,
+    response: Response,
 ):
     """
-    ログイン中のユーザーのテレビ視聴 UI に IPTV チャンネルを登録する。
+    呼び出し元 (ログイン中のユーザー、または Cookie の匿名 ID) のテレビ視聴 UI に IPTV チャンネルを登録する。
 
     登録したチャンネルは、TV ホームの「IPTV」タブと /tv/watch/{display_channel_id} で視聴できるようになる。
-    登録内容はユーザーごとに分離されており、server/data/iptv_tvui_channels.json に保存される。
+    登録内容は呼び出し元ごとに分離されており、server/data/iptv_tvui_channels.json に保存される。
     """
 
     if Config().iptv.enabled is False:
@@ -517,10 +526,10 @@ async def IPTVTVUIRegisterAPI(
             detail = 'Specified IPTV channel was not found.',
         )
 
-    # ログイン中のユーザーのテレビ視聴 UI に登録する
-    user_key = IPTVUtil.BuildUserKey(current_user.id)
+    # 呼び出し元のテレビ視聴 UI に登録する
+    user_key = await ResolveUserKey(request, response)
     IPTVUtil.RegisterTVUIChannel(user_key, payload.display_channel_id)
-    logging.info(f'IPTV channel registered to TV UI: {channel.name} ({payload.display_channel_id}) [user_id: {current_user.id}]')
+    logging.info(f'IPTV channel registered to TV UI: {channel.name} ({payload.display_channel_id}) [user_key: {user_key}]')
 
     return BuildTVUIResponse(user_key)
 
@@ -533,13 +542,14 @@ async def IPTVTVUIRegisterAPI(
 )
 async def IPTVTVUIUnregisterAPI(
     display_channel_id: Annotated[str, Query(description='登録解除する IPTV チャンネルの display_channel_id。')],
-    current_user: Annotated[User, Depends(GetCurrentUser)],
+    request: Request,
+    response: Response,
 ):
     """
-    ログイン中のユーザーのテレビ視聴 UI から、IPTV チャンネルの登録を解除する。
+    呼び出し元 (ログイン中のユーザー、または Cookie の匿名 ID) のテレビ視聴 UI から、IPTV チャンネルの登録を解除する。
     """
 
-    user_key = IPTVUtil.BuildUserKey(current_user.id)
+    user_key = await ResolveUserKey(request, response)
     IPTVUtil.UnregisterTVUIChannel(user_key, display_channel_id)
     return BuildTVUIResponse(user_key)
 
