@@ -902,6 +902,8 @@ class IPTVChannel(BaseModel):
     is_tvui_registered: bool = False
     # 元配信の画質 (最も高画質なバリアントの画質名。取得できなかった場合は None)
     source_quality: str | None = None
+    # チャンネル名から推定した画質 (例: 'NHK World-Japan (1080p)' の '1080p')
+    quality_hint: str | None = None
     # 元配信の映像コーデックの表示名 (例: 'H.264'。取得できなかった場合は None)
     source_codec: str | None = None
     # 元配信で配信されている画質 (バリアント) の一覧 (解像度の高い順)

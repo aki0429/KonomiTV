@@ -94,8 +94,13 @@
                                     {{ channel.name }}
                                 </div>
                                 <div class="iptv-channel-card__meta">
-                                    <span v-if="channel.source_quality !== null" class="iptv-channel-card__badge iptv-channel-card__badge--quality">
+                                    <span v-if="channel.source_quality !== null" class="iptv-channel-card__badge iptv-channel-card__badge--quality"
+                                        title="元配信の画質 (実際のストリームから検出)">
                                         {{ channel.source_quality }}
+                                    </span>
+                                    <span v-else-if="channel.quality_hint !== null" class="iptv-channel-card__badge"
+                                        title="プレイリストのチャンネル名から推定した画質">
+                                        {{ channel.quality_hint }}
                                     </span>
                                     <span v-if="channel.source_codec !== null" class="iptv-channel-card__badge">{{ channel.source_codec }}</span>
                                     <span v-if="channel.group !== null" class="iptv-channel-card__group">{{ channel.group }}</span>
@@ -106,7 +111,8 @@
                                 </div>
                             </div>
                             <!-- 画質の選択 (元配信の画質に応じた選択肢を提示する) -->
-                            <div class="iptv-channel-card__quality" v-if="qualityOptions(channel).length > 0" @click.stop>
+                            <div class="iptv-channel-card__quality" @click.stop>
+                                <span class="iptv-channel-card__quality-label">画質</span>
                                 <v-select class="iptv-channel-card__quality-select" color="primary"
                                     bg-color="background" variant="solo" density="compact" hide-details
                                     :items="qualityOptions(channel)" item-title="title" item-value="value"
@@ -398,8 +404,10 @@ async function refreshAll(): Promise<void> {
 /**
  * チャンネルで選択できる画質の一覧を返す
  *
- * 元配信で配信されている画質のうち、映像の高さが元配信の最大の高さ以下のものを提示する
+ * 元配信の画質が検出できている場合は、映像の高さが元配信の最大の高さ以下のものを提示する
  * (元配信より高い画質を選んでも、拡大されるだけで意味がないため) 。
+ * 検出できていない場合 (配信停止・地域制限など) は、配信側の画質が不明なためすべての画質を提示する
+ * (いずれの場合も、実際の変換は KonomiTV サーバーのエンコーダーが行う) 。
  *
  * @param channel 対象のチャンネル
  * @returns 画質の選択肢
@@ -415,7 +423,8 @@ function qualityOptions(channel: IIPTVChannel): {title: string; value: string}[]
 /**
  * チャンネルで選択されている画質を返す
  *
- * 未選択の場合は元配信の画質 (画質名が一致しない場合は最も高い画質) を返す。
+ * 未選択の場合は元配信の画質、検出できていない場合はチャンネル名から推定した画質を使い、
+ * それも使えない場合は最も高い画質を返す。
  *
  * @param channel 対象のチャンネル
  * @returns 選択されている画質の名前
@@ -427,8 +436,10 @@ function selectedQuality(channel: IIPTVChannel): string {
     if (selected !== undefined && options.some((option) => option.value === selected)) {
         return selected;
     }
-    if (channel.source_quality !== null && options.some((option) => option.value === channel.source_quality)) {
-        return channel.source_quality;
+    for (const default_quality of [channel.source_quality, channel.quality_hint]) {
+        if (default_quality !== null && options.some((option) => option.value === default_quality)) {
+            return default_quality;
+        }
     }
     return options[0]?.value ?? '1080p';
 }
@@ -813,10 +824,17 @@ onMounted(async () => {
     display: flex;
     flex-shrink: 0;
     align-items: center;
-    width: 104px;
+    gap: 4px;
+    width: 132px;
     @include smartphone-vertical {
         display: none;
     }
+}
+
+.iptv-channel-card__quality-label {
+    flex-shrink: 0;
+    font-size: 11px;
+    opacity: 0.7;
 }
 
 .iptv-channel-card__quality-select {

@@ -88,6 +88,9 @@ _HEIGHT_TO_QUALITY_NAME: list[tuple[int, str]] = [
     (240, '240p'),
 ]
 
+# チャンネル名に含まれる画質 (例: '1080p') を抽出するための正規表現
+_NAME_QUALITY_PATTERN = re.compile(r'[\[\uff08(]\s*(\d{3,4}[pi])\s*[\]\uff09)]')
+
 # プレイリストの URL (例: ".../countries/jp.m3u") から国コードを抽出するための正規表現
 _SOURCE_URL_COUNTRY_PATTERN = re.compile(r'/countries/([A-Za-z]{2})\.m3u', re.IGNORECASE)
 
@@ -749,6 +752,9 @@ def ChannelToDict(channel: IPTVChannel) -> dict:
     """チャンネル情報を、API レスポンス用の辞書に変換する。"""
 
     data = asdict(channel)
+    # チャンネル名から推定した画質
+    ## ストリームにアクセスできないチャンネルでも画質を提示できるようにする
+    data['quality_hint'] = ParseQualityFromName(channel.name)
     # ストリームの URL はそのままクライアントに公開せず、プロキシ経由の URL に置き換える
     data['stream_url'] = BuildProxyURL(channel.url)
     data['stream_type'] = DetectStreamType(channel.url)
@@ -1086,6 +1092,24 @@ def ChannelToLiveChannelDict(channel: IPTVChannel) -> dict:
 
 
 # ***** 元配信の画質の検出 *****
+
+
+def ParseQualityFromName(name: str) -> str | None:
+    """
+    チャンネル名に含まれる画質 (例: 'NHK World-Japan (1080p)' の '1080p') を抽出する。
+
+    iptv-org のプレイリストのチャンネル名には配信品質が含まれていることが多く、
+    ストリームにアクセスできないチャンネル (地域制限・配信停止など) でも画質の目安になる。
+
+    Args:
+        name (str): チャンネル名
+
+    Returns:
+        str | None: 画質名 (見つからなかった場合は None)
+    """
+
+    matched = _NAME_QUALITY_PATTERN.search(name)
+    return matched.group(1).lower() if matched is not None else None
 
 
 def BuildQualityName(height: int | None) -> str | None:

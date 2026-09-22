@@ -32,6 +32,8 @@ export interface IIPTVChannel {
     source_codec: string | null;
     // 元配信で配信されている画質 (バリアント) の一覧 (解像度の高い順)
     qualities: IIPTVQuality[];
+    // チャンネル名から推定した画質 (例: 'NHK World-Japan (1080p)' の '1080p')
+    quality_hint: string | null;
 }
 
 /** IPTV の元配信の画質を表すインターフェイス (サーバー側の IPTVQuality に対応) */
