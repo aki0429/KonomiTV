@@ -23,6 +23,7 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `GET /api/channels` (チャンネル一覧) | 🔁 Python 版へプロキシ (視聴者数と IPTV 疑似チャンネルが Python プロセスのメモリに依存) |
 | `GET /api/programs/timetable` (番組表) | ✅ Go 実装済み (EDCB バックエンドの予約情報は未対応) |
 | `POST /api/programs/search` (番組検索) | ✅ Go 実装済み (EDCB 以外は 422 を返し、EDCB 時は Python 版へプロキシ) |
+| `GET /api/series`・`GET /api/series/search`・`GET /api/series/{series_id}` (シリーズ番組) | ✅ Go 実装済み (録画番組・録画ファイル・チャンネルまで展開) |
 | `/assets/*`・`/` (client/dist の静的配信、SPA フォールバック) | ✅ Go 実装済み |
 | CORS (Starlette 互換) | ✅ Go 実装済み |
 | その他の全 API | 🔁 Python 版へプロキシ |
@@ -100,7 +101,6 @@ go vet ./...
 ## 今後の予定
 
 1. IPTV ルーター (`IPTVRouter` / `IPTVUtil`) の移行 (チャンネル一覧の視聴者数・IPTV 疑似チャンネルも含む)
-2. Series (シリーズ番組) の移行
-3. 書き込み系 API (予約・設定など) の移行
-4. ストリーミング (LiveStream / VideoStream) とエンコーダー制御の Go 化
-5. 完全移行後に `-listen 127.0.0.77:7010` で Python 版を置き換え
+2. 書き込み系 API (予約・設定など) の移行
+3. ストリーミング (LiveStream / VideoStream) とエンコーダー制御の Go 化
+4. 完全移行後に `-listen 127.0.0.77:7010` で Python 版を置き換え

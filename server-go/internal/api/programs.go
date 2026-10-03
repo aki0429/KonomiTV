@@ -23,24 +23,6 @@ type timeTableSubchannelGroupKey struct {
 // channelNumberPattern はチャンネル番号 (枝番つき) のパターン。
 var channelNumberPattern = regexp.MustCompile(`^(\d+)(?:-(\d+))?$`)
 
-// timeTableChannelResponse は schemas.Channel 互換のレスポンス (terrestrial_regions は常に null) 。
-type timeTableChannelResponse struct {
-	ID                string `json:"id"`
-	DisplayChannelID  string `json:"display_channel_id"`
-	NetworkID         int    `json:"network_id"`
-	ServiceID         int    `json:"service_id"`
-	TransportStreamID *int   `json:"transport_stream_id"`
-	RemoconID         int    `json:"remocon_id"`
-	ChannelNumber     string `json:"channel_number"`
-	Type              string `json:"type"`
-	Name              string `json:"name"`
-	TerrestrialRegion any    `json:"terrestrial_regions"`
-	JikkyoForce       *int   `json:"jikkyo_force"`
-	IsSubchannel      bool   `json:"is_subchannel"`
-	IsRadiochannel    bool   `json:"is_radiochannel"`
-	IsWatchable       bool   `json:"is_watchable"`
-}
-
 // timeTableProgramResponse は schemas.TimeTableProgram 互換のレスポンス。
 type timeTableProgramResponse struct {
 	programResponse
@@ -56,13 +38,13 @@ type timeTableProgramReservationResponse struct {
 
 // timeTableSubchannelResponse は schemas.TimeTableSubchannel 互換のレスポンス。
 type timeTableSubchannelResponse struct {
-	Channel  timeTableChannelResponse   `json:"channel"`
+	Channel  channelResponse            `json:"channel"`
 	Programs []timeTableProgramResponse `json:"programs"`
 }
 
 // timeTableChannelEntry は schemas.TimeTableChannel 互換のレスポンス。
 type timeTableChannelEntry struct {
-	Channel     timeTableChannelResponse      `json:"channel"`
+	Channel     channelResponse               `json:"channel"`
 	Programs    []timeTableProgramResponse    `json:"programs"`
 	Subchannels []timeTableSubchannelResponse `json:"subchannels"`
 }
@@ -306,7 +288,7 @@ func (s *Server) handleProgramTimeTable(w http.ResponseWriter, r *http.Request) 
 				subPrograms := programsByChannel[subChannel.ID]
 				if len(subPrograms) > 0 {
 					subchannels = append(subchannels, timeTableSubchannelResponse{
-						Channel:  buildTimeTableChannelResponse(subChannel),
+						Channel:  dereferenceChannelResponse(buildChannelResponse(&subChannel)),
 						Programs: subPrograms,
 					})
 				}
@@ -314,7 +296,7 @@ func (s *Server) handleProgramTimeTable(w http.ResponseWriter, r *http.Request) 
 		}
 
 		resultChannels = append(resultChannels, timeTableChannelEntry{
-			Channel:     buildTimeTableChannelResponse(channel),
+			Channel:     dereferenceChannelResponse(buildChannelResponse(&channel)),
 			Programs:    programsList,
 			Subchannels: subchannels,
 		})
@@ -327,27 +309,6 @@ func (s *Server) handleProgramTimeTable(w http.ResponseWriter, r *http.Request) 
 			Latest:   database.FormatJSONTime(latest),
 		},
 	})
-}
-
-// buildTimeTableChannelResponse は Channel から schemas.Channel 互換のレスポンスを構築する。
-// 番組表では terrestrial_regions を設定しないため常に null になる。
-func buildTimeTableChannelResponse(channel database.Channel) timeTableChannelResponse {
-	return timeTableChannelResponse{
-		ID:                channel.ID,
-		DisplayChannelID:  channel.DisplayChannelID,
-		NetworkID:         channel.NetworkID,
-		ServiceID:         channel.ServiceID,
-		TransportStreamID: channel.TransportStreamID,
-		RemoconID:         channel.RemoconID,
-		ChannelNumber:     channel.ChannelNumber,
-		Type:              channel.Type,
-		Name:              channel.Name,
-		TerrestrialRegion: nil,
-		JikkyoForce:       channel.JikkyoForce,
-		IsSubchannel:      channel.IsSubchannel,
-		IsRadiochannel:    channel.IsRadiochannel,
-		IsWatchable:       channel.IsWatchable,
-	}
 }
 
 // timeTableChannelSortKey は番組表で利用するチャンネルの並び替えキー。

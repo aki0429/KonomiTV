@@ -107,6 +107,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/programs/search", s.handleProgramSearch)
 	mux.HandleFunc("GET /api/programs/timetable", s.handleProgramTimeTable)
 
+	// シリーズ番組
+	mux.HandleFunc("GET /api/series", s.handleSeriesList)
+	mux.HandleFunc("GET /api/series/search", s.handleSeriesSearch)
+	mux.HandleFunc("GET /api/series/{series_id}", s.handleSeries)
+
 	// ***** 静的ファイル *****
 	// Python 版の app.mount('/assets', StaticFiles(...)) 相当
 	mux.HandleFunc("/assets/", s.handleAssets)

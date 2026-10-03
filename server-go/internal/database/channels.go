@@ -247,3 +247,32 @@ func GetCurrentAndNextProgram(ctx context.Context, db *sql.DB, channelID string)
 
 	return present, following, nil
 }
+
+// ListChannelsByIDs は指定された ID のチャンネルを取得する (存在しない ID は無視する) 。
+func ListChannelsByIDs(ctx context.Context, db *sql.DB, channelIDs []string) (map[string]Channel, error) {
+	result := map[string]Channel{}
+	if len(channelIDs) == 0 {
+		return result, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(channelIDs)), ",")
+	args := make([]any, 0, len(channelIDs))
+	for _, channelID := range channelIDs {
+		args = append(args, channelID)
+	}
+	rows, err := db.QueryContext(ctx, `SELECT`+channelColumns+`FROM channels WHERE id IN (`+placeholders+`)`, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list channels by ids: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		channel, err := scanChannel(rows.Scan)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan channel row: %w", err)
+		}
+		result[channel.ID] = *channel
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate channel rows: %w", err)
+	}
+	return result, nil
+}
