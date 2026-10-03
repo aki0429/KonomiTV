@@ -23,6 +23,7 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/config"
 	"github.com/aki0429/KonomiTV/server-go/internal/constants"
 	"github.com/aki0429/KonomiTV/server-go/internal/database"
+	"github.com/aki0429/KonomiTV/server-go/internal/iptv"
 )
 
 func main() {
@@ -100,6 +101,19 @@ func main() {
 
 	// ***** HTTP サーバーの起動 *****
 
+	iptvManager := iptv.New(iptv.Options{
+		Config:  cfg,
+		DataDir: paths.DataDir,
+		Logger:  logger,
+	})
+	// 起動時に IPTV チャンネル一覧を取得しておく (Python 版 app.py の IPTVUtil.RefreshChannels() 相当)
+	// プレイリストの取得に時間がかかるため、サーバーの起動をブロックしないようにバックグラウンドで実行する
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		iptvManager.Refresh(ctx, false)
+	}()
+
 	server, err := api.New(api.Options{
 		Config:           cfg,
 		Paths:            paths,
@@ -107,6 +121,7 @@ func main() {
 		WriteDB:          writeDB,
 		Auth:             authManager,
 		Logger:           logger,
+		IPTV:             iptvManager,
 		PythonBackendURL: backendURL,
 	})
 	if err != nil {

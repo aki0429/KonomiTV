@@ -1,0 +1,727 @@
+{
+  "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+  "playlist": "#EXTM3U\n#EXTINF:-1 tvg-id=\"NHKWorldJapan.jp@SD\" tvg-logo=\"https://example.com/nhk.png\" group-title=\"News\",NHK World-Japan (1080p)\nhttps://example.com/nhk/index.m3u8\n#EXTINF:-1 tvg-country=\"US;GB\" http-user-agent=\"CustomAgent/1.0\",Some US Channel\nhttps://example.com/us.ts\n#EXTGRP:Music\n#EXTVLCOPT:http-referrer=https://example.com/\n#EXTINF:-1,Music Channel [Geo-blocked]\nrelative/stream.m3u8\n#EXTINF:-1 tvg-name=\"Fallback Name\", \nhttps://example.com/dup.m3u8\nhttps://example.com/dup.m3u8\n#EXTINF:-1,Raw URL Only\n?token=abc&x=1\n#EXTINF:-1 tvg-language=\"ja\" tvg-logo=\"\",MP4 Channel\nhttps://example.com/video.mp4?a=1&hls=1\n#EXTINF:-1 group-title=\"News\" tvg-id=\"Invalid.toolong\",Comma, in name, with (720p)\nhttps://example.com/comma.m3u8\n#EXTINF:-1 tvg-country=\"jp\",Lowercase Country\n#EXTGRP:Music\n#EXTVLCOPT:http-user-agent=ExtVlcAgent/2.0\n#EXTVLCOPT:http-referrer=https://music.example.com/\nhttps://example.com/music/index.m3u8\n#EXTINF:-1 tvg-country=\"\",Empty Country\nhttps://example.com/empty.m3u8\n#EXTINF:-1 tvg-id=\"Foo.us\",US by tvg-id\nhttps://example.com/byid.m3u8\nhttps://example.com/bare-url.ts\n#EXTINF:-1,Bare Relative\nstream.ts\n",
+  "countries": {
+    "JP": {
+      "name": "Japan",
+      "flag": "🇯🇵"
+    },
+    "US": {
+      "name": "United States",
+      "flag": "🇺🇸"
+    },
+    "GB": {
+      "name": "United Kingdom",
+      "flag": "🇬🇧"
+    }
+  },
+  "channels": [
+    {
+      "id": "324db0c983409bc1",
+      "name": "NHK World-Japan (1080p)",
+      "logo_url": "https://example.com/nhk.png",
+      "group": "News",
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": "NHKWorldJapan.jp@SD",
+      "language": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "quality_hint": "1080p",
+      "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fnhk%2Findex.m3u8",
+      "stream_type": "HLS",
+      "is_hls": true,
+      "display_channel_id": "iptv226546728415005116"
+    },
+    {
+      "id": "3000391e834f953b",
+      "name": "Some US Channel",
+      "logo_url": null,
+      "group": null,
+      "country": "US",
+      "country_name": "United States",
+      "country_flag": "🇺🇸",
+      "tvg_id": null,
+      "language": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "quality_hint": null,
+      "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fus.ts",
+      "stream_type": "MPEGTS",
+      "is_hls": false,
+      "display_channel_id": "iptv216176707314710867"
+    },
+    {
+      "id": "bb514774790b8622",
+      "name": "Music Channel [Geo-blocked]",
+      "logo_url": null,
+      "group": null,
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": null,
+      "is_geo_blocked": true,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "quality_hint": null,
+      "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fiptv-org.github.io%2Fiptv%2Fcountries%2Frelative%2Fstream.m3u8",
+      "stream_type": "HLS",
+      "is_hls": true,
+      "display_channel_id": "iptv843603007736166498"
+    },
+    {
+      "id": "90ebe0dd4dc0ae64",
+      "name": "Fallback Name",
+      "logo_url": null,
+      "group": null,
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "quality_hint": null,
+      "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fdup.m3u8",
+      "stream_type": "HLS",
+      "is_hls": true,
+      "display_channel_id": "iptv652667962630343398"
+    },
+    {
+      "id": "4582ce8f1ca54fd4",
+      "name": "Raw URL Only",
+      "logo_url": null,
+      "group": null,
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "quality_hint": null,
+      "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fiptv-org.github.io%2Fiptv%2Fcountries%2Fjp.m3u%3Ftoken%3Dabc%26x%3D1",
+      "stream_type": "Other",
+      "is_hls": false,
+      "display_channel_id": "iptv313049553102853373"
+    },
+    {
+      "id": "5745e94046fac473",
+      "name": "MP4 Channel",
+      "logo_url": null,
+      "group": null,
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": "ja",
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "quality_hint": null,
+      "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fvideo.mp4%3Fa%3D1%26hls%3D1",
+      "stream_type": "HLS",
+      "is_hls": true,
+      "display_channel_id": "iptv393043057310673991"
+    },
+    {
+      "id": "6227e8f2776f9e8c",
+      "name": "Comma, in name, with (720p)",
+      "logo_url": null,
+      "group": "News",
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": "Invalid.toolong",
+      "language": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "quality_hint": "720p",
+      "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fcomma.m3u8",
+      "stream_type": "HLS",
+      "is_hls": true,
+      "display_channel_id": "iptv442054866743261672"
+    },
+    {
+      "id": "6b4c6cd0ceb831ac",
+      "name": "Lowercase Country",
+      "logo_url": null,
+      "group": "Music",
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "quality_hint": null,
+      "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fmusic%2Findex.m3u8",
+      "stream_type": "HLS",
+      "is_hls": true,
+      "display_channel_id": "iptv483229644022842138"
+    },
+    {
+      "id": "a6d53cf635455122",
+      "name": "Empty Country",
+      "logo_url": null,
+      "group": null,
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "quality_hint": null,
+      "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fempty.m3u8",
+      "stream_type": "HLS",
+      "is_hls": true,
+      "display_channel_id": "iptv751348863030547730"
+    },
+    {
+      "id": "17c4cea489e08035",
+      "name": "US by tvg-id",
+      "logo_url": null,
+      "group": null,
+      "country": "US",
+      "country_name": "United States",
+      "country_flag": "🇺🇸",
+      "tvg_id": "Foo.us",
+      "language": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "quality_hint": null,
+      "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fbyid.m3u8",
+      "stream_type": "HLS",
+      "is_hls": true,
+      "display_channel_id": "iptv107045060274423811"
+    },
+    {
+      "id": "84c5489afaff59a9",
+      "name": "example.com",
+      "logo_url": null,
+      "group": null,
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "quality_hint": null,
+      "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fbare-url.ts",
+      "stream_type": "MPEGTS",
+      "is_hls": false,
+      "display_channel_id": "iptv597945800868230554"
+    },
+    {
+      "id": "ac1c9586266ff1d6",
+      "name": "Bare Relative",
+      "logo_url": null,
+      "group": null,
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "quality_hint": null,
+      "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fiptv-org.github.io%2Fiptv%2Fcountries%2Fstream.ts",
+      "stream_type": "MPEGTS",
+      "is_hls": false,
+      "display_channel_id": "iptv775121992329658141"
+    }
+  ],
+  "raw_channels": [
+    {
+      "id": "324db0c983409bc1",
+      "name": "NHK World-Japan (1080p)",
+      "url": "https://example.com/nhk/index.m3u8",
+      "logo_url": "https://example.com/nhk.png",
+      "group": "News",
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": "NHKWorldJapan.jp@SD",
+      "language": null,
+      "user_agent": null,
+      "referrer": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+    },
+    {
+      "id": "3000391e834f953b",
+      "name": "Some US Channel",
+      "url": "https://example.com/us.ts",
+      "logo_url": null,
+      "group": null,
+      "country": "US",
+      "country_name": "United States",
+      "country_flag": "🇺🇸",
+      "tvg_id": null,
+      "language": null,
+      "user_agent": "CustomAgent/1.0",
+      "referrer": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+    },
+    {
+      "id": "bb514774790b8622",
+      "name": "Music Channel [Geo-blocked]",
+      "url": "https://iptv-org.github.io/iptv/countries/relative/stream.m3u8",
+      "logo_url": null,
+      "group": null,
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": null,
+      "user_agent": null,
+      "referrer": null,
+      "is_geo_blocked": true,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+    },
+    {
+      "id": "90ebe0dd4dc0ae64",
+      "name": "Fallback Name",
+      "url": "https://example.com/dup.m3u8",
+      "logo_url": null,
+      "group": null,
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": null,
+      "user_agent": null,
+      "referrer": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+    },
+    {
+      "id": "4582ce8f1ca54fd4",
+      "name": "Raw URL Only",
+      "url": "https://iptv-org.github.io/iptv/countries/jp.m3u?token=abc&x=1",
+      "logo_url": null,
+      "group": null,
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": null,
+      "user_agent": null,
+      "referrer": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+    },
+    {
+      "id": "5745e94046fac473",
+      "name": "MP4 Channel",
+      "url": "https://example.com/video.mp4?a=1&hls=1",
+      "logo_url": null,
+      "group": null,
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": "ja",
+      "user_agent": null,
+      "referrer": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+    },
+    {
+      "id": "6227e8f2776f9e8c",
+      "name": "Comma, in name, with (720p)",
+      "url": "https://example.com/comma.m3u8",
+      "logo_url": null,
+      "group": "News",
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": "Invalid.toolong",
+      "language": null,
+      "user_agent": null,
+      "referrer": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+    },
+    {
+      "id": "6b4c6cd0ceb831ac",
+      "name": "Lowercase Country",
+      "url": "https://example.com/music/index.m3u8",
+      "logo_url": null,
+      "group": "Music",
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": null,
+      "user_agent": "ExtVlcAgent/2.0",
+      "referrer": "https://music.example.com/",
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+    },
+    {
+      "id": "a6d53cf635455122",
+      "name": "Empty Country",
+      "url": "https://example.com/empty.m3u8",
+      "logo_url": null,
+      "group": null,
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": null,
+      "user_agent": null,
+      "referrer": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+    },
+    {
+      "id": "17c4cea489e08035",
+      "name": "US by tvg-id",
+      "url": "https://example.com/byid.m3u8",
+      "logo_url": null,
+      "group": null,
+      "country": "US",
+      "country_name": "United States",
+      "country_flag": "🇺🇸",
+      "tvg_id": "Foo.us",
+      "language": null,
+      "user_agent": null,
+      "referrer": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+    },
+    {
+      "id": "84c5489afaff59a9",
+      "name": "example.com",
+      "url": "https://example.com/bare-url.ts",
+      "logo_url": null,
+      "group": null,
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": null,
+      "user_agent": null,
+      "referrer": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+    },
+    {
+      "id": "ac1c9586266ff1d6",
+      "name": "Bare Relative",
+      "url": "https://iptv-org.github.io/iptv/countries/stream.ts",
+      "logo_url": null,
+      "group": null,
+      "country": "JP",
+      "country_name": "Japan",
+      "country_flag": "🇯🇵",
+      "tvg_id": null,
+      "language": null,
+      "user_agent": null,
+      "referrer": null,
+      "is_geo_blocked": false,
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+    }
+  ],
+  "tvui_registry_json": "{\n  \"user:1\": [\n    \"iptv1\",\n    \"iptv2\"\n  ],\n  \"anon:00000000-0000-0000-0000-000000000000\": []\n}",
+  "user_sources_json": "[\n  \"https://example.com/a.m3u\",\n  \"https://example.com/b.m3u\"\n]",
+  "display_channel_ids": {
+    "https://example.com/nhk/index.m3u8": "iptv226546728415005116",
+    "https://example.com/us.ts": "iptv216176707314710867",
+    "https://iptv-org.github.io/iptv/countries/relative/stream.m3u8": "iptv843603007736166498",
+    "https://example.com/dup.m3u8": "iptv652667962630343398",
+    "https://iptv-org.github.io/iptv/countries/jp.m3u?token=abc&x=1": "iptv313049553102853373",
+    "https://example.com/video.mp4?a=1&hls=1": "iptv393043057310673991",
+    "https://example.com/comma.m3u8": "iptv442054866743261672",
+    "https://example.com/music/index.m3u8": "iptv483229644022842138",
+    "https://example.com/empty.m3u8": "iptv751348863030547730",
+    "https://example.com/byid.m3u8": "iptv107045060274423811",
+    "https://example.com/bare-url.ts": "iptv597945800868230554",
+    "https://iptv-org.github.io/iptv/countries/stream.ts": "iptv775121992329658141"
+  },
+  "proxy_urls": {
+    "https://example.com/nhk/index.m3u8": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fnhk%2Findex.m3u8",
+    "https://example.com/us.ts": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fus.ts",
+    "https://iptv-org.github.io/iptv/countries/relative/stream.m3u8": "/api/iptv/proxy?url=https%3A%2F%2Fiptv-org.github.io%2Fiptv%2Fcountries%2Frelative%2Fstream.m3u8",
+    "https://example.com/dup.m3u8": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fdup.m3u8",
+    "https://iptv-org.github.io/iptv/countries/jp.m3u?token=abc&x=1": "/api/iptv/proxy?url=https%3A%2F%2Fiptv-org.github.io%2Fiptv%2Fcountries%2Fjp.m3u%3Ftoken%3Dabc%26x%3D1",
+    "https://example.com/video.mp4?a=1&hls=1": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fvideo.mp4%3Fa%3D1%26hls%3D1",
+    "https://example.com/comma.m3u8": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fcomma.m3u8",
+    "https://example.com/music/index.m3u8": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fmusic%2Findex.m3u8",
+    "https://example.com/empty.m3u8": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fempty.m3u8",
+    "https://example.com/byid.m3u8": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fbyid.m3u8",
+    "https://example.com/bare-url.ts": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fbare-url.ts",
+    "https://iptv-org.github.io/iptv/countries/stream.ts": "/api/iptv/proxy?url=https%3A%2F%2Fiptv-org.github.io%2Fiptv%2Fcountries%2Fstream.ts"
+  },
+  "quality_names": {
+    "NHK World-Japan (1080p)": "1080p",
+    "NHK World-Japan [720p]": "720p",
+    "NHK World-Japan （480i）": "480i",
+    "No Quality": null,
+    "Almost 1080": null,
+    "4K (2160p)": "2160p"
+  },
+  "hls_master_qualities": {
+    "qualities": [
+      {
+        "name": "2160p",
+        "width": 3840,
+        "height": 2160,
+        "bandwidth": 12800000
+      },
+      {
+        "name": "1080p",
+        "width": 1920,
+        "height": 1080,
+        "bandwidth": 9000000
+      },
+      {
+        "name": "360p",
+        "width": 640,
+        "height": 360,
+        "bandwidth": 1280000
+      },
+      {
+        "name": null,
+        "width": null,
+        "height": null,
+        "bandwidth": 800000
+      }
+    ],
+    "codec": "H.264"
+  },
+  "hls_media_qualities": {
+    "qualities": [],
+    "codec": null
+  },
+  "rewritten_master": "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1280000,RESOLUTION=640x360,CODECS=\"avc1.4d401f,mp4a.40.2\"\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Flive%2F360p.m3u8\n#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=12800000,RESOLUTION=3840x2160,CODECS=\"hvc1.1.6.L150.90\"\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Flive%2F2160p.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Flive%2F1080p.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=9000000,RESOLUTION=1920x1080,CODECS=\"av01.0.08M.08\"\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Flive%2F1080p-high.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=800000\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Flive%2F240p.m3u8\n",
+  "rewritten_media": "#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI=\"/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Flive%2Fout%2Fkey.bin\",IV=0x1\n#EXT-X-MAP:URI=\"/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Flive%2Fout%2Finit.mp4\"\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Flive%2Fout%2Fseg1.ts\n\n",
+  "normalize_urls": [
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "c.m3u8",
+      "expected": "https://example.com/a/c.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "/c.m3u8",
+      "expected": "https://example.com/c.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "https://other.com/d.m3u8",
+      "expected": "https://other.com/d.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "//other.com/d.m3u8",
+      "expected": "https://other.com/d.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "?x=1",
+      "expected": "https://example.com/a/b.m3u8?x=1"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "#frag",
+      "expected": "https://example.com/a/b.m3u8#frag"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "",
+      "expected": "https://example.com/a/b.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": " c.m3u8 ",
+      "expected": "https://example.com/a/c.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "../c.m3u8",
+      "expected": "https://example.com/c.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "./c.m3u8",
+      "expected": "https://example.com/a/c.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "../../../../c.m3u8",
+      "expected": "https://example.com/c.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "x/./y/../z.m3u8",
+      "expected": "https://example.com/a/x/z.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "//other.com//double//slash.m3u8",
+      "expected": "https://other.com//double//slash.m3u8"
+    },
+    {
+      "base": "https://example.com/a//b/c.m3u8",
+      "target": "d.m3u8",
+      "expected": "https://example.com/a/b/d.m3u8"
+    },
+    {
+      "base": "https://example.com/ssh101/ssh101/Cosmovisión/playlist.m3u8",
+      "target": "chunk.m3u8",
+      "expected": "https://example.com/ssh101/ssh101/Cosmovisión/chunk.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "chunk.m3u8;session=abc",
+      "expected": "https://example.com/a/chunk.m3u8;session=abc"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8?token=1",
+      "target": "c.m3u8",
+      "expected": "https://example.com/a/c.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8?token=1",
+      "target": "?other=2",
+      "expected": "https://example.com/a/b.m3u8?other=2"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8?token=1",
+      "target": "",
+      "expected": "https://example.com/a/b.m3u8?token=1"
+    },
+    {
+      "base": "http://146.88.62.69:1935/Transcoder/มายาHD.stream_576p/playlist.m3u8",
+      "target": "seg.ts",
+      "expected": "http://146.88.62.69:1935/Transcoder/มายาHD.stream_576p/seg.ts"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "rtmp://example.com/live",
+      "expected": "rtmp://example.com/live"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "https:relative.m3u8",
+      "expected": "https://example.com/a/relative.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "mailto:a@b.c",
+      "expected": "mailto:a@b.c"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "x y.m3u8",
+      "expected": "https://example.com/a/x y.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "x%20y.m3u8",
+      "expected": "https://example.com/a/x%20y.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "/a/../b.m3u8",
+      "expected": "https://example.com/b.m3u8"
+    },
+    {
+      "base": "https://example.com",
+      "target": "c.m3u8",
+      "expected": "https://example.com/c.m3u8"
+    },
+    {
+      "base": "https://example.com",
+      "target": "/c.m3u8",
+      "expected": "https://example.com/c.m3u8"
+    },
+    {
+      "base": "https://example.com/",
+      "target": "c.m3u8",
+      "expected": "https://example.com/c.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "..",
+      "expected": "https://example.com/"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": ".",
+      "expected": "https://example.com/a/"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "HTTPS://Other.com/D.M3U8",
+      "expected": "https://Other.com/D.M3U8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "http://other.com/d.m3u8",
+      "expected": "http://other.com/d.m3u8"
+    },
+    {
+      "base": "https://example.com/a/b.m3u8",
+      "target": "//other.com",
+      "expected": "https://other.com"
+    },
+    {
+      "base": "https://example.com:8443/a/b.m3u8",
+      "target": "c.m3u8",
+      "expected": "https://example.com:8443/a/c.m3u8"
+    },
+    {
+      "base": "https://user:pass@example.com/a/b.m3u8",
+      "target": "c.m3u8",
+      "expected": "https://user:pass@example.com/a/c.m3u8"
+    }
+  ],
+  "stream_types": {
+    "https://example.com/a.m3u8": "HLS",
+    "https://example.com/a.m3u8?token=1": "HLS",
+    "https://example.com/live?type=hls": "HLS",
+    "https://example.com/a.mpd": "DASH",
+    "https://example.com/a.mpd?type=dash": "DASH",
+    "https://example.com/a.mp4": "MP4",
+    "https://example.com/a.m4v": "MP4",
+    "https://example.com/a.ts": "MPEGTS",
+    "https://example.com/a.m2ts": "MPEGTS",
+    "https://example.com/a.mts": "MPEGTS",
+    "https://example.com/a.flv": "Other",
+    "https://example.com/live": "Other",
+    "https://example.com/master.m3u8;session=live_stream_1341": "HLS",
+    "https://example.com/a.m3u8;a=1?token=2": "HLS",
+    "https://example.com/a.ts;session=1": "MPEGTS"
+  },
+  "m3u_output": "#EXTM3U\n#EXTINF:-1 tvg-id=\"NHKWorldJapan.jp@SD\" tvg-logo=\"https://example.com/nhk.png\" group-title=\"News\" tvg-country=\"JP\",NHK World-Japan (1080p)\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fnhk%2Findex.m3u8\n#EXTINF:-1 tvg-country=\"US\",Some US Channel\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fus.ts\n#EXTINF:-1 tvg-country=\"JP\",Music Channel [Geo-blocked]\n/api/iptv/proxy?url=https%3A%2F%2Fiptv-org.github.io%2Fiptv%2Fcountries%2Frelative%2Fstream.m3u8\n#EXTINF:-1 tvg-country=\"JP\",Fallback Name\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fdup.m3u8\n#EXTINF:-1 tvg-country=\"JP\",Raw URL Only\n/api/iptv/proxy?url=https%3A%2F%2Fiptv-org.github.io%2Fiptv%2Fcountries%2Fjp.m3u%3Ftoken%3Dabc%26x%3D1\n#EXTINF:-1 tvg-country=\"JP\",MP4 Channel\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fvideo.mp4%3Fa%3D1%26hls%3D1\n#EXTINF:-1 tvg-id=\"Invalid.toolong\" group-title=\"News\" tvg-country=\"JP\",Comma, in name, with (720p)\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fcomma.m3u8\n#EXTINF:-1 group-title=\"Music\" tvg-country=\"JP\",Lowercase Country\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fmusic%2Findex.m3u8\n#EXTINF:-1 tvg-country=\"JP\",Empty Country\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fempty.m3u8\n#EXTINF:-1 tvg-id=\"Foo.us\" tvg-country=\"US\",US by tvg-id\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fbyid.m3u8\n#EXTINF:-1 tvg-country=\"JP\",example.com\n/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fbare-url.ts\n#EXTINF:-1 tvg-country=\"JP\",Bare Relative\n/api/iptv/proxy?url=https%3A%2F%2Fiptv-org.github.io%2Fiptv%2Fcountries%2Fstream.ts\n",
+  "groups": [
+    {
+      "name": "News",
+      "count": 2
+    },
+    {
+      "name": "Music",
+      "count": 1
+    }
+  ],
+  "countries_list": [
+    {
+      "code": "JP",
+      "name": "Japan",
+      "flag": "🇯🇵",
+      "count": 10
+    },
+    {
+      "code": "US",
+      "name": "United States",
+      "flag": "🇺🇸",
+      "count": 2
+    }
+  ]
+}

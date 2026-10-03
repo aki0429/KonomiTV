@@ -14,6 +14,7 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/auth"
 	"github.com/aki0429/KonomiTV/server-go/internal/config"
 	"github.com/aki0429/KonomiTV/server-go/internal/constants"
+	"github.com/aki0429/KonomiTV/server-go/internal/iptv"
 	"github.com/aki0429/KonomiTV/server-go/internal/jikkyo"
 )
 
@@ -25,6 +26,7 @@ type Server struct {
 	writeDB       *sql.DB // 書き込み用 (SQLite の書き込みを直列化するため別接続)
 	auth          *auth.Manager
 	logger        *slog.Logger
+	iptv          *iptv.Manager
 	proxy         http.Handler // nil の場合はプロキシ無効
 	latestVersion *latestVersionCache
 
@@ -41,6 +43,8 @@ type Options struct {
 	WriteDB *sql.DB
 	Auth    *auth.Manager
 	Logger  *slog.Logger
+	// IPTV は IPTV チャンネル一覧のマネージャー。nil の場合は内部で生成する。
+	IPTV *iptv.Manager
 	// PythonBackendURL は未移行 API の転送先 (例: http://127.0.0.77:7010/) 。
 	// 空文字の場合はプロキシを無効化し、未実装の API は 404 を返す。
 	PythonBackendURL string
@@ -57,6 +61,14 @@ func New(options Options) (*Server, error) {
 		// 書き込み用接続が指定されていない場合は読み取り用接続を使う (テスト用)
 		writeDB = options.DB
 	}
+	iptvManager := options.IPTV
+	if iptvManager == nil {
+		iptvManager = iptv.New(iptv.Options{
+			Config:  options.Config,
+			DataDir: options.Paths.DataDir,
+			Logger:  options.Logger,
+		})
+	}
 	return &Server{
 		config:        options.Config,
 		paths:         options.Paths,
@@ -64,6 +76,7 @@ func New(options Options) (*Server, error) {
 		writeDB:       writeDB,
 		auth:          options.Auth,
 		logger:        options.Logger,
+		iptv:          iptvManager,
 		proxy:         proxy,
 		latestVersion: newLatestVersionCache(options.Logger),
 	}, nil
@@ -111,6 +124,20 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/series", s.handleSeriesList)
 	mux.HandleFunc("GET /api/series/search", s.handleSeriesSearch)
 	mux.HandleFunc("GET /api/series/{series_id}", s.handleSeries)
+
+	// IPTV (M3U プレイリストの取り込みとストリームのプロキシ)
+	mux.HandleFunc("GET /api/iptv/channels", s.handleIPTVChannels)
+	mux.HandleFunc("GET /api/iptv/countries", s.handleIPTVCountries)
+	mux.HandleFunc("GET /api/iptv/groups", s.handleIPTVGroups)
+	mux.HandleFunc("GET /api/iptv/playlist.m3u", s.handleIPTVPlaylist)
+	mux.HandleFunc("GET /api/iptv/sources", s.handleIPTVSources)
+	mux.HandleFunc("POST /api/iptv/sources", s.handleIPTVSourceAdd)
+	mux.HandleFunc("DELETE /api/iptv/sources", s.handleIPTVSourceDelete)
+	mux.HandleFunc("GET /api/iptv/tvui", s.handleIPTVTVUIChannels)
+	mux.HandleFunc("POST /api/iptv/tvui", s.handleIPTVTVUIRegister)
+	mux.HandleFunc("DELETE /api/iptv/tvui", s.handleIPTVTVUIUnregister)
+	mux.HandleFunc("GET /api/iptv/proxy", s.handleIPTVProxy)
+	mux.HandleFunc("GET /api/iptv/logo", s.handleIPTVLogo)
 
 	// ***** 静的ファイル *****
 	// Python 版の app.mount('/assets', StaticFiles(...)) 相当

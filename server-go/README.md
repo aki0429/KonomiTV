@@ -24,6 +24,11 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `GET /api/programs/timetable` (番組表) | ✅ Go 実装済み (EDCB バックエンドの予約情報は未対応) |
 | `POST /api/programs/search` (番組検索) | ✅ Go 実装済み (EDCB 以外は 422 を返し、EDCB 時は Python 版へプロキシ) |
 | `GET /api/series`・`GET /api/series/search`・`GET /api/series/{series_id}` (シリーズ番組) | ✅ Go 実装済み (録画番組・録画ファイル・チャンネルまで展開) |
+| `GET /api/iptv/channels`・`/countries`・`/groups`・`/playlist.m3u` (IPTV チャンネル一覧・国・グループ・プレイリスト出力) | ✅ Go 実装済み (実データ 11152 チャンネルで Python 版と完全一致を検証済み) |
+| `GET`/`POST`/`DELETE /api/iptv/sources` (プレイリストソース管理) | ✅ Go 実装済み |
+| `GET`/`POST`/`DELETE /api/iptv/tvui` (テレビ視聴 UI 登録) | ✅ Go 実装済み (呼び出し元ごとに分離) |
+| `GET /api/iptv/proxy` (IPTV ストリームプロキシ、HLS プレイリストの書き換え含む) | ✅ Go 実装済み |
+| `GET /api/iptv/logo` (IPTV チャンネルロゴプロキシ) | ✅ Go 実装済み (取得できない場合は既定のロゴ) |
 | `/assets/*`・`/` (client/dist の静的配信、SPA フォールバック) | ✅ Go 実装済み |
 | CORS (Starlette 互換) | ✅ Go 実装済み |
 | その他の全 API | 🔁 Python 版へプロキシ |
@@ -68,6 +73,7 @@ curl http://127.0.0.77:7002/api/version
 - `internal/database/`: SQLite へのアクセス (`modernc.org/sqlite`、CGO 不要) 。読み取りは読み取り専用接続、書き込みは専用接続で行う。
 - `internal/tsinfo/`: 放送波 (MPEG-TS) のユーティリティ (`server/app/utils/TSInformation.py` 相当、地域識別の逆引きなど) 。
 - `internal/jikkyo/`: ニコニコ実況のチャンネル対応表 (`server/app/utils/JikkyoClient.py` の一部) 。`server/static/jikkyo_channels.json` を読み込む。
+- `internal/iptv/`: IPTV (M3U プレイリスト) の取り込みと配信 (`server/app/utils/IPTVUtil.py` の Go 版) 。
 - `internal/api/`: HTTP ハンドラー。Go 実装済みルートと、Python 版へのプロキシ・静的配信。
 
 ### 互換性のための約束事
@@ -89,6 +95,25 @@ curl http://127.0.0.77:7002/api/version
 - `internal/jikkyo/testdata/jikkyo_resolution.json`: Python 版 `JikkyoClient` の実況チャンネル解決結果 1267 件分の期待値。
 - `internal/tsinfo/testdata/subchannel_parent_ids.json`: Python 版 `TSInformation.calculateSubchannelParentServiceID()` の全サービス ID 分の期待値。
 - `internal/api/testdata/timetable_sort.json`: Python 版 `GetTimeTableChannelSortKey()` によるチャンネル並び替え結果の期待値。
+- `internal/iptv/testdata/iptv_parity.json`: Python 版 `IPTVUtil` の M3U 解析結果 (M3U のパース・相対 URL の解決・HLS プレイリストの
+  書き換え・画質の抽出・ストリーム形式の判定・プレイリスト出力・国/グループ集計) の期待値。
+
+フィクスチャは `server-go/tools/` のスクリプトで再生成できます (`server/` ディレクトリで実行) 。
+
+```powershell
+cd server
+uv run python ../server-go/tools/generate_iptv_parity_fixture.py
+```
+
+実データ (iptv-org のプレイリスト約 1.1 万チャンネル) を使った完全一致の検証もできます。
+
+```powershell
+cd server
+uv run python ../server-go/tools/generate_iptv_real_fixture.py   # server-go/tmp_real_iptv/ に生成
+cd ../server-go
+$env:KONOMITV_IPTV_REAL_FIXTURE = 'tmp_real_iptv'
+go test ./internal/iptv/ -run TestRealPlaylistParity -v
+```
 
 ```powershell
 go test ./...
@@ -100,7 +125,7 @@ go vet ./...
 
 ## 今後の予定
 
-1. IPTV ルーター (`IPTVRouter` / `IPTVUtil`) の移行 (チャンネル一覧の視聴者数・IPTV 疑似チャンネルも含む)
+1. チャンネル一覧 (`GET /api/channels`) の移行 (視聴者数と IPTV 疑似チャンネルの解禁)
 2. 書き込み系 API (予約・設定など) の移行
 3. ストリーミング (LiveStream / VideoStream) とエンコーダー制御の Go 化
 4. 完全移行後に `-listen 127.0.0.77:7010` で Python 版を置き換え

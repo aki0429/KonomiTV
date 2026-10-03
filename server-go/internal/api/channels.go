@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -206,14 +207,11 @@ func (s *Server) handleChannelLogo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// IPTV の疑似チャンネルの場合のロゴは IPTVUtil (Python 版のメモリ上のチャンネル情報) に依存するため、
-	// IPTVUtil を移植するまでは Python 版へプロキシする
+	// IPTV の疑似チャンネルの場合は、IPTV のロゴをプロキシして返す (取得できない場合は既定のロゴ)
 	if strings.HasPrefix(channelID, iptvChannelIDPrefix) {
-		if s.proxy != nil {
-			s.proxy.ServeHTTP(w, r)
+		if s.serveIPTVChannelLogo(w, r, strings.TrimPrefix(channelID, iptvChannelIDPrefix)) {
 			return
 		}
-		// プロキシが無効な場合は既定のロゴを返す
 		s.serveChannelLogoFile(w, r, "default.png", sha256HexString("iptv-default"+constants.Version))
 		return
 	}
@@ -396,6 +394,46 @@ func (s *Server) writeChannelLogoData(w http.ResponseWriter, r *http.Request, lo
 	w.Header().Set("Content-Type", mediaType)
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(logoData)
+}
+
+// serveIPTVChannelLogo は IPTV チャンネルのロゴを取得して書き出す。
+// ロゴを取得できなかった場合は false を返す (呼び出し側で既定のロゴを返す) 。
+func (s *Server) serveIPTVChannelLogo(w http.ResponseWriter, r *http.Request, displayChannelID string) bool {
+	channel := s.iptv.GetChannelByDisplayChannelID(displayChannelID)
+	if channel == nil || channel.LogoURL == nil {
+		return false
+	}
+
+	// ロゴは CORS やホットリンク制限を受けていることがあるため、サーバー経由で取得する
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, *channel.LogoURL, nil)
+	if err != nil {
+		return false
+	}
+	request.Header.Set("User-Agent", s.config.IPTV.UserAgent)
+	response, err := s.iptv.HTTPClient().Do(request)
+	if err != nil {
+		return false
+	}
+	defer func() { _ = response.Body.Close() }()
+	if response.StatusCode != http.StatusOK {
+		return false
+	}
+	logoData, err := io.ReadAll(response.Body)
+	if err != nil || len(logoData) == 0 {
+		return false
+	}
+
+	mediaType := response.Header.Get("Content-Type")
+	if index := strings.Index(mediaType, ";"); index >= 0 {
+		mediaType = mediaType[:index]
+	}
+	if mediaType == "" {
+		mediaType = "image/png"
+	}
+	s.writeChannelLogoData(w, r, logoData, mediaType)
+	return true
 }
 
 // serveChannelLogoFile は同梱のロゴファイルを ETag 付きで書き出す。
