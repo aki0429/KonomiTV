@@ -718,6 +718,14 @@ class PlayerController {
                     mediaSource: 'auto',
                     // MPEG-2 を直接デコードできるブラウザ環境…もあるらしいがデインタレースができるかは不明なため、パススルーモードは使わない
                     passthrough: false,
+                    // 放送波の音声はもともと音量が小さく、通常の画質ではエンコード時に volume=2.0 で音量を2倍にしている
+                    // オリジナル画質でも同じ音量で聞こえるよう、AAC の各チャンネルの global_gain を書き換えて再エンコードなしで音量を上げる
+                    // 1段階あたり 2^(1/4) 倍 (約 1.5dB) なので、4段階でちょうど2倍になる
+                    audioGainSteps: 4,
+                    // 5.1ch はステレオで聞くとセンター・サラウンドが前方の左右に足し込まれ、同じ2倍でも音割れしやすい
+                    // 通常の画質の FFmpeg の AAC エンコーダーは音割れしそうな箇所の音量を自動で抑えるが、global_gain の書き換えにはその処理がない
+                    // 実録画で比べた結果、3段階 (約 1.68 倍) が通常の画質とほぼ同じ音量かつ音割れも同程度に収まったため、5.1ch はこちらを使う
+                    surroundAudioGainSteps: 3,
                     // ライブ放送では選択中のサービスを明示する (tsreadex がすでに選択してくれているが念のため)
                     // 録画再生では、DB に記録済みのサービス ID がある場合だけ指定する
                     serviceId: this.playback_mode === 'Live' ?
@@ -732,7 +740,7 @@ class PlayerController {
                         doubleRate: true,
                         // 24fps モードがオンの場合のみ、実写区間では 60fps でぬるぬる描画しつつ、
                         // 映画・アニメなど 24fps で制作された映像を自動検出し、余分なフレームを間引いて本来の動きに近づける
-                        autoFilm: this.playback_mode === 'Live' ? this.quality_profile.tv_24fps_mode : this.quality_profile.video_24fps_mode,
+                        film: this.playback_mode === 'Live' ? this.quality_profile.tv_24fps_mode : this.quality_profile.video_24fps_mode,
                     }) : undefined,
                 },
                 // mpegts.js
@@ -2381,6 +2389,11 @@ class PlayerController {
             return;
         }
         this.destroying = true;
+
+        // 非同期の終了処理を待つ間に視聴画面の DOM が外れるため、先に字幕と文字スーパーの描画を止める
+        // aribb24.js がサイズ 0 の Canvas に字幕を再描画すると例外になる
+        this.player?.plugins.aribb24Caption?.hide();
+        this.player?.plugins.aribb24Superimpose?.hide();
 
         // 視聴履歴の最終位置を更新
         // 現在の再生位置を取得するため、プレイヤーの破棄前に実行する必要がある
