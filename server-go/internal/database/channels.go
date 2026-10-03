@@ -248,6 +248,34 @@ func GetCurrentAndNextProgram(ctx context.Context, db *sql.DB, channelID string)
 	return present, following, nil
 }
 
+// ListWatchableChannels は視聴可能なチャンネルをリモコン番号 → チャンネル番号の順で返す。
+func ListWatchableChannels(ctx context.Context, db *sql.DB) ([]*Channel, error) {
+	// Tortoise ORM の order_by('remocon_id', 'channel_number') と同じ並び順にする
+	rows, err := db.QueryContext(
+		ctx,
+		`SELECT`+channelColumns+`FROM channels
+		 WHERE is_watchable = 1
+		 ORDER BY remocon_id ASC, channel_number ASC`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list watchable channels: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	channels := []*Channel{}
+	for rows.Next() {
+		channel, err := scanChannel(rows.Scan)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan channel row: %w", err)
+		}
+		channels = append(channels, channel)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate channel rows: %w", err)
+	}
+	return channels, nil
+}
+
 // ListChannelsByIDs は指定された ID のチャンネルを取得する (存在しない ID は無視する) 。
 func ListChannelsByIDs(ctx context.Context, db *sql.DB, channelIDs []string) (map[string]Channel, error) {
 	result := map[string]Channel{}

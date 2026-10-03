@@ -109,8 +109,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/data-broadcasting/internet-status", s.handleDataBroadcastingInternetStatus)
 
 	// チャンネル
-	// GET /api/channels (チャンネル一覧) は視聴者数と IPTV 擬似チャンネルが Python プロセスのメモリに
-	// 依存するため、それらを Go へ移行するまでは Python 版へプロキシする
+	mux.HandleFunc("GET /api/channels", s.handleChannels)
 	mux.HandleFunc("GET /api/channels/{channel_id}", s.handleChannel)
 	mux.HandleFunc("GET /api/channels/{channel_id}/logo", s.handleChannelLogo)
 	mux.HandleFunc("GET /api/channels/{channel_id}/jikkyo", s.handleChannelJikkyo)

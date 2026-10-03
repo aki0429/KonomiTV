@@ -199,3 +199,73 @@ func GetSubchannelDurations(ctx context.Context, db *sql.DB) ([]SubchannelDurati
 	}
 	return durations, nil
 }
+
+// PresentFollowingProgram は現在放送中または24時間以内に放送予定の番組 (チャンネルごとの放送順つき) 。
+type PresentFollowingProgram struct {
+	Program *Program
+	// ProgramOrder はチャンネルごとに番組開始時刻が小さい順で振られる順序 (1 始まり) 。
+	ProgramOrder int
+	// IsPresent は番組開始時刻が現在時刻よりも前 (= 放送中) かどうか。
+	IsPresent bool
+}
+
+// ListPresentAndFollowingPrograms は現在放送中の番組と、24時間以内に放送開始予定の番組を取得する。
+//
+// チャンネル一覧 API で現在と次の番組情報を一度に取得するために利用する。
+// Python 版 (ChannelsRouter) と同じ SQL を発行し、番組開始時刻の小さい順に 2 件だけを残す。
+func ListPresentAndFollowingPrograms(ctx context.Context, db *sql.DB, now time.Time) ([]*PresentFollowingProgram, error) {
+	// Tortoise ORM は datetime を "YYYY-MM-DD HH:MM:SS.ffffff+09:00" 形式の文字列として
+	// バインドするため、SQLite 上では文字列比較になる。同じ形式で比較する。
+	nowText := FormatDBTime(now)
+	endText := FormatDBTime(now.Add(24 * time.Hour))
+
+	// 番組時間は EPG の仕様上必ず24時間以下に収まるため、パフォーマンスを考慮して24時間以内に放送開始予定の番組のみに絞り込む
+	rows, err := db.QueryContext(
+		ctx,
+		`SELECT * FROM (
+			SELECT
+				DENSE_RANK() OVER (PARTITION BY channel_id ORDER BY start_time ASC) AS program_order,
+				CASE WHEN "start_time" <= (?) THEN 1 ELSE 0 END AS is_present,
+				`+programColumns+`
+			FROM
+				"programs"
+			WHERE
+				("start_time" <= (?) AND (?) <= "end_time")
+				OR
+				((?) <= "start_time" AND "start_time" <= (?))
+		) WHERE
+			program_order <= 2`,
+		nowText,
+		nowText, nowText,
+		nowText, endText,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list present and following programs: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	programs := []*PresentFollowingProgram{}
+	for rows.Next() {
+		var (
+			programOrder int64
+			isPresent    int64
+		)
+		program, err := scanProgram(func(dest ...any) error {
+			// program_order / is_present が先頭に付加されているため、いったん別のスライスに読み込む
+			destinations := append([]any{&programOrder, &isPresent}, dest...)
+			return rows.Scan(destinations...)
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan program row: %w", err)
+		}
+		programs = append(programs, &PresentFollowingProgram{
+			Program:      program,
+			ProgramOrder: int(programOrder),
+			IsPresent:    isPresent != 0,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate program rows: %w", err)
+	}
+	return programs, nil
+}

@@ -20,7 +20,7 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `GET /api/channels/{channel_id}` (チャンネル情報、現在/次の番組を含む) | ✅ Go 実装済み (視聴者数のみ常に 0) |
 | `GET /api/channels/{channel_id}/logo` (チャンネルロゴ) | ✅ Go 実装済み (IPTV 疑似チャンネルは Python 版へプロキシ) |
 | `GET /api/channels/{channel_id}/jikkyo` (ニコニコ実況 WebSocket URL) | ✅ Go 実装済み (ニコニコアカウント連携時のニコ生セッション取得・トークン更新含む) |
-| `GET /api/channels` (チャンネル一覧) | 🔁 Python 版へプロキシ (視聴者数と IPTV 疑似チャンネルが Python プロセスのメモリに依存) |
+| `GET /api/channels` (チャンネル一覧、現在/次の番組・IPTV 疑似チャンネル含む) | ✅ Go 実装済み (視聴者数のみ常に 0) |
 | `GET /api/programs/timetable` (番組表) | ✅ Go 実装済み (EDCB バックエンドの予約情報は未対応) |
 | `POST /api/programs/search` (番組検索) | ✅ Go 実装済み (EDCB 以外は 422 を返し、EDCB 時は Python 版へプロキシ) |
 | `GET /api/series`・`GET /api/series/search`・`GET /api/series/{series_id}` (シリーズ番組) | ✅ Go 実装済み (録画番組・録画ファイル・チャンネルまで展開) |
@@ -105,6 +105,14 @@ cd server
 uv run python ../server-go/tools/generate_iptv_parity_fixture.py
 ```
 
+チャンネル一覧 API は、実スキーマの DB と実際の HTTP サーバーを使った E2E 検証もできます。
+
+```powershell
+python server-go/tools/e2e_channels_setup.py <一時コピーした server/data/database.sqlite>
+./konomitv-go.exe -no-proxy -listen 127.0.0.77:7005 -server-dir <server ディレクトリ>
+python server-go/tools/e2e_channels_verify.py <同じ database.sqlite> http://127.0.0.77:7005
+```
+
 実データ (iptv-org のプレイリスト約 1.1 万チャンネル) を使った完全一致の検証もできます。
 
 ```powershell
@@ -125,7 +133,6 @@ go vet ./...
 
 ## 今後の予定
 
-1. チャンネル一覧 (`GET /api/channels`) の移行 (視聴者数と IPTV 疑似チャンネルの解禁)
+1. ストリーミング (LiveStream / VideoStream) とエンコーダー制御の Go 化 (視聴者数もここで実装する)
 2. 書き込み系 API (予約・設定など) の移行
-3. ストリーミング (LiveStream / VideoStream) とエンコーダー制御の Go 化
-4. 完全移行後に `-listen 127.0.0.77:7010` で Python 版を置き換え
+3. 完全移行後に `-listen 127.0.0.77:7010` で Python 版を置き換え
