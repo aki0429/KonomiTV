@@ -32,6 +32,8 @@ type Paths struct {
 	DatabasePath string
 	// StaticDir はサーバーが同梱する静的ファイル (放送局ロゴなど) のパス。
 	StaticDir string
+	// ThumbnailsDir は録画番組のサムネイル画像ディレクトリ。
+	ThumbnailsDir string
 	// LogsDir はログ出力ディレクトリ。
 	LogsDir string
 	// LibraryDir はサードパーティーライブラリ (FFmpeg など) のディレクトリ。
@@ -78,6 +80,7 @@ func NewPaths(serverDir string) Paths {
 		DataDir:        filepath.Join(serverDir, "data"),
 		DatabasePath:   filepath.Join(serverDir, "data", "database.sqlite"),
 		StaticDir:      filepath.Join(serverDir, "static"),
+		ThumbnailsDir:  filepath.Join(serverDir, "data", "thumbnails"),
 		LogsDir:        filepath.Join(serverDir, "logs"),
 		LibraryDir:     filepath.Join(serverDir, "thirdparty"),
 	}

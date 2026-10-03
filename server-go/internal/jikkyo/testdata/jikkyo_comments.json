@@ -1,0 +1,223 @@
+{
+  "start_time": 1767236400,
+  "colors": {
+    "white": "#FFEAEA",
+    "red": "#F02840",
+    "pink": "#FD7E80",
+    "orange": "#FDA708",
+    "yellow": "#FFE133",
+    "green": "#64DD17",
+    "cyan": "#00D4F5",
+    "blue": "#4763FF",
+    "purple": "#D500F9",
+    "black": "#1E1310",
+    "white2": "#CCCC99",
+    "niconicowhite": "#CCCC99",
+    "red2": "#CC0033",
+    "truered": "#CC0033",
+    "pink2": "#FF33CC",
+    "orange2": "#FF6600",
+    "passionorange": "#FF6600",
+    "yellow2": "#999900",
+    "madyellow": "#999900",
+    "green2": "#00CC66",
+    "elementalgreen": "#00CC66",
+    "cyan2": "#00CCCC",
+    "blue2": "#3399FF",
+    "marineblue": "#3399FF",
+    "purple2": "#6633CC",
+    "nobleviolet": "#6633CC",
+    "black2": "#666666",
+    "#FFEAEA": "#FFEAEA",
+    "#123abc": "#123abc",
+    "#12345": null,
+    "unknown": null,
+    "": null
+  },
+  "commands": {
+    "<null>": [
+      "#FFEAEA",
+      "right",
+      "medium"
+    ],
+    "": [
+      "#FFEAEA",
+      "right",
+      "medium"
+    ],
+    "184": [
+      "#FFEAEA",
+      "right",
+      "medium"
+    ],
+    "184 ue": [
+      "#FFEAEA",
+      "top",
+      "medium"
+    ],
+    "184 shita big": [
+      "#FFEAEA",
+      "bottom",
+      "big"
+    ],
+    "red ue big": [
+      "#F02840",
+      "top",
+      "big"
+    ],
+    "naka": [
+      "#FFEAEA",
+      "right",
+      "medium"
+    ],
+    "shita small": [
+      "#FFEAEA",
+      "bottom",
+      "small"
+    ],
+    "blue2 right": [
+      "#3399FF",
+      "right",
+      "medium"
+    ],
+    "#FF0000 ue small": [
+      "#FF0000",
+      "top",
+      "small"
+    ],
+    "184 unknown_command": [
+      "#FFEAEA",
+      "right",
+      "medium"
+    ],
+    " 184  ": [
+      "#FFEAEA",
+      "right",
+      "medium"
+    ]
+  },
+  "special_commands": {
+    "/vote|<null>": false,
+    "/vote|3": true,
+    "/vote|1": false,
+    "/vote now|3": true,
+    "/vote_now|3": true,
+    "/VOTE|3": false,
+    "/|3": false,
+    "/1vote|3": false,
+    "普通のコメント|3": false,
+    "/vote|": false,
+    "/nico|3": true
+  },
+  "packets": [
+    {
+      "chat": {
+        "thread": "1",
+        "no": "1",
+        "vpos": "0",
+        "date": "1767236400",
+        "date_usec": "0",
+        "user_id": "user1",
+        "mail": "184 ue big",
+        "premium": "1",
+        "anonymity": "1",
+        "content": "コメント1"
+      }
+    },
+    {
+      "chat": {
+        "thread": "1",
+        "no": "2",
+        "vpos": "0",
+        "date": "1767236410",
+        "date_usec": "500000",
+        "user_id": "user2",
+        "mail": "red shita small",
+        "premium": "1",
+        "anonymity": "1",
+        "content": "コメント2"
+      }
+    },
+    {
+      "chat": {
+        "thread": "1",
+        "no": "3",
+        "vpos": "0",
+        "date": "1767236420",
+        "date_usec": "0",
+        "user_id": "user3",
+        "mail": "184",
+        "premium": "1",
+        "anonymity": "1",
+        "deleted": "1",
+        "content": "削除済み"
+      }
+    },
+    {
+      "chat": {
+        "thread": "1",
+        "no": "4",
+        "vpos": "0",
+        "date": "1767236430",
+        "date_usec": "0",
+        "user_id": "user4",
+        "mail": "184",
+        "premium": "3",
+        "anonymity": "1",
+        "content": "/vote"
+      }
+    },
+    {
+      "chat": {
+        "thread": "1",
+        "no": "5",
+        "vpos": "0",
+        "date": "1767236440",
+        "date_usec": "0",
+        "user_id": "user5",
+        "mail": "184",
+        "premium": "1",
+        "anonymity": "1"
+      }
+    },
+    {
+      "chat": {
+        "thread": "1",
+        "no": "6",
+        "vpos": "0",
+        "date": "1767236450",
+        "date_usec": "0",
+        "user_id": "user6",
+        "premium": "1",
+        "anonymity": "1",
+        "content": "コメント3"
+      }
+    }
+  ],
+  "comments": [
+    {
+      "time": 0.0,
+      "type": "top",
+      "size": "big",
+      "color": "#FFEAEA",
+      "author": "user1",
+      "text": "コメント1"
+    },
+    {
+      "time": 10.5,
+      "type": "bottom",
+      "size": "small",
+      "color": "#F02840",
+      "author": "user2",
+      "text": "コメント2"
+    },
+    {
+      "time": 50.0,
+      "type": "right",
+      "size": "medium",
+      "color": "#FFEAEA",
+      "author": "user6",
+      "text": "コメント3"
+    }
+  ]
+}

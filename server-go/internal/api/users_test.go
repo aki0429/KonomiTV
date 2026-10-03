@@ -30,6 +30,18 @@ func doJSONRequest(t *testing.T, handler http.Handler, method string, path strin
 	return recorder
 }
 
+// doJSONRequestWithHeaders はテスト用に追加のヘッダー付きでリクエストを実行する。
+func doJSONRequestWithHeaders(t *testing.T, handler http.Handler, method string, path string, headers map[string]string) *httptest.ResponseRecorder {
+	t.Helper()
+	request := httptest.NewRequest(method, path, strings.NewReader(""))
+	for key, value := range headers {
+		request.Header.Set(key, value)
+	}
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	return recorder
+}
+
 // TestUserTokenAndMe はアクセストークン発行から /api/users/me までの一連の流れを検証する。
 func TestUserTokenAndMe(t *testing.T) {
 	server, _ := newTestServer(t, "")

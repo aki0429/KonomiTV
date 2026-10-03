@@ -34,6 +34,13 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `GET /api/streams/live/{display_channel_id}/{quality}/events` (状態の Server-Sent Events) | ✅ Go 実装済み |
 | `GET /api/streams/live/{display_channel_id}/{quality}/mpegts` (ライブ MPEG-TS ストリーム) | ✅ Go 実装済み |
 | `GET /api/streams/live/{display_channel_id}/{quality}/psi-archived-data` (PSI/SI アーカイブデータ) | ✅ Go 実装済み (EDCB / Mirakurun バックエンドのみ。IPTV では 500 を返す) |
+| `GET /api/videos`・`GET /api/videos/search` (録画番組一覧・検索) | ✅ Go 実装済み (応答は Python 版と完全一致を検証済み) |
+| `GET /api/videos/{video_id}` (録画番組情報) | ✅ Go 実装済み |
+| `GET /api/videos/{video_id}/thumbnail`・`/thumbnail/tiled` (サムネイル画像、ETag / 304 対応) | ✅ Go 実装済み |
+| `GET /api/videos/{video_id}/download` (録画ファイルのダウンロード、Range 対応) | ✅ Go 実装済み |
+| `GET /api/videos/{video_id}/jikkyo` (ニコニコ実況の過去ログコメント) | ✅ Go 実装済み |
+| `DELETE /api/videos/{video_id}` (録画ファイルの削除、管理者のみ) | ✅ Go 実装済み |
+| `POST /api/videos/{video_id}/reanalyze`・`/thumbnail/regenerate` | 🔁 Python 版へプロキシ |
 | `GET /api/settings/client`・`PUT /api/settings/client` (クライアント設定の取得・更新) | ✅ Go 実装済み |
 | `GET /api/settings/server`・`PUT /api/settings/server` (サーバー設定の取得・更新) | ✅ Go 実装済み (PUT は config.yaml をコメントを保持したまま行単位で書き換える) |
 | `/assets/*`・`/` (client/dist の静的配信、SPA フォールバック) | ✅ Go 実装済み |
@@ -125,6 +132,27 @@ Go 版では `EDCB バックエンドは Go 版サーバーでは未対応です
 **未対応**: Python 版のカスタムバリデーターのうち、環境に依存する検証 (EDCB / Mirakurun への接続確認、
 ポートの使用状況、エンコーダーの対応状況) は Go 版では行わない。
 
+### 録画番組 API (`/api/videos`)
+
+録画番組の一覧・検索・詳細・サムネイル画像・録画ファイルのダウンロード・削除を Go で実装している
+(応答は Python 版 `schemas.RecordedProgram` と完全に一致することを検証済み) 。
+
+- 一覧と検索は Python 版と同じ生 SQL (recorded_programs + recorded_videos + channels の結合) を発行する。
+  `order=ids` の場合は指定された ID の順序を維持する (ページングも Python 版と同じ挙動) 。
+- サムネイル画像は `server/data/thumbnails/<file_hash>.webp` を配信し、存在しない場合は
+  `server/static/thumbnails/default.webp` をキャッシュ無効で返す。
+  `ETag` / `Last-Modified` による 304 応答 (If-None-Match / If-Modified-Since) にも対応する。
+- 録画ファイルのダウンロードは `http.ServeFile` で配信するため Range リクエスト (シーク) に対応する。
+- 削除は管理者のみ実行でき、データベースのレコード・サムネイル画像・補助ファイル (.ts.program.txt / .ts.err) ・
+  録画ファイル本体を Python 版と同じ順序で削除する。
+- ニコニコ実況の過去ログコメントは過去ログ API から取得して DPlayer の形式に変換する
+  (コメントの色・位置・サイズの解釈は Python 版と一致することをフィクスチャで検証済み) 。
+
+**未対応**: メタデータ再解析 (`POST /api/videos/{video_id}/reanalyze`) とサムネイル画像再生成
+(`POST /api/videos/{video_id}/thumbnail/regenerate`) は Go 版では未実装のため Python 版へプロキシする
+(FFmpeg / psisiarc を使った録画ファイルの解析処理が必要なため) 。
+また、MPEG-4 コンテナの録画番組で `.psc` ファイルがある場合のコメント時刻の補正は行わない。
+
 ## テスト
 
 `go test ./...` で実行する。Python 版との互換性は、Python 側で生成したフィクスチャとの照合で検証している。
@@ -136,6 +164,8 @@ Go 版では `EDCB バックエンドは Go 版サーバーでは未対応です
   書き換え・画質の抽出・ストリーム形式の判定・プレイリスト出力・国/グループ集計) の期待値。
 - `internal/stream/testdata/stream_options.json`: Python 版 `LiveEncodingTask` の FFmpeg / HWEncC の
   エンコード引数 (画質 16 種類 × チャンネル種別 × フル HD × リトライ回数 × エンコードオプション) の期待値。
+- `internal/jikkyo/testdata/jikkyo_comments.json`: Python 版 `JikkyoClient` のコメント整形処理
+  (色・位置・サイズの解釈、運営コマンドの判定、過去ログ API のレスポンスの変換) の期待値。
 - `internal/config/server_settings_defaults.json`: Python 版 `ServerSettings` のデフォルト値と、
   リポジトリの `config.yaml` を Python 版 `LoadConfig()` で読み込んだ結果の期待値
   (`GET /api/settings/server` はこのデフォルト値で `config.yaml` を補完して返す) 。
@@ -179,6 +209,18 @@ cd server
 uv run python ../server-go/tools/e2e_settings_verify.py http://127.0.0.77:7007 <作業ディレクトリ>/config.yaml <管理者ユーザーの ID>
 ```
 
+録画番組 API は、実スキーマの DB と実際の録画ファイルを使った E2E 検証もできます
+(検証スクリプトは録画番組を 1 件削除するため、実行前に毎回 setup を実行し直してください) 。
+
+```powershell
+cd server
+uv run python ../server-go/tools/e2e_videos_setup.py <作業ディレクトリ>
+cd ../server-go
+./konomitv-go.exe -no-proxy -listen 127.0.0.77:7008 -server-dir <作業ディレクトリ>/server
+cd ../server
+uv run python ../server-go/tools/e2e_videos_verify.py http://127.0.0.77:7008 <作業ディレクトリ> <管理者ユーザーの ID>
+```
+
 実データ (iptv-org のプレイリスト約 1.1 万チャンネル) を使った完全一致の検証もできます。
 
 ```powershell
@@ -199,7 +241,7 @@ go vet ./...
 
 ## 今後の予定
 
-1. ビデオストリーミング (`/api/streams/video`、録画番組の再生) と録画番組 API (`/api/videos`) の Go 化
+1. ビデオストリーミング (`/api/streams/video`、録画番組の再生) の Go 化
 2. EDCB バックエンドのチューナー制御 (`EDCBTuner`) の Go 化
 3. 残りの書き込み系 API (予約・Twitter / Bluesky / ニコニコ連携・キャプチャなど) の移行
 4. 完全移行後に `-listen 127.0.0.77:7010` で Python 版を置き換え

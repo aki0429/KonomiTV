@@ -142,6 +142,19 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/series/search", s.handleSeriesSearch)
 	mux.HandleFunc("GET /api/series/{series_id}", s.handleSeries)
 
+	// 録画番組
+	// メタデータ再解析とサムネイル画像再生成は Go 版では未実装のため、Python 版へプロキシする
+	mux.HandleFunc("GET /api/videos", s.handleVideos)
+	mux.HandleFunc("GET /api/videos/search", s.handleVideosSearch)
+	mux.HandleFunc("GET /api/videos/{video_id}", s.handleVideo)
+	mux.HandleFunc("DELETE /api/videos/{video_id}", s.handleVideoDelete)
+	mux.HandleFunc("GET /api/videos/{video_id}/download", s.handleVideoDownload)
+	mux.HandleFunc("GET /api/videos/{video_id}/jikkyo", s.handleVideoJikkyo)
+	mux.HandleFunc("GET /api/videos/{video_id}/thumbnail", s.handleVideoThumbnail)
+	mux.HandleFunc("GET /api/videos/{video_id}/thumbnail/tiled", s.handleVideoThumbnailTile)
+	mux.HandleFunc("POST /api/videos/{video_id}/reanalyze", s.handleVideoReanalyze)
+	mux.HandleFunc("POST /api/videos/{video_id}/thumbnail/regenerate", s.handleVideoThumbnailRegenerate)
+
 	// 設定
 	mux.HandleFunc("GET /api/settings/client", s.handleClientSettings)
 	mux.HandleFunc("PUT /api/settings/client", s.handleClientSettingsUpdate)
