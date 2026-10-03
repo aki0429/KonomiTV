@@ -1,9 +1,11 @@
 package api
 
 import (
+	"io"
 	"log/slog"
 	"net/http"
-	"time"
+
+	"github.com/aki0429/KonomiTV/server-go/internal/logging"
 )
 
 // statusRecorder はレスポンスのステータスコードを記録する ResponseWriter。
@@ -35,21 +37,21 @@ func (r *statusRecorder) Flush() {
 }
 
 // accessLogMiddleware は Uvicorn のアクセスログに相当するリクエストログを出力する。
-func accessLogMiddleware(next http.Handler, logger *slog.Logger) http.Handler {
+// アクセスログは Python 版と同じ形式で server/logs/KonomiTV-Access.log にも出力する。
+func accessLogMiddleware(next http.Handler, writers []io.Writer) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
 		recorder := &statusRecorder{ResponseWriter: w}
 		next.ServeHTTP(recorder, r)
 		if recorder.status == 0 {
 			recorder.status = http.StatusOK
 		}
-		logger.Info(
-			"access",
-			slog.String("method", r.Method),
-			slog.String("path", r.URL.Path),
-			slog.Int("status", recorder.status),
-			slog.Duration("duration", time.Since(start)),
-		)
+		// リクエストラインは Python 版 (uvicorn) と同じくクエリ文字列を含む
+		target := r.URL.RequestURI()
+		protocol := r.Proto
+		if protocol == "" {
+			protocol = "HTTP/1.1"
+		}
+		logging.AccessLog(writers, r.RemoteAddr, r.Method, target, protocol, recorder.status)
 	})
 }
 

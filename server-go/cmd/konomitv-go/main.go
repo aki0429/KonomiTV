@@ -9,6 +9,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -24,6 +25,7 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/constants"
 	"github.com/aki0429/KonomiTV/server-go/internal/database"
 	"github.com/aki0429/KonomiTV/server-go/internal/iptv"
+	"github.com/aki0429/KonomiTV/server-go/internal/logging"
 )
 
 func main() {
@@ -63,7 +65,28 @@ func main() {
 	if *debugLog || cfg.General.Debug {
 		logLevel = slog.LevelDebug
 	}
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel}))
+	// サーバーログは標準出力と server/logs/KonomiTV-Server.log の両方に出力する
+	// (Python 版と同じくクライアントのログビューアから参照できるようにするため)
+	serverLogWriter, err := logging.NewRotatingWriter(paths.ServerLogPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[Warning] Failed to open the server log file: %v\n", err)
+	}
+	logWriters := []io.Writer{os.Stdout}
+	if serverLogWriter != nil {
+		defer func() { _ = serverLogWriter.Close() }()
+		logWriters = append(logWriters, serverLogWriter)
+	}
+	logger := slog.New(logging.NewPythonHandler(logWriters, logLevel))
+
+	// アクセスログは標準出力と server/logs/KonomiTV-Access.log の両方に出力する
+	accessLogWriters := []io.Writer{os.Stdout}
+	accessLogWriter, err := logging.NewRotatingWriter(paths.AccessLogPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[Warning] Failed to open the access log file: %v\n", err)
+	} else {
+		defer func() { _ = accessLogWriter.Close() }()
+		accessLogWriters = append(accessLogWriters, accessLogWriter)
+	}
 
 	// ***** データベースのオープン (読み取り専用) *****
 
@@ -114,6 +137,10 @@ func main() {
 		iptvManager.Refresh(ctx, false)
 	}()
 
+	// シグナルを受信したらグレースフルシャットダウンする
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	server, err := api.New(api.Options{
 		Config:           cfg,
 		Paths:            paths,
@@ -123,6 +150,10 @@ func main() {
 		Logger:           logger,
 		IPTV:             iptvManager,
 		PythonBackendURL: backendURL,
+		AccessLogWriters: accessLogWriters,
+		// メンテナンス API から呼び出されるサーバーの終了・再起動処理
+		Shutdown: stop,
+		Restart:  stop,
 	})
 	if err != nil {
 		logger.Error("failed to initialize server", slog.Any("error", err))
@@ -136,10 +167,6 @@ func main() {
 		IdleTimeout:       5 * time.Minute,
 		// ストリーミング配信があるため WriteTimeout は設定しない
 	}
-
-	// シグナルを受信したらグレースフルシャットダウンする
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	go func() {
 		logger.Info(

@@ -36,6 +36,10 @@ type Paths struct {
 	ThumbnailsDir string
 	// LogsDir はログ出力ディレクトリ。
 	LogsDir string
+	// ServerLogPath はサーバーログのパス (Python 版 KONOMITV_SERVER_LOG_PATH) 。
+	ServerLogPath string
+	// AccessLogPath はアクセスログのパス (Python 版 KONOMITV_ACCESS_LOG_PATH) 。
+	AccessLogPath string
 	// LibraryDir はサードパーティーライブラリ (FFmpeg など) のディレクトリ。
 	LibraryDir string
 }
@@ -82,6 +86,8 @@ func NewPaths(serverDir string) Paths {
 		StaticDir:      filepath.Join(serverDir, "static"),
 		ThumbnailsDir:  filepath.Join(serverDir, "data", "thumbnails"),
 		LogsDir:        filepath.Join(serverDir, "logs"),
+		ServerLogPath:  filepath.Join(serverDir, "logs", "KonomiTV-Server.log"),
+		AccessLogPath:  filepath.Join(serverDir, "logs", "KonomiTV-Access.log"),
 		LibraryDir:     filepath.Join(serverDir, "thirdparty"),
 	}
 }

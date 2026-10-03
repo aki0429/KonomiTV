@@ -6,6 +6,7 @@ package api
 
 import (
 	"database/sql"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -31,6 +32,12 @@ type Server struct {
 	liveStreams   *stream.Manager
 	proxy         http.Handler // nil の場合はプロキシ無効
 	latestVersion *latestVersionCache
+	// accessLogWriters はアクセスログの出力先 (標準出力とログファイル) 。
+	accessLogWriters []io.Writer
+	// shutdown はサーバーを終了するための関数 (main.go から設定する) 。
+	shutdown func()
+	// restart はサーバーを再起動するための関数 (main.go から設定する) 。
+	restart func()
 
 	// jikkyoChannels は実況チャンネルの対応表 (初回アクセス時に読み込む) 。
 	jikkyoChannels     *jikkyo.ChannelMap
@@ -52,6 +59,12 @@ type Options struct {
 	// PythonBackendURL は未移行 API の転送先 (例: http://127.0.0.77:7010/) 。
 	// 空文字の場合はプロキシを無効化し、未実装の API は 404 を返す。
 	PythonBackendURL string
+	// AccessLogWriters はアクセスログの出力先 (省略時は標準出力のみ) 。
+	AccessLogWriters []io.Writer
+	// Shutdown はサーバーを終了するための関数 (メンテナンス API から呼び出す) 。
+	Shutdown func()
+	// Restart はサーバーを再起動するための関数 (メンテナンス API から呼び出す) 。
+	Restart func()
 }
 
 // New は Server を生成する。
@@ -87,16 +100,19 @@ func New(options Options) (*Server, error) {
 		DB:     options.DB,
 	})
 	return &Server{
-		config:        options.Config,
-		paths:         options.Paths,
-		db:            options.DB,
-		writeDB:       writeDB,
-		auth:          options.Auth,
-		logger:        options.Logger,
-		iptv:          iptvManager,
-		liveStreams:   liveStreams,
-		proxy:         proxy,
-		latestVersion: newLatestVersionCache(options.Logger),
+		config:           options.Config,
+		paths:            options.Paths,
+		db:               options.DB,
+		writeDB:          writeDB,
+		auth:             options.Auth,
+		logger:           options.Logger,
+		iptv:             iptvManager,
+		liveStreams:      liveStreams,
+		proxy:            proxy,
+		latestVersion:    newLatestVersionCache(options.Logger),
+		accessLogWriters: options.AccessLogWriters,
+		shutdown:         options.Shutdown,
+		restart:          options.Restart,
 	}, nil
 }
 
@@ -181,6 +197,15 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/iptv/tvui", s.handleIPTVTVUIUnregister)
 	mux.HandleFunc("GET /api/iptv/proxy", s.handleIPTVProxy)
 	mux.HandleFunc("GET /api/iptv/logo", s.handleIPTVLogo)
+	// メンテナンス
+	// データベース更新 (EDCB / Mirakurun バックエンド) 、一括スキャン、バックグラウンド解析は
+	// Go 版では未実装のため Python 版へプロキシする
+	mux.HandleFunc("GET /api/maintenance/logs/{log_type}", s.handleMaintenanceLogs)
+	mux.HandleFunc("POST /api/maintenance/update-database", s.handleMaintenanceUpdateDatabase)
+	mux.HandleFunc("POST /api/maintenance/run-batch-scan", s.handleMaintenanceBatchScan)
+	mux.HandleFunc("POST /api/maintenance/run-background-analysis", s.handleMaintenanceBackgroundAnalysis)
+	mux.HandleFunc("POST /api/maintenance/restart", s.handleMaintenanceRestart)
+	mux.HandleFunc("POST /api/maintenance/shutdown", s.handleMaintenanceShutdown)
 
 	// ***** 静的ファイル *****
 	// Python 版の app.mount('/assets', StaticFiles(...)) 相当
@@ -203,6 +228,6 @@ func (s *Server) Handler() http.Handler {
 	var handler http.Handler = dispatcher
 	handler = corsMiddleware(handler, s.config.General.Debug)
 	handler = recoverMiddleware(handler, s.logger)
-	handler = accessLogMiddleware(handler, s.logger)
+	handler = accessLogMiddleware(handler, s.accessLogWriters)
 	return handler
 }

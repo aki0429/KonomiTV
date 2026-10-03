@@ -43,6 +43,10 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `POST /api/videos/{video_id}/reanalyze`・`/thumbnail/regenerate` | 🔁 Python 版へプロキシ |
 | `GET /api/settings/client`・`PUT /api/settings/client` (クライアント設定の取得・更新) | ✅ Go 実装済み |
 | `GET /api/settings/server`・`PUT /api/settings/server` (サーバー設定の取得・更新) | ✅ Go 実装済み (PUT は config.yaml をコメントを保持したまま行単位で書き換える) |
+| `GET /api/maintenance/logs/{log_type}` (サーバーログ・アクセスログの SSE 配信) | ✅ Go 実装済み |
+| `POST /api/maintenance/restart`・`POST /api/maintenance/shutdown` (再起動・終了) | ✅ Go 実装済み (ローカルホストからのアクセスは認証不要) |
+| `POST /api/maintenance/update-database` (データベース更新) | ✅ Go 実装済み (IPTV バックエンドはプレイリストの再取得、EDCB / Mirakurun は Python 版へプロキシ) |
+| `POST /api/maintenance/run-batch-scan`・`/run-background-analysis` | 🔁 Python 版へプロキシ |
 | `/assets/*`・`/` (client/dist の静的配信、SPA フォールバック) | ✅ Go 実装済み |
 | CORS (Starlette 互換) | ✅ Go 実装済み |
 | その他の全 API | 🔁 Python 版へプロキシ |
@@ -88,6 +92,7 @@ curl http://127.0.0.77:7002/api/version
 - `internal/tsinfo/`: 放送波 (MPEG-TS) のユーティリティ (`server/app/utils/TSInformation.py` 相当、地域識別の逆引きなど) 。
 - `internal/jikkyo/`: ニコニコ実況のチャンネル対応表 (`server/app/utils/JikkyoClient.py` の一部) 。`server/static/jikkyo_channels.json` を読み込む。
 - `internal/iptv/`: IPTV (M3U プレイリスト) の取り込みと配信 (`server/app/utils/IPTVUtil.py` の Go 版) 。
+- `internal/logging/`: Python 版 (uvicorn) 互換のログ出力と日次ローテーション (`server/app/utils/LogRotation.py` の Go 版) 。
 - `internal/api/`: HTTP ハンドラー。Go 実装済みルートと、Python 版へのプロキシ・静的配信。
 
 ### 互換性のための約束事
@@ -153,6 +158,27 @@ Go 版では `EDCB バックエンドは Go 版サーバーでは未対応です
 (FFmpeg / psisiarc を使った録画ファイルの解析処理が必要なため) 。
 また、MPEG-4 コンテナの録画番組で `.psc` ファイルがある場合のコメント時刻の補正は行わない。
 
+### メンテナンス API (`/api/maintenance`)
+
+- `GET /api/maintenance/logs/{log_type}` はサーバーログ (`server`) またはアクセスログ (`access`) を
+  Server-Sent Events で配信する。初回接続時に `initial_log_update` で全行を送信し、以降は
+  `log_update` で新しい行を 1 行ずつ送信する (sse_starlette と同じく 15 秒間隔で ping を送信) 。
+- ログは Python 版 (uvicorn) と同じ形式 (`[2026/09/22 12:53:30.229] INFO:     message`) で
+  `server/logs/KonomiTV-Server.log` と `server/logs/KonomiTV-Access.log` に出力する。
+  JST 基準で日次ローテーションし、過去のログは `server/logs/archives/` に移動する (保持期間は 30 日) 。
+  なお、Go 版のログには構造化ログの属性が `key=value` 形式で付加される (Python 版にはない追加情報) 。
+- `POST /api/maintenance/restart` は `server/data/restart_required.lock` を作成してからサーバーを終了する
+  (KonomiTV.py などのスーパーバイザーがこのファイルを確認して再起動する) 。
+  `POST /api/maintenance/shutdown` はロックファイルを作成せずにサーバーを終了する。
+  どちらも管理者ユーザーまたは `Host: 127.0.0.77:<server.port + 10>` (内部ポート) からのアクセスで実行できる。
+- `POST /api/maintenance/update-database` は IPTV バックエンドではプレイリストを再取得するだけで、
+  Python 版と同じくチャンネル情報・番組情報をデータベースに保存しない。
+  EDCB / Mirakurun バックエンドのチャンネル情報・番組情報の更新は Go 版では未実装のため Python 版へプロキシする。
+
+**未対応**: 録画フォルダの一括スキャン (`POST /api/maintenance/run-batch-scan`) と
+バックグラウンド解析 (`POST /api/maintenance/run-background-analysis`) は、
+録画ファイルのメタデータ解析・CM 区間検出・サムネイル生成が必要なため Python 版へプロキシする。
+
 ## テスト
 
 `go test ./...` で実行する。Python 版との互換性は、Python 側で生成したフィクスチャとの照合で検証している。
@@ -177,6 +203,16 @@ cd server
 uv run python ../server-go/tools/generate_iptv_parity_fixture.py
 uv run python ../server-go/tools/generate_stream_options_fixture.py
 uv run python ../server-go/tools/generate_server_settings_fixture.py
+```
+
+### E2E 検証
+
+実サーバーを一時ディレクトリで起動して検証するスクリプトも `server-go/tools/` にあります
+(`server/` ディレクトリで実行) 。
+
+```powershell
+# メンテナンス API (再起動 API を実行するとサーバーが終了するため、最後に実行する)
+uv run python ../server-go/tools/e2e_maintenance_verify.py http://127.0.0.77:7008 <作業ディレクトリ> 1 2
 ```
 
 チャンネル一覧 API は、実スキーマの DB と実際の HTTP サーバーを使った E2E 検証もできます。

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/aki0429/KonomiTV/server-go/internal/database"
@@ -207,13 +208,26 @@ func (s *Server) handleLiveStreamEvents(w http.ResponseWriter, r *http.Request) 
 }
 
 // writeSSEEvent は Server-Sent Events のイベントを書き出す。
+// データは Python 版 (json.dumps(ensure_ascii=False)) と同じく、
+// HTML エスケープと非 ASCII 文字のエスケープを行わずに出力する。
 func writeSSEEvent(w io.Writer, event string, body any) {
-	data, err := json.Marshal(body)
+	data, err := marshalPythonJSON(body)
 	if err != nil {
 		return
 	}
 	_, _ = io.WriteString(w, "event: "+event+"\r\n")
 	_, _ = io.WriteString(w, "data: "+string(data)+"\r\n\r\n")
+}
+
+// marshalPythonJSON は Python 版の json.dumps(ensure_ascii=False) 相当の JSON を返す。
+func marshalPythonJSON(body any) ([]byte, error) {
+	var builder strings.Builder
+	encoder := json.NewEncoder(&builder)
+	encoder.SetEscapeHTML(false)
+	if err := encoder.Encode(body); err != nil {
+		return nil, err
+	}
+	return []byte(strings.TrimSuffix(builder.String(), "\n")), nil
 }
 
 // handleLiveStreamPSIArchivedData はライブ PSI/SI アーカイブデータストリーミング API
