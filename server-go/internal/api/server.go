@@ -1,0 +1,72 @@
+// Package api は KonomiTV の HTTP API サーバーを提供する。
+//
+// Python 版サーバーからの段階的な移行のため、Go 側で実装済みのルートはネイティブに処理し、
+// 未移行のルートは Python 版サーバーへリバースプロキシする (ストラングラーパターン) 。
+package api
+
+import (
+	"database/sql"
+	"log/slog"
+	"net/http"
+
+	"github.com/aki0429/KonomiTV/server-go/internal/config"
+	"github.com/aki0429/KonomiTV/server-go/internal/constants"
+)
+
+// Server は Go 版 KonomiTV サーバーのインスタンス。
+type Server struct {
+	config        *config.Config
+	paths         constants.Paths
+	db            *sql.DB
+	logger        *slog.Logger
+	proxy         http.Handler // nil の場合はプロキシ無効
+	latestVersion *latestVersionCache
+}
+
+// Options は Server の生成に必要な依存関係。
+type Options struct {
+	Config *config.Config
+	Paths  constants.Paths
+	DB     *sql.DB
+	Logger *slog.Logger
+	// PythonBackendURL は未移行 API の転送先 (例: http://127.0.0.77:7010/) 。
+	// 空文字の場合はプロキシを無効化し、未実装の API は 404 を返す。
+	PythonBackendURL string
+}
+
+// New は Server を生成する。
+func New(options Options) (*Server, error) {
+	proxy, err := newProxy(options.PythonBackendURL, options.Logger)
+	if err != nil {
+		return nil, err
+	}
+	return &Server{
+		config:        options.Config,
+		paths:         options.Paths,
+		db:            options.DB,
+		logger:        options.Logger,
+		proxy:         proxy,
+		latestVersion: newLatestVersionCache(options.Logger),
+	}, nil
+}
+
+// Handler は HTTP ハンドラーを構成して返す。
+func (s *Server) Handler() http.Handler {
+	mux := http.NewServeMux()
+
+	// ***** Go 実装済みのルート *****
+	mux.HandleFunc("GET /api/version", s.handleVersion)
+
+	// ***** 静的ファイル *****
+	// Python 版の app.mount('/assets', StaticFiles(...)) 相当
+	mux.HandleFunc("/assets/", s.handleAssets)
+	// それ以外のすべて (未移行 API のプロキシと SPA 配信)
+	mux.HandleFunc("/", s.handleRoot)
+
+	// ミドルウェア (外側から アクセスログ → panic 回復 → CORS → ルーティング)
+	var handler http.Handler = mux
+	handler = corsMiddleware(handler, s.config.General.Debug)
+	handler = recoverMiddleware(handler, s.logger)
+	handler = accessLogMiddleware(handler, s.logger)
+	return handler
+}

@@ -1,0 +1,6 @@
+# ビルド成果物
+/konomitv-go
+/konomitv-go.exe
+/bin/
+*.test
+*.out

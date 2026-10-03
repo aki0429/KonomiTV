@@ -181,6 +181,17 @@ Windows では Windows サービス、Linux では pm2 サービスとして動�
 - `KonomiTV.py`: KonomiTV サーバーのエントリーポイント
 - `KonomiTV-Service.py`: Windows サービス管理スクリプト & Windows サービスのエントリーポイント
 
+### サーバー Go 版 (`server-go/`)
+
+- KonomiTV サーバーのバックエンドを段階的に Go へ移行するための実装。Python 版と共存させたまま、ルーター単位で移行する (ストラングラーパターン)
+- Go 側で実装済みのルートはネイティブに処理し、未移行の `/api/*` は Python 版サーバーの内部 URL (`http://127.0.0.77:(server.port + 10)/`、デフォルト: 7010) へリバースプロキシする
+- デフォルトのリッスンアドレスは `127.0.0.77:7002`。Python 版 (Akebi 経由で 7000) とは別ポートなので共存できる
+- `go build ./...`・`go vet ./...`・`go test ./...` を `server-go/` で実行して検証する
+- SQLite (`server/data/database.sqlite`) は Python 版 (Tortoise ORM) が管理する。Go 側は移行初期段階では `mode=ro` + `query_only` の読み取り専用でアクセスし、絶対に書き込まない
+- 日時は Tortoise ORM が `datetime.isoformat(" ")` 形式 (例: `2025-09-22 15:47:00.123456+09:00`) で保存している。独自形式で書き込まないこと
+- API のレスポンス形式・エラーレスポンス (`{"detail": "..."}`) ・CORS ヘッダーは Python 版 (FastAPI / Starlette) と互換になるように実装する
+- 移行状況と使い方は `server-go/README.md` を参照すること
+
 ## アーキテクチャ上の設計判断と既知の制約
 
 ### ライブストリーミング (LiveStream / LiveEncodingTask) の協調動作
@@ -239,6 +250,16 @@ Windows では Windows サービス、Linux では pm2 サービスとして動�
 - `getattr()` で型チェッカーを黙らせるのは禁止。参照する属性は型ヒントやプロパティできちんと公開し、どうしても `getattr()` が必要な場合は「その属性が必ず存在する根拠」を詳細にコメントする
 - すべての Docstring には Args / Returns を明記し、コメントは処理のまとまりごとに必ず加えて「なぜそうするのか」「何を意図した値なのか」を丁寧に説明する。コードを読まなくてもコメントから処理の流れを追えるようにする
 - このプロジェクトでは必ずロギングモジュールとして `import logging` の代わりに `from app import logging` を使うべき
+
+### Go コード (`server-go/`)
+
+- **コードの編集後には、必ず `gofmt` を適用し、`go vet ./...` と `go test ./...` を実行すること**
+- コメントは Python コードと同様に日本語で記述する (ログメッセージは文字化けを避けるため英語) 。エクスポートする識別子には doc コメントを付ける
+- 標準ライブラリを優先し、外部依存は必要最小限にする (`modernc.org/sqlite`、`gopkg.in/yaml.v3` など) 。SQLite は CGO を必要としない `modernc.org/sqlite` を使う
+- HTTP ルーティングは Go 1.22 以降の `net/http.ServeMux` (メソッド付きパターン) を使う
+- エラーは `fmt.Errorf("...: %w", err)` でラップする。エラー文字列は英語で記述する
+- Python 版との互換性が必要な箇所 (JSON フィールド名・順序、日時形式、エラーレスポンス、CORS ヘッダー) は、対応する Python 実装を必ず読んでから実装する
+- 新しい API を移行した際は、`server-go/README.md` の移行状況テーブルを更新し、可能なら Python 版との応答互換性テストを追加する
 
 ### Vue / TypeScript コード
 
