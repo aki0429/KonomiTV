@@ -19,6 +19,8 @@ type Config struct {
 	General GeneralConfig `yaml:"general"`
 	Server  ServerConfig  `yaml:"server"`
 	TV      TVConfig      `yaml:"tv"`
+	Video   VideoConfig   `yaml:"video"`
+	Capture CaptureConfig `yaml:"capture"`
 	IPTV    IPTVConfig    `yaml:"iptv"`
 }
 
@@ -60,6 +62,20 @@ type TVConfig struct {
 	DebugModeTSPath *string `yaml:"debug_mode_ts_path"`
 }
 
+// VideoConfig は video セクションの設定。
+type VideoConfig struct {
+	// RecordedFolders は録画ファイルが保存されているフォルダの一覧。
+	RecordedFolders []string `yaml:"recorded_folders"`
+	// ExcludeScanPaths は録画フォルダのスキャンから除外するパスの一覧。
+	ExcludeScanPaths []string `yaml:"exclude_scan_paths"`
+}
+
+// CaptureConfig は capture セクションの設定。
+type CaptureConfig struct {
+	// UploadFolders はキャプチャ画像の保存先フォルダの一覧。
+	UploadFolders []string `yaml:"upload_folders"`
+}
+
 // IPTVConfig は iptv セクションの設定。
 type IPTVConfig struct {
 	// Enabled は IPTV 機能が有効か。
@@ -90,6 +106,9 @@ func Default() *Config {
 	config.General.ProgramUpdateInterval = 5.0
 	config.Server.Port = 7000
 	config.TV.MaxAliveTime = 10
+	config.Video.RecordedFolders = []string{}
+	config.Video.ExcludeScanPaths = []string{}
+	config.Capture.UploadFolders = []string{}
 	config.IPTV.Enabled = true
 	config.IPTV.CacheTTL = 3600
 	config.IPTV.RequestTimeout = 20.0

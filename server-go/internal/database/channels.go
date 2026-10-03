@@ -304,3 +304,29 @@ func ListChannelsByIDs(ctx context.Context, db *sql.DB, channelIDs []string) (ma
 	}
 	return result, nil
 }
+
+// SearchChannelsByName はチャンネル名の部分一致でチャンネルを検索する。
+// 移植元: Python 版 CapturesRouter の Channel.filter(name__icontains=search)
+func SearchChannelsByName(ctx context.Context, db *sql.DB, search string) ([]Channel, error) {
+	rows, err := db.QueryContext(
+		ctx,
+		`SELECT`+channelColumns+`FROM channels WHERE LOWER(name) LIKE ?`,
+		"%"+strings.ToLower(search)+"%",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search channels by name: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	channels := []Channel{}
+	for rows.Next() {
+		channel, err := scanChannel(rows.Scan)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan channel row: %w", err)
+		}
+		channels = append(channels, *channel)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to iterate channel rows: %w", err)
+	}
+	return channels, nil
+}

@@ -197,6 +197,20 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/iptv/tvui", s.handleIPTVTVUIUnregister)
 	mux.HandleFunc("GET /api/iptv/proxy", s.handleIPTVProxy)
 	mux.HandleFunc("GET /api/iptv/logo", s.handleIPTVLogo)
+	// キャプチャ
+	// 保存先フォルダのスキャン・EXIF メタデータの抽出・サムネイル生成・フォルダ管理を Go で行う
+	mux.HandleFunc("GET /api/captures", s.handleCaptures)
+	mux.HandleFunc("POST /api/captures", s.handleCaptureUpload)
+	mux.HandleFunc("GET /api/captures/folders", s.handleCaptureFolderList)
+	mux.HandleFunc("POST /api/captures/folders", s.handleCaptureFolderCreate)
+	mux.HandleFunc("PUT /api/captures/folders/{folder_id}", s.handleCaptureFolderUpdate)
+	mux.HandleFunc("DELETE /api/captures/folders/{folder_id}", s.handleCaptureFolderDelete)
+	mux.HandleFunc("GET /api/captures/folders/{folder_id}/captures", s.handleCaptureFolderCaptureList)
+	mux.HandleFunc("POST /api/captures/folders/{folder_id}/captures", s.handleCaptureFolderCaptureAdd)
+	mux.HandleFunc("DELETE /api/captures/folders/{folder_id}/captures", s.handleCaptureFolderCaptureRemove)
+	mux.HandleFunc("GET /api/captures/{filename}", s.handleCaptureImage)
+	mux.HandleFunc("DELETE /api/captures/{filename}", s.handleCaptureDelete)
+
 	// メンテナンス
 	// データベース更新 (EDCB / Mirakurun バックエンド) 、一括スキャン、バックグラウンド解析は
 	// Go 版では未実装のため Python 版へプロキシする

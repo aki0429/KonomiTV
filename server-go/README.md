@@ -47,6 +47,9 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `POST /api/maintenance/restart`・`POST /api/maintenance/shutdown` (再起動・終了) | ✅ Go 実装済み (ローカルホストからのアクセスは認証不要) |
 | `POST /api/maintenance/update-database` (データベース更新) | ✅ Go 実装済み (IPTV バックエンドはプレイリストの再取得、EDCB / Mirakurun は Python 版へプロキシ) |
 | `POST /api/maintenance/run-batch-scan`・`/run-background-analysis` | 🔁 Python 版へプロキシ |
+| `GET /api/captures`・`GET /api/captures/{filename}`・`POST /api/captures`・`DELETE /api/captures/{filename}` (キャプチャ一覧・取得・アップロード・削除) | ✅ Go 実装済み |
+| `GET`/`POST`/`PUT`/`DELETE /api/captures/folders` (キャプチャフォルダ管理) | ✅ Go 実装済み |
+| `GET`/`POST`/`DELETE /api/captures/folders/{folder_id}/captures` (フォルダ内キャプチャ操作) | ✅ Go 実装済み |
 | `/assets/*`・`/` (client/dist の静的配信、SPA フォールバック) | ✅ Go 実装済み |
 | CORS (Starlette 互換) | ✅ Go 実装済み |
 | その他の全 API | 🔁 Python 版へプロキシ |
@@ -93,6 +96,8 @@ curl http://127.0.0.77:7002/api/version
 - `internal/jikkyo/`: ニコニコ実況のチャンネル対応表 (`server/app/utils/JikkyoClient.py` の一部) 。`server/static/jikkyo_channels.json` を読み込む。
 - `internal/iptv/`: IPTV (M3U プレイリスト) の取り込みと配信 (`server/app/utils/IPTVUtil.py` の Go 版) 。
 - `internal/logging/`: Python 版 (uvicorn) 互換のログ出力と日次ローテーション (`server/app/utils/LogRotation.py` の Go 版) 。
+- `internal/exif/`: EXIF の最小限のパーサー (キャプチャ画像の XPComment と回転情報の読み取り) 。
+- `internal/captures/`: キャプチャ画像のスキャン・メタデータ抽出・サムネイル生成 (`server/app/routers/CapturesRouter.py` の一部) 。
 - `internal/api/`: HTTP ハンドラー。Go 実装済みルートと、Python 版へのプロキシ・静的配信。
 
 ### 互換性のための約束事
@@ -179,6 +184,26 @@ Go 版では `EDCB バックエンドは Go 版サーバーでは未対応です
 バックグラウンド解析 (`POST /api/maintenance/run-background-analysis`) は、
 録画ファイルのメタデータ解析・CM 区間検出・サムネイル生成が必要なため Python 版へプロキシする。
 
+### キャプチャ API (`/api/captures`)
+
+サーバー設定 `capture.upload_folders` で指定されたフォルダ内の JPEG / PNG を扱う。
+
+- 一覧は保存先フォルダをスキャンし、ファイルの更新日時順 (order=desc/asc) にソートして
+  ページネーション (1 ページ 36 件) を適用する。
+- キャプチャメタデータは EXIF の XPComment タグ (0x9C9C) に格納された UTF-16LE の JSON を読み取る
+  (`internal/exif` に自前の最小限の EXIF パーサーを実装) 。
+  応答は Python 版 `schemas.Capture` と完全に一致することを検証済み。
+- 検索 (`search`) はファイル名・EXIF の番組名・チャンネル名 (channels テーブルの network_id / service_id と突き合わせ) の
+  いずれかで部分一致する。
+- `thumbnail=true` を指定すると、EXIF の回転情報を適用したうえで長辺 400px に縮小した JPEG (品質 80) を返す。
+  縮小後のサイズは Pillow の `Image.thumbnail()` と同じ計算で求め、Pillow と一致することを検証済み。
+- アップロードは magic bytes で JPEG / PNG かを判定し、同名ファイルが存在する場合は連番を付与して保存する。
+  空き容量が 10MB 未満のフォルダはスキップして次の保存先フォルダを探す。
+- キャプチャフォルダ (capture_folders / capture_bookmarks テーブル) はログインユーザーごとに管理し、
+  他のユーザーのフォルダにはアクセスできない (404) 。
+
+**未対応**: 特になし (Python 版と同じ挙動を実装済み) 。
+
 ## テスト
 
 `go test ./...` で実行する。Python 版との互換性は、Python 側で生成したフィクスチャとの照合で検証している。
@@ -195,6 +220,9 @@ Go 版では `EDCB バックエンドは Go 版サーバーでは未対応です
 - `internal/config/server_settings_defaults.json`: Python 版 `ServerSettings` のデフォルト値と、
   リポジトリの `config.yaml` を Python 版 `LoadConfig()` で読み込んだ結果の期待値
   (`GET /api/settings/server` はこのデフォルト値で `config.yaml` を補完して返す) 。
+- `internal/captures/testdata/capture_exif.jpg`・`capture_no_exif.png`・`expected.json`:
+  Pillow で生成した EXIF XPComment 付き JPEG と EXIF なし PNG、およびそのメタデータの期待値
+  (キャプチャ API のメタデータ抽出・サムネイル生成の検証に使う) 。
 
 フィクスチャは `server-go/tools/` のスクリプトで再生成できます (`server/` ディレクトリで実行) 。
 
@@ -203,6 +231,7 @@ cd server
 uv run python ../server-go/tools/generate_iptv_parity_fixture.py
 uv run python ../server-go/tools/generate_stream_options_fixture.py
 uv run python ../server-go/tools/generate_server_settings_fixture.py
+uv run python ../server-go/tools/generate_capture_fixture.py
 ```
 
 ### E2E 検証
@@ -213,6 +242,10 @@ uv run python ../server-go/tools/generate_server_settings_fixture.py
 ```powershell
 # メンテナンス API (再起動 API を実行するとサーバーが終了するため、最後に実行する)
 uv run python ../server-go/tools/e2e_maintenance_verify.py http://127.0.0.77:7008 <作業ディレクトリ> 1 2
+
+# キャプチャ API (事前に e2e_captures_setup.py で環境を構築する)
+uv run python ../server-go/tools/e2e_captures_setup.py <作業ディレクトリ>
+uv run python ../server-go/tools/e2e_captures_verify.py http://127.0.0.77:7009 <作業ディレクトリ> 1
 ```
 
 チャンネル一覧 API は、実スキーマの DB と実際の HTTP サーバーを使った E2E 検証もできます。

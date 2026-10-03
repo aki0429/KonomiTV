@@ -1,0 +1,30 @@
+{
+  "capture_exif.jpg": {
+    "mime_type": "image/jpeg",
+    "image_width": 1200,
+    "image_height": 800,
+    "orientation": 6,
+    "capture_metadata": {
+      "captured_at": "2026-09-22T15:11:58.874290+09:00",
+      "captured_playback_position": 123.456,
+      "network_id": 32736,
+      "service_id": 1024,
+      "event_id": 12345,
+      "title": "テスト番組 第1話「日本語タイトル」",
+      "description": "テスト番組の概要です。",
+      "start_time": "2026-09-22T15:00:00+09:00",
+      "end_time": "2026-09-22T15:30:00+09:00",
+      "duration": 1800.0,
+      "caption_text": "字幕テスト",
+      "is_caption_composited": true,
+      "is_comment_composited": false
+    }
+  },
+  "capture_no_exif.png": {
+    "mime_type": "image/png",
+    "image_width": 640,
+    "image_height": 480,
+    "orientation": 1,
+    "capture_metadata": null
+  }
+}
