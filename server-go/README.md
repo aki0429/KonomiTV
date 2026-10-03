@@ -17,6 +17,9 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `POST /api/users` (登録) ・`PUT`/`DELETE /api/users/me`・`PUT`/`DELETE /api/users/{username}` (更新・削除) | ✅ Go 実装済み |
 | `PUT /api/users/me/icon` (アイコン更新、512x512 PNG へ変換) | ✅ Go 実装済み |
 | `POST`/`DELETE /api/users/me/account-links` (Twitter / Bluesky 紐付け) | ✅ Go 実装済み |
+| `GET /api/channels/{channel_id}` (チャンネル情報、現在/次の番組を含む) | ✅ Go 実装済み (視聴者数のみ常に 0) |
+| `GET /api/channels/{channel_id}/logo` (チャンネルロゴ) | ✅ Go 実装済み (IPTV 疑似チャンネルは Python 版へプロキシ) |
+| `GET /api/channels` (チャンネル一覧) | 🔁 Python 版へプロキシ (視聴者数と IPTV 疑似チャンネルが Python プロセスのメモリに依存) |
 | `/assets/*`・`/` (client/dist の静的配信、SPA フォールバック) | ✅ Go 実装済み |
 | CORS (Starlette 互換) | ✅ Go 実装済み |
 | その他の全 API | 🔁 Python 版へプロキシ |
@@ -59,20 +62,25 @@ curl http://127.0.0.77:7002/api/version
 - `internal/config/`: `config.yaml` の読み込み (`server/app/config.py` の Go 版、必要な項目のみ) 。
 - `internal/constants/`: バージョン・パス・タイムゾーンなどの定数 (`server/app/constants.py` 相当) 。
 - `internal/database/`: SQLite へのアクセス (`modernc.org/sqlite`、CGO 不要) 。読み取りは読み取り専用接続、書き込みは専用接続で行う。
+- `internal/tsinfo/`: 放送波 (MPEG-TS) のユーティリティ (`server/app/utils/TSInformation.py` 相当、地域識別の逆引きなど) 。
 - `internal/api/`: HTTP ハンドラー。Go 実装済みルートと、Python 版へのプロキシ・静的配信。
 
 ### 互換性のための約束事
 
 - SQLite は Python 版 (Tortoise ORM) が管理する `server/data/database.sqlite` をそのまま使う。
   日時は `datetime.isoformat(" ")` 形式 (例: `2025-09-22 15:47:00.123456+09:00`) で保存されている。
-- 移行初期段階では Go 側から DB への書き込みを行わない (`mode=ro` + `query_only`) 。
+- 読み取りは読み取り専用接続 (`mode=ro` + `query_only`) 、書き込みは専用接続 (`busy_timeout` + `foreign_keys`、接続数 1 で直列化) で行う。スキーマは変更せず、マイグレーションは Python 版の Aerich に任せる。
 - JWT アクセストークンは Python 版 (`python-jose`, HS256) と完全に互換。`server/data/jwt_secret.dat` を共有するため、どちらのサーバーが発行したトークンでも認証できる。
 - パスワードのハッシュ化・検証は bcrypt (passlib 互換、コスト12) で行う。
+- 浮動小数点数は Pydantic v2 と同じ形式 (`1800.0`) で出力する。
 - エラーレスポンスは FastAPI 互換の `{"detail": "..."}` 形式で返す。
 - CORS は Starlette の CORSMiddleware と同じヘッダーを返す。
 - 日時の JSON 表現は Pydantic v2 と同じ (`2026-09-22T15:11:58.874290+09:00`) 。
 
 ## テスト
+
+`go test ./...` で実行する。Python 版との互換性は、Python 側で生成したフィクスチャとの照合で検証している。
+- `internal/tsinfo/testdata/regions.json`: Python 版 `TSInformation.getRegionNamesFromNetworkID()` の全ネットワーク ID 分の期待値。
 
 ```powershell
 go test ./...
@@ -84,8 +92,8 @@ go vet ./...
 
 ## 今後の予定
 
-1. 読み取り系 API (`Channels` / `Programs` / `Series`) の移行
-2. IPTV ルーター (`IPTVRouter` / `IPTVUtil`) の移行
+1. IPTV ルーター (`IPTVRouter` / `IPTVUtil`) の移行 (チャンネル一覧の視聴者数・IPTV 疑似チャンネルも含む)
+2. 読み取り系 API (`Programs` / `Series`) の移行
 3. 書き込み系 API (予約・設定など) の移行
 4. ストリーミング (LiveStream / VideoStream) とエンコーダー制御の Go 化
 5. 完全移行後に `-listen 127.0.0.77:7010` で Python 版を置き換え

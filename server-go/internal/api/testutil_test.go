@@ -67,6 +67,45 @@ CREATE TABLE account_links (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE channels (
+    id VARCHAR(255) NOT NULL PRIMARY KEY,
+    display_channel_id VARCHAR(255) NOT NULL UNIQUE,
+    network_id INT NOT NULL,
+    service_id INT NOT NULL,
+    transport_stream_id INT,
+    remocon_id INT NOT NULL,
+    channel_number VARCHAR(255) NOT NULL,
+    type VARCHAR(255) NOT NULL,
+    name TEXT NOT NULL,
+    jikkyo_force INT,
+    is_subchannel INT NOT NULL,
+    is_radiochannel INT NOT NULL,
+    is_watchable INT NOT NULL
+);
+CREATE TABLE programs (
+    id VARCHAR(255) NOT NULL PRIMARY KEY,
+    channel_id VARCHAR(255) NOT NULL REFERENCES channels (id) ON DELETE CASCADE,
+    network_id INT NOT NULL,
+    service_id INT NOT NULL,
+    event_id INT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    detail JSON NOT NULL,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    duration REAL NOT NULL,
+    is_free INT NOT NULL,
+    genres JSON NOT NULL,
+    video_type TEXT,
+    video_codec TEXT,
+    video_resolution TEXT,
+    primary_audio_type TEXT NOT NULL,
+    primary_audio_language TEXT NOT NULL,
+    primary_audio_sampling_rate TEXT NOT NULL,
+    secondary_audio_type TEXT,
+    secondary_audio_language TEXT,
+    secondary_audio_sampling_rate TEXT
+);
 `
 
 // createTestDatabase はテスト用の SQLite データベースを生成する。

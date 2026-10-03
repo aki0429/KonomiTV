@@ -28,6 +28,7 @@ func newTestServer(t *testing.T, backendURL string) (*Server, constants.Paths) {
 		paths.ClientDistDir,
 		filepath.Join(paths.ClientDistDir, "assets"),
 		filepath.Join(paths.StaticDir, "account-icons"),
+		filepath.Join(paths.StaticDir, "logos"),
 	} {
 		if err := os.MkdirAll(directory, 0o755); err != nil {
 			t.Fatal(err)
