@@ -12,6 +12,8 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `POST /api/users/token` (アクセストークン発行) | ✅ Go 実装済み |
 | `GET /api/users`・`GET /api/users/me`・`GET /api/users/{username}` | ✅ Go 実装済み (読み取りのみ) |
 | `GET /api/users/me/icon`・`GET /api/users/{username}/icon` | ✅ Go 実装済み |
+| `GET /api/data-broadcasting/request/{url}`・`POST /api/data-broadcasting/request/{url}` (web-bml プロキシ) | ✅ Go 実装済み |
+| `GET /api/data-broadcasting/internet-status` | ✅ Go 実装済み |
 | `POST /api/users` (登録) ・`PUT`/`DELETE` (更新・削除) ・アイコン更新 | 🔁 Python 版へプロキシ (書き込み系は未移行) |
 | `/assets/*`・`/` (client/dist の静的配信、SPA フォールバック) | ✅ Go 実装済み |
 | CORS (Starlette 互換) | ✅ Go 実装済み |

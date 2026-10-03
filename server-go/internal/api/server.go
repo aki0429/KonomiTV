@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/aki0429/KonomiTV/server-go/internal/auth"
 	"github.com/aki0429/KonomiTV/server-go/internal/config"
@@ -69,14 +70,28 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/users/{username}", s.handleSpecifiedUser)
 	mux.HandleFunc("GET /api/users/{username}/icon", s.handleSpecifiedUserIcon)
 
+	// データ放送ブラウザ (web-bml) 向け API
+	mux.HandleFunc("GET /api/data-broadcasting/internet-status", s.handleDataBroadcastingInternetStatus)
+
 	// ***** 静的ファイル *****
 	// Python 版の app.mount('/assets', StaticFiles(...)) 相当
 	mux.HandleFunc("/assets/", s.handleAssets)
 	// それ以外のすべて (未移行 API のプロキシと SPA 配信)
 	mux.HandleFunc("/", s.handleRoot)
 
+	// データ放送のリクエストプロキシは転送先 URL をパスに含む ("//" を含む) ため、
+	// "//" を除去する ServeMux のパスクリーニングを通すことができない。
+	// そのため ServeMux の手前で直接ディスパッチする。
+	dispatcher := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, dataBroadcastingProxyPrefix) {
+			s.handleDataBroadcastingProxy(w, r)
+			return
+		}
+		mux.ServeHTTP(w, r)
+	})
+
 	// ミドルウェア (外側から アクセスログ → panic 回復 → CORS → ルーティング)
-	var handler http.Handler = mux
+	var handler http.Handler = dispatcher
 	handler = corsMiddleware(handler, s.config.General.Debug)
 	handler = recoverMiddleware(handler, s.logger)
 	handler = accessLogMiddleware(handler, s.logger)
