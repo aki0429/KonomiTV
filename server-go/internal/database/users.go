@@ -438,6 +438,15 @@ func UpdateUserPassword(ctx context.Context, db *sql.DB, id int64, passwordHash 
 	return nil
 }
 
+// UpdateUserClientSettings はクライアント設定 (JSON 文字列) を更新する。
+func UpdateUserClientSettings(ctx context.Context, db *sql.DB, id int64, clientSettings string) error {
+	if _, err := db.ExecContext(ctx, `UPDATE users SET client_settings = ?, updated_at = ? WHERE id = ?`,
+		clientSettings, NowForDB(), id); err != nil {
+		return fmt.Errorf("failed to update client settings: %w", err)
+	}
+	return nil
+}
+
 // UpdateUserIsAdmin は管理者権限を付与/剥奪する。
 func UpdateUserIsAdmin(ctx context.Context, db *sql.DB, id int64, isAdmin bool) error {
 	if _, err := db.ExecContext(ctx, `UPDATE users SET is_admin = ?, updated_at = ? WHERE id = ?`, isAdmin, NowForDB(), id); err != nil {

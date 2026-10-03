@@ -34,6 +34,8 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `GET /api/streams/live/{display_channel_id}/{quality}/events` (状態の Server-Sent Events) | ✅ Go 実装済み |
 | `GET /api/streams/live/{display_channel_id}/{quality}/mpegts` (ライブ MPEG-TS ストリーム) | ✅ Go 実装済み |
 | `GET /api/streams/live/{display_channel_id}/{quality}/psi-archived-data` (PSI/SI アーカイブデータ) | ✅ Go 実装済み (EDCB / Mirakurun バックエンドのみ。IPTV では 500 を返す) |
+| `GET /api/settings/client`・`PUT /api/settings/client` (クライアント設定の取得・更新) | ✅ Go 実装済み |
+| `GET /api/settings/server`・`PUT /api/settings/server` (サーバー設定の取得・更新) | ✅ Go 実装済み (PUT は config.yaml をコメントを保持したまま行単位で書き換える) |
 | `/assets/*`・`/` (client/dist の静的配信、SPA フォールバック) | ✅ Go 実装済み |
 | CORS (Starlette 互換) | ✅ Go 実装済み |
 | その他の全 API | 🔁 Python 版へプロキシ |
@@ -113,6 +115,16 @@ curl http://127.0.0.77:7002/api/version
 Go 版では `EDCB バックエンドは Go 版サーバーでは未対応です。(E-02E)` を返して Offline になる
 (IPTV バックエンドと Mirakurun / mirakc バックエンドは Go 版で動作する) 。
 
+### サーバー設定 API
+
+`GET /api/settings/server` は `config.yaml` を Python 版 `ServerSettings` のデフォルト値で補完して返す
+(応答は Python 版と完全に一致することを検証済み) 。
+`PUT /api/settings/server` は Pydantic 相当のバリデーション (列挙値・数値の範囲・URL のスキーム) を行ったうえで、
+`config.yaml` を**コメントを保持したまま行単位で書き換える** (ruamel.yaml の代替) 。
+
+**未対応**: Python 版のカスタムバリデーターのうち、環境に依存する検証 (EDCB / Mirakurun への接続確認、
+ポートの使用状況、エンコーダーの対応状況) は Go 版では行わない。
+
 ## テスト
 
 `go test ./...` で実行する。Python 版との互換性は、Python 側で生成したフィクスチャとの照合で検証している。
@@ -124,6 +136,9 @@ Go 版では `EDCB バックエンドは Go 版サーバーでは未対応です
   書き換え・画質の抽出・ストリーム形式の判定・プレイリスト出力・国/グループ集計) の期待値。
 - `internal/stream/testdata/stream_options.json`: Python 版 `LiveEncodingTask` の FFmpeg / HWEncC の
   エンコード引数 (画質 16 種類 × チャンネル種別 × フル HD × リトライ回数 × エンコードオプション) の期待値。
+- `internal/config/server_settings_defaults.json`: Python 版 `ServerSettings` のデフォルト値と、
+  リポジトリの `config.yaml` を Python 版 `LoadConfig()` で読み込んだ結果の期待値
+  (`GET /api/settings/server` はこのデフォルト値で `config.yaml` を補完して返す) 。
 
 フィクスチャは `server-go/tools/` のスクリプトで再生成できます (`server/` ディレクトリで実行) 。
 
@@ -131,6 +146,7 @@ Go 版では `EDCB バックエンドは Go 版サーバーでは未対応です
 cd server
 uv run python ../server-go/tools/generate_iptv_parity_fixture.py
 uv run python ../server-go/tools/generate_stream_options_fixture.py
+uv run python ../server-go/tools/generate_server_settings_fixture.py
 ```
 
 チャンネル一覧 API は、実スキーマの DB と実際の HTTP サーバーを使った E2E 検証もできます。
@@ -151,6 +167,16 @@ python server-go/tools/e2e_stream_server.py <作業ディレクトリ>/test.ts 7
 go build -o konomitv-go.exe ./cmd/konomitv-go
 ./konomitv-go.exe -no-proxy -listen 127.0.0.77:7006 -server-dir <作業ディレクトリ>/server   # 別のターミナルで実行
 python server-go/tools/e2e_stream_verify.py http://127.0.0.77:7006
+```
+
+サーバー設定 API は、実際の `config.yaml` を使った E2E 検証もできます
+(`PUT` は一時ディレクトリの `config.yaml` に対してのみ実行され、リポジトリの `config.yaml` は変更されません) 。
+
+```powershell
+cp config.yaml <作業ディレクトリ>/config.yaml
+./konomitv-go.exe -no-proxy -listen 127.0.0.77:7007 -server-dir <作業ディレクトリ>/server
+cd server
+uv run python ../server-go/tools/e2e_settings_verify.py http://127.0.0.77:7007 <作業ディレクトリ>/config.yaml <管理者ユーザーの ID>
 ```
 
 実データ (iptv-org のプレイリスト約 1.1 万チャンネル) を使った完全一致の検証もできます。
@@ -175,5 +201,5 @@ go vet ./...
 
 1. ビデオストリーミング (`/api/streams/video`、録画番組の再生) と録画番組 API (`/api/videos`) の Go 化
 2. EDCB バックエンドのチューナー制御 (`EDCBTuner`) の Go 化
-3. 書き込み系 API (予約・設定など) の移行
+3. 残りの書き込み系 API (予約・Twitter / Bluesky / ニコニコ連携・キャプチャなど) の移行
 4. 完全移行後に `-listen 127.0.0.77:7010` で Python 版を置き換え

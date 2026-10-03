@@ -142,6 +142,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/series/search", s.handleSeriesSearch)
 	mux.HandleFunc("GET /api/series/{series_id}", s.handleSeries)
 
+	// 設定
+	mux.HandleFunc("GET /api/settings/client", s.handleClientSettings)
+	mux.HandleFunc("PUT /api/settings/client", s.handleClientSettingsUpdate)
+	mux.HandleFunc("GET /api/settings/server", s.handleServerSettings)
+	mux.HandleFunc("PUT /api/settings/server", s.handleServerSettingsUpdate)
+
 	// ライブストリーミング
 	mux.HandleFunc("GET /api/streams/live", s.handleLiveStreams)
 	mux.HandleFunc("GET /api/streams/live/{display_channel_id}/{quality}", s.handleLiveStream)

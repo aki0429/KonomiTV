@@ -1,0 +1,83 @@
+{
+  "defaults": {
+    "general": {
+      "backend": "EDCB",
+      "always_receive_tv_from_mirakurun": false,
+      "edcb_url": "tcp://127.0.0.1:4510/",
+      "mirakurun_url": "http://127.0.0.1:40772/",
+      "encoder": "FFmpeg",
+      "program_update_interval": 5.0,
+      "debug": false,
+      "debug_encoder": false
+    },
+    "server": {
+      "port": 7000,
+      "custom_https_certificate": null,
+      "custom_https_private_key": null
+    },
+    "tv": {
+      "preferred_terrestrial_region": null,
+      "max_alive_time": 10,
+      "debug_mode_ts_path": null
+    },
+    "video": {
+      "recorded_folders": [],
+      "exclude_scan_paths": []
+    },
+    "capture": {
+      "upload_folders": []
+    },
+    "iptv": {
+      "enabled": true,
+      "sources": [
+        "https://iptv-org.github.io/iptv/index.m3u"
+      ],
+      "cache_ttl": 3600,
+      "request_timeout": 20.0,
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    }
+  },
+  "loaded": {
+    "general": {
+      "backend": "IPTV",
+      "always_receive_tv_from_mirakurun": false,
+      "edcb_url": "tcp://127.0.0.1:4510/",
+      "mirakurun_url": "http://127.0.0.1:40772/",
+      "encoder": "FFmpeg",
+      "program_update_interval": 5.0,
+      "debug": true,
+      "debug_encoder": false
+    },
+    "server": {
+      "port": 7000,
+      "custom_https_certificate": null,
+      "custom_https_private_key": null
+    },
+    "tv": {
+      "preferred_terrestrial_region": null,
+      "max_alive_time": 10,
+      "debug_mode_ts_path": null
+    },
+    "video": {
+      "recorded_folders": [
+        "J:\\TV-Record"
+      ],
+      "exclude_scan_paths": []
+    },
+    "capture": {
+      "upload_folders": [
+        "J:\\TV-Capture"
+      ]
+    },
+    "iptv": {
+      "enabled": true,
+      "sources": [
+        "https://iptv-org.github.io/iptv/index.m3u"
+      ],
+      "cache_ttl": 3600,
+      "request_timeout": 20.0,
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    }
+  },
+  "loaded_json": "{\"general\":{\"backend\":\"IPTV\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":true,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[\"J:\\\\TV-Record\"],\"exclude_scan_paths\":[]},\"capture\":{\"upload_folders\":[\"J:\\\\TV-Capture\"]},\"iptv\":{\"enabled\":true,\"sources\":[\"https://iptv-org.github.io/iptv/index.m3u\"],\"cache_ttl\":3600,\"request_timeout\":20.0,\"user_agent\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36\"}}"
+}
