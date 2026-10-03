@@ -63,8 +63,13 @@ func insertTestChannel(t *testing.T, db *sql.DB, channel testChannel) {
 }
 
 // insertTestProgram はテスト用の番組を挿入する。
+// network_id / service_id はチャンネルの値と一致させる (Python 版の番組更新処理と同じ) 。
 func insertTestProgram(t *testing.T, db *sql.DB, id string, channelID string, title string, startTime time.Time, endTime time.Time, duration float64) {
 	t.Helper()
+	var networkID, serviceID int
+	if err := db.QueryRow(`SELECT network_id, service_id FROM channels WHERE id = ?`, channelID).Scan(&networkID, &serviceID); err != nil {
+		t.Fatal(err)
+	}
 	_, err := db.Exec(`
 		INSERT INTO programs (
 			id, channel_id, network_id, service_id, event_id, title, description,
@@ -72,12 +77,12 @@ func insertTestProgram(t *testing.T, db *sql.DB, id string, channelID string, ti
 			video_type, video_codec, video_resolution,
 			primary_audio_type, primary_audio_language, primary_audio_sampling_rate,
 			secondary_audio_type, secondary_audio_language, secondary_audio_sampling_rate
-		) VALUES (?, ?, 32736, 1024, 1, ?, 'テスト番組の説明', '{"テスト": "値"}', ?, ?, ?, 1,
+		) VALUES (?, ?, ?, ?, 1, ?, 'テスト番組の説明', '{"テスト": "値"}', ?, ?, ?, 1,
 			'[{"major": "ニュース／報道", "middle": "国内"}]',
 			'映像', 'H.264', '1080i',
 			'音声', '日本語', '48kHz', NULL, NULL, NULL
 		)
-	`, id, channelID, title, formatTestDBTime(startTime), formatTestDBTime(endTime), duration)
+	`, id, channelID, networkID, serviceID, title, formatTestDBTime(startTime), formatTestDBTime(endTime), duration)
 	if err != nil {
 		t.Fatal(err)
 	}

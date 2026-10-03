@@ -146,3 +146,34 @@ func GetRegionNamesFromNetworkID(networkID int) []string {
 	copy(result, regionNames)
 	return result
 }
+
+// CalculateSubchannelParentServiceID はサブチャンネルの親サービス ID を算出する。
+// 親子関係を決め打ちできない場合は nil を返す。
+// 現状は BS のみ TSID なしでも親子関係を決め打ちできる
+// (Mirakurun の /api/services は TSID を返さないため) 。
+func CalculateSubchannelParentServiceID(channelType string, serviceID int) *int {
+	if channelType != "BS" {
+		return nil
+	}
+	parent := func(value int) *int {
+		return &value
+	}
+	// NHK BS
+	if serviceID == 102 {
+		return parent(101)
+	}
+	if serviceID == 104 {
+		return parent(103)
+	}
+	// 民放系 BS のマルチ編成
+	for base := 141; base <= 181; base += 10 {
+		if base < serviceID && serviceID <= base+8 {
+			return parent(base)
+		}
+	}
+	// 放送大学テレビ
+	if serviceID == 232 || serviceID == 233 {
+		return parent(231)
+	}
+	return nil
+}

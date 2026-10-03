@@ -58,6 +58,16 @@ func ParseNullableDBTime(value *string) (*time.Time, error) {
 	return &parsed, nil
 }
 
+// FormatDBTime は time.Time を Tortoise ORM が SQLite に保存するのと同じ形式の文字列に変換する。
+// Python の datetime.isoformat(' ') と同じく、マイクロ秒が 0 の場合は小数部を省略する。
+func FormatDBTime(value time.Time) string {
+	inJST := value.In(constants.JST)
+	if inJST.Nanosecond() == 0 {
+		return inJST.Format("2006-01-02 15:04:05-07:00")
+	}
+	return inJST.Format("2006-01-02 15:04:05.000000-07:00")
+}
+
 // FormatJSONTime は time.Time を Pydantic v2 / FastAPI と同じ ISO8601 形式の文字列に変換する。
 // 例: "2026-09-22T15:11:50.725472+09:00" (マイクロ秒が 0 の場合は省略される)
 func FormatJSONTime(value time.Time) string {

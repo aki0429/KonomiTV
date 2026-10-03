@@ -81,6 +81,37 @@ func TestRegionsMatchPython(t *testing.T) {
 	}
 }
 
+// TestCalculateSubchannelParentServiceIDMatchesPython は親サービス ID の算出が Python 版と一致することを検証する。
+func TestCalculateSubchannelParentServiceIDMatchesPython(t *testing.T) {
+	raw, err := os.ReadFile("testdata/subchannel_parent_ids.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var expectations []struct {
+		Type            string `json:"type"`
+		ServiceID       int    `json:"service_id"`
+		ParentServiceID *int   `json:"parent_service_id"`
+	}
+	if err := json.Unmarshal(raw, &expectations); err != nil {
+		t.Fatal(err)
+	}
+	if len(expectations) < 2000 {
+		t.Fatalf("unexpectedly few expectations: %d", len(expectations))
+	}
+	for _, expectation := range expectations {
+		actual := CalculateSubchannelParentServiceID(expectation.Type, expectation.ServiceID)
+		if expectation.ParentServiceID == nil {
+			if actual != nil {
+				t.Errorf("CalculateSubchannelParentServiceID(%q, %d) = %d, want nil", expectation.Type, expectation.ServiceID, *actual)
+			}
+			continue
+		}
+		if actual == nil || *actual != *expectation.ParentServiceID {
+			t.Errorf("CalculateSubchannelParentServiceID(%q, %d) = %v, want %d", expectation.Type, expectation.ServiceID, actual, *expectation.ParentServiceID)
+		}
+	}
+}
+
 // TestTerrestrialRegionToRegionIDs は地域名からの順引きを検証する。
 func TestTerrestrialRegionToRegionIDs(t *testing.T) {
 	if ids := TerrestrialRegionToRegionIDs("東京都"); len(ids) != 2 || ids[0] != 23 || ids[1] != 1 {

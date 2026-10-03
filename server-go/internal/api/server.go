@@ -102,6 +102,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/channels/{channel_id}/logo", s.handleChannelLogo)
 	mux.HandleFunc("GET /api/channels/{channel_id}/jikkyo", s.handleChannelJikkyo)
 
+	// 番組表・番組検索
+	// POST /api/programs/search は EDCB バックエンド専用のため、Go 側ではバックエンドのチェックのみ行う
+	mux.HandleFunc("POST /api/programs/search", s.handleProgramSearch)
+	mux.HandleFunc("GET /api/programs/timetable", s.handleProgramTimeTable)
+
 	// ***** 静的ファイル *****
 	// Python 版の app.mount('/assets', StaticFiles(...)) 相当
 	mux.HandleFunc("/assets/", s.handleAssets)

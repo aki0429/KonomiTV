@@ -1,0 +1,312 @@
+{
+ "rows": [
+  {
+   "id": "GR-011-1001",
+   "type": "GR",
+   "channel_number": "011",
+   "service_id": 1001,
+   "network_id": 32736,
+   "transport_stream_id": 32736
+  },
+  {
+   "id": "GR-012-1002",
+   "type": "GR",
+   "channel_number": "012",
+   "service_id": 1002,
+   "network_id": 32736,
+   "transport_stream_id": 32736
+  },
+  {
+   "id": "GR-021-1003",
+   "type": "GR",
+   "channel_number": "021",
+   "service_id": 1003,
+   "network_id": 32736,
+   "transport_stream_id": 32736
+  },
+  {
+   "id": "GR-031-1-1004",
+   "type": "GR",
+   "channel_number": "031-1",
+   "service_id": 1004,
+   "network_id": 32736,
+   "transport_stream_id": 32736
+  },
+  {
+   "id": "GR-031-2-1005",
+   "type": "GR",
+   "channel_number": "031-2",
+   "service_id": 1005,
+   "network_id": 32736,
+   "transport_stream_id": 32736
+  },
+  {
+   "id": "GR-032-1-1006",
+   "type": "GR",
+   "channel_number": "032-1",
+   "service_id": 1006,
+   "network_id": 32736,
+   "transport_stream_id": 32736
+  },
+  {
+   "id": "GR-041-1007",
+   "type": "GR",
+   "channel_number": "041",
+   "service_id": 1007,
+   "network_id": 32736,
+   "transport_stream_id": 32736
+  },
+  {
+   "id": "GR-061-1008",
+   "type": "GR",
+   "channel_number": "061",
+   "service_id": 1008,
+   "network_id": 32736,
+   "transport_stream_id": 32736
+  },
+  {
+   "id": "GR-081-1009",
+   "type": "GR",
+   "channel_number": "081",
+   "service_id": 1009,
+   "network_id": 32736,
+   "transport_stream_id": 32736
+  },
+  {
+   "id": "GR-091-1010",
+   "type": "GR",
+   "channel_number": "091",
+   "service_id": 1010,
+   "network_id": 32736,
+   "transport_stream_id": 32736
+  },
+  {
+   "id": "GR-101-1011",
+   "type": "GR",
+   "channel_number": "101",
+   "service_id": 1011,
+   "network_id": 32736,
+   "transport_stream_id": 32736
+  },
+  {
+   "id": "GR-abc-1012",
+   "type": "GR",
+   "channel_number": "abc",
+   "service_id": 1012,
+   "network_id": 32736,
+   "transport_stream_id": 32736
+  },
+  {
+   "id": "BS-101-1013",
+   "type": "BS",
+   "channel_number": "101",
+   "service_id": 1013,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS-102-1014",
+   "type": "BS",
+   "channel_number": "102",
+   "service_id": 1014,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS-103-1015",
+   "type": "BS",
+   "channel_number": "103",
+   "service_id": 1015,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS-104-1016",
+   "type": "BS",
+   "channel_number": "104",
+   "service_id": 1016,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS-141-1-1017",
+   "type": "BS",
+   "channel_number": "141-1",
+   "service_id": 1017,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS-141-2-1018",
+   "type": "BS",
+   "channel_number": "141-2",
+   "service_id": 1018,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS-142-1019",
+   "type": "BS",
+   "channel_number": "142",
+   "service_id": 1019,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS-151-1020",
+   "type": "BS",
+   "channel_number": "151",
+   "service_id": 1020,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS-161-1021",
+   "type": "BS",
+   "channel_number": "161",
+   "service_id": 1021,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS-171-1022",
+   "type": "BS",
+   "channel_number": "171",
+   "service_id": 1022,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS-181-1023",
+   "type": "BS",
+   "channel_number": "181",
+   "service_id": 1023,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS-191-1024",
+   "type": "BS",
+   "channel_number": "191",
+   "service_id": 1024,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS-200-1025",
+   "type": "BS",
+   "channel_number": "200",
+   "service_id": 1025,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS-201-1026",
+   "type": "BS",
+   "channel_number": "201",
+   "service_id": 1026,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS-211-1027",
+   "type": "BS",
+   "channel_number": "211",
+   "service_id": 1027,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "CS-055-1028",
+   "type": "CS",
+   "channel_number": "055",
+   "service_id": 1028,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "CS-218-1029",
+   "type": "CS",
+   "channel_number": "218",
+   "service_id": 1029,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "CS-223-1030",
+   "type": "CS",
+   "channel_number": "223",
+   "service_id": 1030,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "CS-240-1031",
+   "type": "CS",
+   "channel_number": "240",
+   "service_id": 1031,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "CS-500-1032",
+   "type": "CS",
+   "channel_number": "500",
+   "service_id": 1032,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS4K-101-1033",
+   "type": "BS4K",
+   "channel_number": "101",
+   "service_id": 1033,
+   "network_id": 4,
+   "transport_stream_id": null
+  },
+  {
+   "id": "BS4K-102-1034",
+   "type": "BS4K",
+   "channel_number": "102",
+   "service_id": 1034,
+   "network_id": 4,
+   "transport_stream_id": null
+  }
+ ],
+ "sorted_ids": [
+  "GR-011-1001",
+  "GR-012-1002",
+  "GR-021-1003",
+  "GR-031-1-1004",
+  "GR-032-1-1006",
+  "GR-031-2-1005",
+  "GR-041-1007",
+  "GR-061-1008",
+  "GR-081-1009",
+  "GR-091-1010",
+  "GR-101-1011",
+  "CS-055-1028",
+  "BS-101-1013",
+  "BS4K-101-1033",
+  "BS-102-1014",
+  "BS4K-102-1034",
+  "BS-103-1015",
+  "BS-104-1016",
+  "BS-141-1-1017",
+  "BS-141-2-1018",
+  "BS-142-1019",
+  "BS-151-1020",
+  "BS-161-1021",
+  "BS-171-1022",
+  "BS-181-1023",
+  "BS-191-1024",
+  "BS-200-1025",
+  "BS-201-1026",
+  "BS-211-1027",
+  "CS-218-1029",
+  "CS-223-1030",
+  "CS-240-1031",
+  "CS-500-1032",
+  "GR-abc-1012"
+ ]
+}

@@ -12,8 +12,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/aki0429/KonomiTV/server-go/internal/constants"
-
 	_ "modernc.org/sqlite" // SQLite ドライバー (純 Go 実装)
 )
 
@@ -70,5 +68,5 @@ func OpenReadWrite(path string) (*sql.DB, error) {
 // NowForDB は現在時刻を Tortoise ORM が SQLite に保存するのと同じ形式で返す。
 // Python の datetime.isoformat(' ') 形式 (例: "2026-10-04 05:20:11.123456+09:00") と同一。
 func NowForDB() string {
-	return time.Now().In(constants.JST).Format("2006-01-02 15:04:05.000000-07:00")
+	return FormatDBTime(time.Now())
 }
