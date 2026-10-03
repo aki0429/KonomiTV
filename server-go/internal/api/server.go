@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/aki0429/KonomiTV/server-go/internal/auth"
 	"github.com/aki0429/KonomiTV/server-go/internal/config"
 	"github.com/aki0429/KonomiTV/server-go/internal/constants"
 )
@@ -18,6 +19,7 @@ type Server struct {
 	config        *config.Config
 	paths         constants.Paths
 	db            *sql.DB
+	auth          *auth.Manager
 	logger        *slog.Logger
 	proxy         http.Handler // nil の場合はプロキシ無効
 	latestVersion *latestVersionCache
@@ -28,6 +30,7 @@ type Options struct {
 	Config *config.Config
 	Paths  constants.Paths
 	DB     *sql.DB
+	Auth   *auth.Manager
 	Logger *slog.Logger
 	// PythonBackendURL は未移行 API の転送先 (例: http://127.0.0.77:7010/) 。
 	// 空文字の場合はプロキシを無効化し、未実装の API は 404 を返す。
@@ -44,6 +47,7 @@ func New(options Options) (*Server, error) {
 		config:        options.Config,
 		paths:         options.Paths,
 		db:            options.DB,
+		auth:          options.Auth,
 		logger:        options.Logger,
 		proxy:         proxy,
 		latestVersion: newLatestVersionCache(options.Logger),
@@ -56,6 +60,14 @@ func (s *Server) Handler() http.Handler {
 
 	// ***** Go 実装済みのルート *****
 	mux.HandleFunc("GET /api/version", s.handleVersion)
+
+	// 認証 (読み取り系のみ。書き込み系は Python 版へプロキシする)
+	mux.HandleFunc("POST /api/users/token", s.handleUserAccessToken)
+	mux.HandleFunc("GET /api/users", s.handleUsers)
+	mux.HandleFunc("GET /api/users/me", s.handleUserMe)
+	mux.HandleFunc("GET /api/users/me/icon", s.handleUserMeIcon)
+	mux.HandleFunc("GET /api/users/{username}", s.handleSpecifiedUser)
+	mux.HandleFunc("GET /api/users/{username}/icon", s.handleSpecifiedUserIcon)
 
 	// ***** 静的ファイル *****
 	// Python 版の app.mount('/assets', StaticFiles(...)) 相当

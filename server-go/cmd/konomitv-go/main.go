@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/aki0429/KonomiTV/server-go/internal/api"
+	"github.com/aki0429/KonomiTV/server-go/internal/auth"
 	"github.com/aki0429/KonomiTV/server-go/internal/config"
 	"github.com/aki0429/KonomiTV/server-go/internal/constants"
 	"github.com/aki0429/KonomiTV/server-go/internal/database"
@@ -81,12 +82,21 @@ func main() {
 		backendURL = cfg.BackendAPIURL()
 	}
 
+	// ***** 認証マネージャーの初期化 *****
+
+	authManager, err := auth.New(paths, db, cfg, logger)
+	if err != nil {
+		logger.Error("failed to initialize auth manager", slog.Any("error", err))
+		os.Exit(1)
+	}
+
 	// ***** HTTP サーバーの起動 *****
 
 	server, err := api.New(api.Options{
 		Config:           cfg,
 		Paths:            paths,
 		DB:               db,
+		Auth:             authManager,
 		Logger:           logger,
 		PythonBackendURL: backendURL,
 	})

@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aki0429/KonomiTV/server-go/internal/auth"
 	"github.com/aki0429/KonomiTV/server-go/internal/config"
 	"github.com/aki0429/KonomiTV/server-go/internal/constants"
 )
@@ -26,6 +27,7 @@ func newTestServer(t *testing.T, backendURL string) (*Server, constants.Paths) {
 		paths.ServerDir,
 		paths.ClientDistDir,
 		filepath.Join(paths.ClientDistDir, "assets"),
+		filepath.Join(paths.StaticDir, "account-icons"),
 	} {
 		if err := os.MkdirAll(directory, 0o755); err != nil {
 			t.Fatal(err)
@@ -34,14 +36,20 @@ func newTestServer(t *testing.T, backendURL string) (*Server, constants.Paths) {
 	// SPA の index.html とアセットを配置する
 	writeFile(t, filepath.Join(paths.ClientDistDir, "index.html"), "<!DOCTYPE html><html><body>index</body></html>")
 	writeFile(t, filepath.Join(paths.ClientDistDir, "assets", "app.js"), "console.log('app');")
+	// デフォルトのアカウントアイコンを配置する
+	writeFile(t, filepath.Join(paths.StaticDir, "account-icons", "default.png"), "default-icon")
 
 	cfg := config.Default()
 	cfg.General.Debug = true
 
+	testDatabase := createTestDatabase(t)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	server, err := New(Options{
 		Config:           cfg,
 		Paths:            paths,
-		Logger:           slog.New(slog.NewTextHandler(io.Discard, nil)),
+		DB:               testDatabase,
+		Auth:             auth.NewWithSecret(testJWTSecret, testDatabase, true, logger),
+		Logger:           logger,
 		PythonBackendURL: backendURL,
 	})
 	if err != nil {
