@@ -18,6 +18,7 @@ import (
 type Config struct {
 	General GeneralConfig `yaml:"general"`
 	Server  ServerConfig  `yaml:"server"`
+	TV      TVConfig      `yaml:"tv"`
 	IPTV    IPTVConfig    `yaml:"iptv"`
 }
 
@@ -51,6 +52,14 @@ type ServerConfig struct {
 	CustomHTTPSPrivateKey *string `yaml:"custom_https_private_key"`
 }
 
+// TVConfig は tv セクションの設定。
+type TVConfig struct {
+	// MaxAliveTime は誰も見ていないチャンネルのエンコードタスクを維持する時間 (秒) 。
+	MaxAliveTime float64 `yaml:"max_alive_time"`
+	// DebugModeTSPath はデバッグ用に再生する TS ファイルの絶対パス (未設定なら null) 。
+	DebugModeTSPath *string `yaml:"debug_mode_ts_path"`
+}
+
 // IPTVConfig は iptv セクションの設定。
 type IPTVConfig struct {
 	// Enabled は IPTV 機能が有効か。
@@ -80,7 +89,8 @@ func Default() *Config {
 	config.General.Encoder = "FFmpeg"
 	config.General.ProgramUpdateInterval = 5.0
 	config.Server.Port = 7000
-	config.IPTV.Enabled = false
+	config.TV.MaxAliveTime = 10
+	config.IPTV.Enabled = true
 	config.IPTV.CacheTTL = 3600
 	config.IPTV.RequestTimeout = 20.0
 	config.IPTV.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"

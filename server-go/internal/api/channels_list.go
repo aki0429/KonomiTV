@@ -69,12 +69,15 @@ func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
 		key := channelProgramKey{NetworkID: channel.NetworkID, ServiceID: channel.ServiceID}
 		present, following := pickPresentAndFollowingPrograms(programsByChannel[key])
 
-		response, err := buildLiveChannelResponse(channel, present, following)
+		response, err := buildLiveChannelResponse(channel, present, following, 0)
 		if err != nil {
 			s.logger.Error("failed to build channel response", "error", err)
 			writeError(w, http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
+
+		// 現在の視聴者数を取得する
+		response.ViewerCount = s.liveStreams.GetViewerCount(response.DisplayChannelID)
 
 		// せっかくチャンネルごとにループで回しているので、ここでチャンネルタイプごとの分類もやっておく
 		switch response.Type {
@@ -97,7 +100,10 @@ func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
 	// テレビ視聴 UI に登録した IPTV チャンネルを追加する (登録内容は呼び出し元ごとに分離されている)
 	userKey := s.auth.ResolveUserKey(w, r)
 	for _, iptvChannel := range s.iptv.GetTVUIChannels(userKey) {
-		result.IPTV = append(result.IPTV, toLiveChannelResponse(iptvChannel.ToLiveChannelResponse()))
+		response := toLiveChannelResponse(iptvChannel.ToLiveChannelResponse())
+		// 現在の視聴者数を取得する
+		response.ViewerCount = s.liveStreams.GetViewerCount(response.DisplayChannelID)
+		result.IPTV = append(result.IPTV, response)
 	}
 
 	writeJSON(w, http.StatusOK, result)

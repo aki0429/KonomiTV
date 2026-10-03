@@ -100,7 +100,7 @@ func (s *Server) handleChannel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := buildLiveChannelResponse(channel, present, following)
+	response, err := buildLiveChannelResponse(channel, present, following, s.liveStreams.GetViewerCount(channel.DisplayChannelID))
 	if err != nil {
 		s.logger.Error("failed to build channel response", "error", err)
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -110,7 +110,7 @@ func (s *Server) handleChannel(w http.ResponseWriter, r *http.Request) {
 }
 
 // buildLiveChannelResponse は Channel と現在・次の番組情報から schemas.LiveChannel 互換のレスポンスを構築する。
-func buildLiveChannelResponse(channel *database.Channel, present *database.Program, following *database.Program) (*liveChannelResponse, error) {
+func buildLiveChannelResponse(channel *database.Channel, present *database.Program, following *database.Program, viewerCount int) (*liveChannelResponse, error) {
 	// 地デジチャンネルの地域名のリストを設定 (デバッグ用)
 	var terrestrialRegions []string
 	if channel.Type == "GR" {
@@ -150,11 +150,9 @@ func buildLiveChannelResponse(channel *database.Channel, present *database.Progr
 		IsRadiochannel:     channel.IsRadiochannel,
 		IsWatchable:        channel.IsWatchable,
 		IsDisplay:          isDisplay,
-		// Python 版は LiveStream (Python プロセス上のメモリ) から視聴者数を取得するため、
-		// Go 版では常に 0 になる。ストリーミングを Go へ移行する際に実装する。
-		ViewerCount:      0,
-		ProgramPresent:   presentResponse,
-		ProgramFollowing: followingResponse,
+		ViewerCount:        viewerCount,
+		ProgramPresent:     presentResponse,
+		ProgramFollowing:   followingResponse,
 	}, nil
 }
 

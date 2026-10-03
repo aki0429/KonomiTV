@@ -26,6 +26,14 @@ func (r *statusRecorder) Write(data []byte) (int, error) {
 	return r.ResponseWriter.Write(data)
 }
 
+// Flush はストリーミング配信のために基になる ResponseWriter をフラッシュする。
+// これを実装しないと、ストリーミング系の API が http.Flusher を検出できずに失敗する。
+func (r *statusRecorder) Flush() {
+	if flusher, ok := r.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
+
 // accessLogMiddleware は Uvicorn のアクセスログに相当するリクエストログを出力する。
 func accessLogMiddleware(next http.Handler, logger *slog.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

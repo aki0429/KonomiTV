@@ -17,10 +17,10 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `POST /api/users` (登録) ・`PUT`/`DELETE /api/users/me`・`PUT`/`DELETE /api/users/{username}` (更新・削除) | ✅ Go 実装済み |
 | `PUT /api/users/me/icon` (アイコン更新、512x512 PNG へ変換) | ✅ Go 実装済み |
 | `POST`/`DELETE /api/users/me/account-links` (Twitter / Bluesky 紐付け) | ✅ Go 実装済み |
-| `GET /api/channels/{channel_id}` (チャンネル情報、現在/次の番組を含む) | ✅ Go 実装済み (視聴者数のみ常に 0) |
+| `GET /api/channels/{channel_id}` (チャンネル情報、現在/次の番組を含む) | ✅ Go 実装済み |
 | `GET /api/channels/{channel_id}/logo` (チャンネルロゴ) | ✅ Go 実装済み (IPTV 疑似チャンネルは Python 版へプロキシ) |
 | `GET /api/channels/{channel_id}/jikkyo` (ニコニコ実況 WebSocket URL) | ✅ Go 実装済み (ニコニコアカウント連携時のニコ生セッション取得・トークン更新含む) |
-| `GET /api/channels` (チャンネル一覧、現在/次の番組・IPTV 疑似チャンネル含む) | ✅ Go 実装済み (視聴者数のみ常に 0) |
+| `GET /api/channels` (チャンネル一覧、現在/次の番組・IPTV 疑似チャンネル含む) | ✅ Go 実装済み |
 | `GET /api/programs/timetable` (番組表) | ✅ Go 実装済み (EDCB バックエンドの予約情報は未対応) |
 | `POST /api/programs/search` (番組検索) | ✅ Go 実装済み (EDCB 以外は 422 を返し、EDCB 時は Python 版へプロキシ) |
 | `GET /api/series`・`GET /api/series/search`・`GET /api/series/{series_id}` (シリーズ番組) | ✅ Go 実装済み (録画番組・録画ファイル・チャンネルまで展開) |
@@ -29,6 +29,11 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `GET`/`POST`/`DELETE /api/iptv/tvui` (テレビ視聴 UI 登録) | ✅ Go 実装済み (呼び出し元ごとに分離) |
 | `GET /api/iptv/proxy` (IPTV ストリームプロキシ、HLS プレイリストの書き換え含む) | ✅ Go 実装済み |
 | `GET /api/iptv/logo` (IPTV チャンネルロゴプロキシ) | ✅ Go 実装済み (取得できない場合は既定のロゴ) |
+| `GET /api/streams/live` (ライブストリーム一覧) | ✅ Go 実装済み |
+| `GET /api/streams/live/{display_channel_id}/{quality}` (ライブストリームの状態) | ✅ Go 実装済み |
+| `GET /api/streams/live/{display_channel_id}/{quality}/events` (状態の Server-Sent Events) | ✅ Go 実装済み |
+| `GET /api/streams/live/{display_channel_id}/{quality}/mpegts` (ライブ MPEG-TS ストリーム) | ✅ Go 実装済み |
+| `GET /api/streams/live/{display_channel_id}/{quality}/psi-archived-data` (PSI/SI アーカイブデータ) | ✅ Go 実装済み (EDCB / Mirakurun バックエンドのみ。IPTV では 500 を返す) |
 | `/assets/*`・`/` (client/dist の静的配信、SPA フォールバック) | ✅ Go 実装済み |
 | CORS (Starlette 互換) | ✅ Go 実装済み |
 | その他の全 API | 🔁 Python 版へプロキシ |
@@ -88,6 +93,26 @@ curl http://127.0.0.77:7002/api/version
 - CORS は Starlette の CORSMiddleware と同じヘッダーを返す。
 - 日時の JSON 表現は Pydantic v2 と同じ (`2026-09-22T15:11:58.874290+09:00`) 。
 
+### ライブストリーミング
+
+`internal/stream/` が Python 版 `server/app/streams/` 相当のエンコード処理を担当する。
+
+- 画質 (16 種類 + `original`) と追加エンコードオプション (`-10bit` / `-24fps`) の解釈、および
+  FFmpeg / QSVEncC / NVEncC / VCEEncC / rkmppenc のエンコード引数の組み立て
+  (Python 版と引数レベルで一致することをフィクスチャで検証している) 。
+- `LiveStream` / `LiveStreamClient`: チャンネル+画質ごとのストリーム管理、クライアントの接続・切断、
+  視聴者数、`Offline` / `Standby` / `ONAir` / `Idling` / `Restart` の状態遷移、アイドリングによる自動停止。
+- `liveEncodingTask`: IPTV のストリーム (`BuildTSConversionArguments` で MPEG-2 TS に変換) または
+  Mirakurun / mirakc の Service Stream API から放送波を受信し、tsreadex → エンコーダー → MPEG-TS 出力を
+  クライアントへ分配する。エンコーダーの進捗ログからの状態遷移、フリーズ検出による再起動 (最大 10 回) 、
+  停波・チューナー不足などのエラー判定も Python 版と同じメッセージを返す。
+- `LivePSIDataArchiver`: psisiarc を起動してデータ放送用の PSI/SI アーカイブデータを配信する
+  (IPTV の疑似チャンネルでは起動しない) 。
+
+**未対応**: EDCB バックエンドのチューナー制御 (`EDCBTuner`) 。EDCB バックエンドで放送波を受信する場合、
+Go 版では `EDCB バックエンドは Go 版サーバーでは未対応です。(E-02E)` を返して Offline になる
+(IPTV バックエンドと Mirakurun / mirakc バックエンドは Go 版で動作する) 。
+
 ## テスト
 
 `go test ./...` で実行する。Python 版との互換性は、Python 側で生成したフィクスチャとの照合で検証している。
@@ -97,12 +122,15 @@ curl http://127.0.0.77:7002/api/version
 - `internal/api/testdata/timetable_sort.json`: Python 版 `GetTimeTableChannelSortKey()` によるチャンネル並び替え結果の期待値。
 - `internal/iptv/testdata/iptv_parity.json`: Python 版 `IPTVUtil` の M3U 解析結果 (M3U のパース・相対 URL の解決・HLS プレイリストの
   書き換え・画質の抽出・ストリーム形式の判定・プレイリスト出力・国/グループ集計) の期待値。
+- `internal/stream/testdata/stream_options.json`: Python 版 `LiveEncodingTask` の FFmpeg / HWEncC の
+  エンコード引数 (画質 16 種類 × チャンネル種別 × フル HD × リトライ回数 × エンコードオプション) の期待値。
 
 フィクスチャは `server-go/tools/` のスクリプトで再生成できます (`server/` ディレクトリで実行) 。
 
 ```powershell
 cd server
 uv run python ../server-go/tools/generate_iptv_parity_fixture.py
+uv run python ../server-go/tools/generate_stream_options_fixture.py
 ```
 
 チャンネル一覧 API は、実スキーマの DB と実際の HTTP サーバーを使った E2E 検証もできます。
@@ -111,6 +139,18 @@ uv run python ../server-go/tools/generate_iptv_parity_fixture.py
 python server-go/tools/e2e_channels_setup.py <一時コピーした server/data/database.sqlite>
 ./konomitv-go.exe -no-proxy -listen 127.0.0.77:7005 -server-dir <server ディレクトリ>
 python server-go/tools/e2e_channels_verify.py <同じ database.sqlite> http://127.0.0.77:7005
+```
+
+ライブストリーミングは、実際の FFmpeg / tsreadex を使ったエンコードパイプラインを含めて E2E 検証できます。
+ローカルの MPEG-2 TS を約 1x 速で配信する簡易サーバーを IPTV の疑似チャンネルとして取り込み、
+実際にストリームを受信して状態遷移・視聴者数・Server-Sent Events・アイドリングによる自動停止を確認します。
+
+```powershell
+python server-go/tools/e2e_stream_setup.py <作業ディレクトリ>
+python server-go/tools/e2e_stream_server.py <作業ディレクトリ>/test.ts 7099   # 別のターミナルで実行
+go build -o konomitv-go.exe ./cmd/konomitv-go
+./konomitv-go.exe -no-proxy -listen 127.0.0.77:7006 -server-dir <作業ディレクトリ>/server   # 別のターミナルで実行
+python server-go/tools/e2e_stream_verify.py http://127.0.0.77:7006
 ```
 
 実データ (iptv-org のプレイリスト約 1.1 万チャンネル) を使った完全一致の検証もできます。
@@ -133,6 +173,7 @@ go vet ./...
 
 ## 今後の予定
 
-1. ストリーミング (LiveStream / VideoStream) とエンコーダー制御の Go 化 (視聴者数もここで実装する)
-2. 書き込み系 API (予約・設定など) の移行
-3. 完全移行後に `-listen 127.0.0.77:7010` で Python 版を置き換え
+1. ビデオストリーミング (`/api/streams/video`、録画番組の再生) と録画番組 API (`/api/videos`) の Go 化
+2. EDCB バックエンドのチューナー制御 (`EDCBTuner`) の Go 化
+3. 書き込み系 API (予約・設定など) の移行
+4. 完全移行後に `-listen 127.0.0.77:7010` で Python 版を置き換え

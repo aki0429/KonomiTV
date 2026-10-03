@@ -16,6 +16,7 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/constants"
 	"github.com/aki0429/KonomiTV/server-go/internal/iptv"
 	"github.com/aki0429/KonomiTV/server-go/internal/jikkyo"
+	"github.com/aki0429/KonomiTV/server-go/internal/stream"
 )
 
 // Server は Go 版 KonomiTV サーバーのインスタンス。
@@ -27,6 +28,7 @@ type Server struct {
 	auth          *auth.Manager
 	logger        *slog.Logger
 	iptv          *iptv.Manager
+	liveStreams   *stream.Manager
 	proxy         http.Handler // nil の場合はプロキシ無効
 	latestVersion *latestVersionCache
 
@@ -45,6 +47,8 @@ type Options struct {
 	Logger  *slog.Logger
 	// IPTV は IPTV チャンネル一覧のマネージャー。nil の場合は内部で生成する。
 	IPTV *iptv.Manager
+	// LiveStreams はライブストリームのマネージャー。nil の場合は内部で生成する。
+	LiveStreams *stream.Manager
 	// PythonBackendURL は未移行 API の転送先 (例: http://127.0.0.77:7010/) 。
 	// 空文字の場合はプロキシを無効化し、未実装の API は 404 を返す。
 	PythonBackendURL string
@@ -69,6 +73,19 @@ func New(options Options) (*Server, error) {
 			Logger:  options.Logger,
 		})
 	}
+	liveStreams := options.LiveStreams
+	if liveStreams == nil {
+		liveStreams = stream.NewManager(options.Logger)
+	}
+	// ライブストリーミングのエンコードタスクを有効化する
+	// (IPTV の疑似チャンネルは IPTV マネージャーから、それ以外のチャンネルは DB からチャンネル情報を取得する) 。
+	liveStreams.EnableEncodingTasks(stream.TaskOptions{
+		Config: options.Config,
+		Paths:  options.Paths,
+		Logger: options.Logger,
+		IPTV:   iptvManager,
+		DB:     options.DB,
+	})
 	return &Server{
 		config:        options.Config,
 		paths:         options.Paths,
@@ -77,6 +94,7 @@ func New(options Options) (*Server, error) {
 		auth:          options.Auth,
 		logger:        options.Logger,
 		iptv:          iptvManager,
+		liveStreams:   liveStreams,
 		proxy:         proxy,
 		latestVersion: newLatestVersionCache(options.Logger),
 	}, nil
@@ -123,6 +141,13 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/series", s.handleSeriesList)
 	mux.HandleFunc("GET /api/series/search", s.handleSeriesSearch)
 	mux.HandleFunc("GET /api/series/{series_id}", s.handleSeries)
+
+	// ライブストリーミング
+	mux.HandleFunc("GET /api/streams/live", s.handleLiveStreams)
+	mux.HandleFunc("GET /api/streams/live/{display_channel_id}/{quality}", s.handleLiveStream)
+	mux.HandleFunc("GET /api/streams/live/{display_channel_id}/{quality}/events", s.handleLiveStreamEvents)
+	mux.HandleFunc("GET /api/streams/live/{display_channel_id}/{quality}/psi-archived-data", s.handleLiveStreamPSIArchivedData)
+	mux.HandleFunc("GET /api/streams/live/{display_channel_id}/{quality}/mpegts", s.handleLiveStreamMPEGTS)
 
 	// IPTV (M3U プレイリストの取り込みとストリームのプロキシ)
 	mux.HandleFunc("GET /api/iptv/channels", s.handleIPTVChannels)
