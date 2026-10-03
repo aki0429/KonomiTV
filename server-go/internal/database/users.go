@@ -446,6 +446,30 @@ func UpdateUserIsAdmin(ctx context.Context, db *sql.DB, id int64, isAdmin bool) 
 	return nil
 }
 
+// UpdateNiconicoAccount はニコニコアカウント連携のアクセストークン・リフレッシュトークンと
+// ユーザー情報 (名前・プレミアム会員かどうか) を更新する。
+// Python 版 User.refreshNiconicoAccessToken() の save() 相当。
+func UpdateNiconicoAccount(
+	ctx context.Context,
+	db *sql.DB,
+	id int64,
+	accessToken string,
+	refreshToken string,
+	userName *string,
+	userPremium *bool,
+) error {
+	if _, err := db.ExecContext(ctx, `
+		UPDATE users SET
+			niconico_access_token = ?, niconico_refresh_token = ?,
+			niconico_user_name = ?, niconico_user_premium = ?,
+			updated_at = ?
+		WHERE id = ?
+	`, accessToken, refreshToken, userName, userPremium, NowForDB(), id); err != nil {
+		return fmt.Errorf("failed to update niconico account: %w", err)
+	}
+	return nil
+}
+
 // DeleteUser はユーザーを削除する (関連レコードは外部キーの CASCADE で削除される) 。
 func DeleteUser(ctx context.Context, db *sql.DB, id int64) error {
 	if _, err := db.ExecContext(ctx, `DELETE FROM users WHERE id = ?`, id); err != nil {

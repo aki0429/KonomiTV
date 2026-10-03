@@ -9,10 +9,12 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/aki0429/KonomiTV/server-go/internal/auth"
 	"github.com/aki0429/KonomiTV/server-go/internal/config"
 	"github.com/aki0429/KonomiTV/server-go/internal/constants"
+	"github.com/aki0429/KonomiTV/server-go/internal/jikkyo"
 )
 
 // Server は Go 版 KonomiTV サーバーのインスタンス。
@@ -25,6 +27,10 @@ type Server struct {
 	logger        *slog.Logger
 	proxy         http.Handler // nil の場合はプロキシ無効
 	latestVersion *latestVersionCache
+
+	// jikkyoChannels は実況チャンネルの対応表 (初回アクセス時に読み込む) 。
+	jikkyoChannels     *jikkyo.ChannelMap
+	jikkyoChannelsOnce sync.Once
 }
 
 // Options は Server の生成に必要な依存関係。
@@ -94,6 +100,7 @@ func (s *Server) Handler() http.Handler {
 	// 依存するため、それらを Go へ移行するまでは Python 版へプロキシする
 	mux.HandleFunc("GET /api/channels/{channel_id}", s.handleChannel)
 	mux.HandleFunc("GET /api/channels/{channel_id}/logo", s.handleChannelLogo)
+	mux.HandleFunc("GET /api/channels/{channel_id}/jikkyo", s.handleChannelJikkyo)
 
 	// ***** 静的ファイル *****
 	// Python 版の app.mount('/assets', StaticFiles(...)) 相当
