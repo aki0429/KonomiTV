@@ -10,13 +10,15 @@ import (
 	"database/sql"
 	"fmt"
 	"path/filepath"
+	"time"
+
+	"github.com/aki0429/KonomiTV/server-go/internal/constants"
 
 	_ "modernc.org/sqlite" // SQLite ドライバー (純 Go 実装)
 )
 
 // OpenReadOnly は SQLite データベースを読み取り専用で開く。
-// 移行初期段階では Go 側から一切書き込みを行わないため、誤ってデータを破壊しないよう
-// mode=ro と query_only の両方で読み取り専用を強制している。
+// 誤ってデータを破壊しないよう、mode=ro と query_only の両方で読み取り専用を強制している。
 func OpenReadOnly(path string) (*sql.DB, error) {
 	// Windows のドライブレター (J:\...) を含むパスでも正しく解釈されるよう、
 	// スラッシュに正規化した上で file: URI として渡す
@@ -39,4 +41,34 @@ func OpenReadOnly(path string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to connect to database (%s): %w", path, err)
 	}
 	return db, nil
+}
+
+// OpenReadWrite は SQLite データベースを読み書き可能で開く。
+// users の作成・更新・削除など、Go 側から書き込みを行う機能で使う。
+// 書き込みは直列化するため、接続数は 1 に制限する。
+func OpenReadWrite(path string) (*sql.DB, error) {
+	dsn := fmt.Sprintf(
+		"file:%s?_pragma=busy_timeout(10000)&_pragma=foreign_keys(1)&_pragma=query_only(false)",
+		filepath.ToSlash(path),
+	)
+	db, err := sql.Open("sqlite", dsn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database (%s): %w", path, err)
+	}
+
+	// SQLite への書き込みは直列化する
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+
+	if err := db.Ping(); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("failed to connect to database (%s): %w", path, err)
+	}
+	return db, nil
+}
+
+// NowForDB は現在時刻を Tortoise ORM が SQLite に保存するのと同じ形式で返す。
+// Python の datetime.isoformat(' ') 形式 (例: "2026-10-04 05:20:11.123456+09:00") と同一。
+func NowForDB() string {
+	return time.Now().In(constants.JST).Format("2006-01-02 15:04:05.000000-07:00")
 }

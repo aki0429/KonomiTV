@@ -187,7 +187,7 @@ Windows では Windows サービス、Linux では pm2 サービスとして動�
 - Go 側で実装済みのルートはネイティブに処理し、未移行の `/api/*` は Python 版サーバーの内部 URL (`http://127.0.0.77:(server.port + 10)/`、デフォルト: 7010) へリバースプロキシする
 - デフォルトのリッスンアドレスは `127.0.0.77:7002`。Python 版 (Akebi 経由で 7000) とは別ポートなので共存できる
 - `go build ./...`・`go vet ./...`・`go test ./...` を `server-go/` で実行して検証する
-- SQLite (`server/data/database.sqlite`) は Python 版 (Tortoise ORM) が管理する。Go 側は移行初期段階では `mode=ro` + `query_only` の読み取り専用でアクセスし、絶対に書き込まない
+- SQLite (`server/data/database.sqlite`) は Python 版 (Tortoise ORM) が管理する。Go 側の読み取りは `mode=ro` + `query_only` の読み取り専用接続で行い、書き込みは専用の書き込み接続 (`busy_timeout` + `foreign_keys`、接続数 1 で直列化) で行う。スキーマを変更してはならない (マイグレーションは Python 版の Aerich が管理する)
 - 日時は Tortoise ORM が `datetime.isoformat(" ")` 形式 (例: `2025-09-22 15:47:00.123456+09:00`) で保存している。独自形式で書き込まないこと
 - API のレスポンス形式・エラーレスポンス (`{"detail": "..."}`) ・CORS ヘッダーは Python 版 (FastAPI / Starlette) と互換になるように実装する
 - 移行状況と使い方は `server-go/README.md` を参照すること

@@ -73,6 +73,14 @@ func main() {
 	}
 	defer func() { _ = db.Close() }()
 
+	// 書き込み用接続 (ユーザーの作成・更新・削除などで使う) 。SQLite の書き込みは直列化する。
+	writeDB, err := database.OpenReadWrite(paths.DatabasePath)
+	if err != nil {
+		logger.Error("failed to open database for writing", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer func() { _ = writeDB.Close() }()
+
 	// ***** プロキシ先の決定 *****
 
 	backendURL := *pythonBackend
@@ -96,6 +104,7 @@ func main() {
 		Config:           cfg,
 		Paths:            paths,
 		DB:               db,
+		WriteDB:          writeDB,
 		Auth:             authManager,
 		Logger:           logger,
 		PythonBackendURL: backendURL,

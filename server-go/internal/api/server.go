@@ -19,7 +19,8 @@ import (
 type Server struct {
 	config        *config.Config
 	paths         constants.Paths
-	db            *sql.DB
+	db            *sql.DB // 読み取り専用
+	writeDB       *sql.DB // 書き込み用 (SQLite の書き込みを直列化するため別接続)
 	auth          *auth.Manager
 	logger        *slog.Logger
 	proxy         http.Handler // nil の場合はプロキシ無効
@@ -28,11 +29,12 @@ type Server struct {
 
 // Options は Server の生成に必要な依存関係。
 type Options struct {
-	Config *config.Config
-	Paths  constants.Paths
-	DB     *sql.DB
-	Auth   *auth.Manager
-	Logger *slog.Logger
+	Config  *config.Config
+	Paths   constants.Paths
+	DB      *sql.DB
+	WriteDB *sql.DB
+	Auth    *auth.Manager
+	Logger  *slog.Logger
 	// PythonBackendURL は未移行 API の転送先 (例: http://127.0.0.77:7010/) 。
 	// 空文字の場合はプロキシを無効化し、未実装の API は 404 を返す。
 	PythonBackendURL string
@@ -44,10 +46,16 @@ func New(options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	writeDB := options.WriteDB
+	if writeDB == nil {
+		// 書き込み用接続が指定されていない場合は読み取り用接続を使う (テスト用)
+		writeDB = options.DB
+	}
 	return &Server{
 		config:        options.Config,
 		paths:         options.Paths,
 		db:            options.DB,
+		writeDB:       writeDB,
 		auth:          options.Auth,
 		logger:        options.Logger,
 		proxy:         proxy,
@@ -63,11 +71,19 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/version", s.handleVersion)
 
 	// 認証 (読み取り系のみ。書き込み系は Python 版へプロキシする)
+	mux.HandleFunc("POST /api/users", s.handleUserCreate)
 	mux.HandleFunc("POST /api/users/token", s.handleUserAccessToken)
 	mux.HandleFunc("GET /api/users", s.handleUsers)
 	mux.HandleFunc("GET /api/users/me", s.handleUserMe)
+	mux.HandleFunc("PUT /api/users/me", s.handleUserUpdate)
+	mux.HandleFunc("DELETE /api/users/me", s.handleUserDelete)
 	mux.HandleFunc("GET /api/users/me/icon", s.handleUserMeIcon)
+	mux.HandleFunc("PUT /api/users/me/icon", s.handleUserUpdateIcon)
+	mux.HandleFunc("POST /api/users/me/account-links", s.handleAccountLinkCreate)
+	mux.HandleFunc("DELETE /api/users/me/account-links/{link_id}", s.handleAccountLinkDelete)
 	mux.HandleFunc("GET /api/users/{username}", s.handleSpecifiedUser)
+	mux.HandleFunc("PUT /api/users/{username}", s.handleSpecifiedUserUpdate)
+	mux.HandleFunc("DELETE /api/users/{username}", s.handleSpecifiedUserDelete)
 	mux.HandleFunc("GET /api/users/{username}/icon", s.handleSpecifiedUserIcon)
 
 	// データ放送ブラウザ (web-bml) 向け API

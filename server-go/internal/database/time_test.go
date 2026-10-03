@@ -19,6 +19,8 @@ func TestParseDBTime(t *testing.T) {
 		{"no fraction", "2026-09-22 15:11:50+09:00", "2026-09-22T15:11:50+09:00"},
 		{"no timezone", "2026-09-22 15:11:50.725472", "2026-09-22T15:11:50.725472+09:00"},
 		{"iso T separator", "2026-09-22T15:11:50.725472+09:00", "2026-09-22T15:11:50.725472+09:00"},
+		// SQLite の CURRENT_TIMESTAMP 由来 (UTC) の値は JST に変換される
+		{"rfc3339 Z", "2026-10-03T20:29:06Z", "2026-10-04T05:29:06+09:00"},
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {

@@ -41,8 +41,11 @@ CREATE TABLE twitter_accounts (
     name TEXT NOT NULL,
     screen_name TEXT NOT NULL,
     icon_url TEXT NOT NULL,
+    access_token TEXT NOT NULL,
+    access_token_secret TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    cookie_browser_info JSON
 );
 CREATE TABLE bluesky_accounts (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -51,8 +54,10 @@ CREATE TABLE bluesky_accounts (
     handle TEXT NOT NULL,
     name TEXT NOT NULL,
     icon_url TEXT NOT NULL,
+    session_string TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uid_bluesky_ac_user_id_did UNIQUE (user_id, did)
 );
 CREATE TABLE account_links (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,

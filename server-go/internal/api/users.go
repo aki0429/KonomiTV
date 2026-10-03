@@ -154,30 +154,35 @@ func (s *Server) buildUserResponse(ctx context.Context, user *database.User) (*u
 		})
 	}
 	for _, link := range accountLinks {
-		response.AccountLinks = append(response.AccountLinks, accountLinkResponse{
-			ID: link.ID,
-			TwitterAccount: twitterAccountResponse{
-				ID:         link.TwitterAccount.ID,
-				Name:       link.TwitterAccount.Name,
-				ScreenName: link.TwitterAccount.ScreenName,
-				IconURL:    link.TwitterAccount.IconURL,
-				CreatedAt:  database.FormatJSONTime(link.TwitterAccount.CreatedAt),
-				UpdatedAt:  database.FormatJSONTime(link.TwitterAccount.UpdatedAt),
-			},
-			BlueskyAccount: blueskyAccountResponse{
-				ID:        link.BlueskyAccount.ID,
-				DID:       link.BlueskyAccount.DID,
-				Handle:    link.BlueskyAccount.Handle,
-				Name:      link.BlueskyAccount.Name,
-				IconURL:   link.BlueskyAccount.IconURL,
-				CreatedAt: database.FormatJSONTime(link.BlueskyAccount.CreatedAt),
-				UpdatedAt: database.FormatJSONTime(link.BlueskyAccount.UpdatedAt),
-			},
-			CreatedAt: database.FormatJSONTime(link.CreatedAt),
-			UpdatedAt: database.FormatJSONTime(link.UpdatedAt),
-		})
+		response.AccountLinks = append(response.AccountLinks, accountLinkToResponse(&link))
 	}
 	return response, nil
+}
+
+// accountLinkToResponse は AccountLink を schemas.AccountLink 互換のレスポンスに変換する。
+func accountLinkToResponse(link *database.AccountLink) accountLinkResponse {
+	return accountLinkResponse{
+		ID: link.ID,
+		TwitterAccount: twitterAccountResponse{
+			ID:         link.TwitterAccount.ID,
+			Name:       link.TwitterAccount.Name,
+			ScreenName: link.TwitterAccount.ScreenName,
+			IconURL:    link.TwitterAccount.IconURL,
+			CreatedAt:  database.FormatJSONTime(link.TwitterAccount.CreatedAt),
+			UpdatedAt:  database.FormatJSONTime(link.TwitterAccount.UpdatedAt),
+		},
+		BlueskyAccount: blueskyAccountResponse{
+			ID:        link.BlueskyAccount.ID,
+			DID:       link.BlueskyAccount.DID,
+			Handle:    link.BlueskyAccount.Handle,
+			Name:      link.BlueskyAccount.Name,
+			IconURL:   link.BlueskyAccount.IconURL,
+			CreatedAt: database.FormatJSONTime(link.BlueskyAccount.CreatedAt),
+			UpdatedAt: database.FormatJSONTime(link.BlueskyAccount.UpdatedAt),
+		},
+		CreatedAt: database.FormatJSONTime(link.CreatedAt),
+		UpdatedAt: database.FormatJSONTime(link.UpdatedAt),
+	}
 }
 
 // ***** ハンドラー *****
@@ -266,6 +271,13 @@ func (s *Server) handleUserMe(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+
+	// 一番よく使う API なので、リクエスト時に twitter_accounts テーブルに仮のアカウントデータが残っていたらすべて消しておく
+	// Twitter 連携では途中で連携をキャンセルした場合に仮のアカウントデータが残置されてしまうので、それを取り除く
+	if err := database.DeleteTemporaryTwitterAccounts(r.Context(), s.writeDB); err != nil {
+		s.logger.Warn("failed to delete temporary twitter accounts", "error", err)
+	}
+
 	response, err := s.buildUserResponse(r.Context(), currentUser)
 	if err != nil {
 		s.logger.Error("failed to build user response", "error", err)

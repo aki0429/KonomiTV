@@ -18,6 +18,10 @@ var dbTimeLayouts = []string{
 	"2006-01-02 15:04:05",
 	"2006-01-02T15:04:05.999999999-07:00",
 	"2006-01-02T15:04:05-07:00",
+	// SQLite の CURRENT_TIMESTAMP 由来の値や modernc.org/sqlite が time.Time を経由して
+	// 文字列化した値は RFC3339 形式 (末尾が Z や +09:00) になることがある
+	"2006-01-02T15:04:05.999999999Z07:00",
+	"2006-01-02T15:04:05Z07:00",
 }
 
 // ParseDBTime は SQLite に保存された日時文字列を time.Time に変換する。
@@ -28,15 +32,16 @@ func ParseDBTime(value string) (time.Time, error) {
 		if err != nil {
 			continue
 		}
-		if !strings.Contains(layout, "-07:00") {
-			// レイアウトにタイムゾーンが含まれていない場合は time.Parse が UTC として解釈するため、JST に置き換える
-			return time.Date(
-				parsed.Year(), parsed.Month(), parsed.Day(),
-				parsed.Hour(), parsed.Minute(), parsed.Second(), parsed.Nanosecond(),
-				constants.JST,
-			), nil
+		if strings.Contains(layout, "Z07:00") || strings.Contains(layout, "-07:00") {
+			// タイムゾーン付きの場合はそのまま JST に変換する
+			return parsed.In(constants.JST), nil
 		}
-		return parsed.In(constants.JST), nil
+		// レイアウトにタイムゾーンが含まれていない場合は time.Parse が UTC として解釈するため、JST に置き換える
+		return time.Date(
+			parsed.Year(), parsed.Month(), parsed.Day(),
+			parsed.Hour(), parsed.Minute(), parsed.Second(), parsed.Nanosecond(),
+			constants.JST,
+		), nil
 	}
 	return time.Time{}, fmt.Errorf("failed to parse datetime string: %q", value)
 }
