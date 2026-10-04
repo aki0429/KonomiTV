@@ -1,0 +1,71 @@
+{
+  "file_size": 29648916,
+  "stream_info": {
+    "video_pid": 256,
+    "pcr_pid": 256,
+    "codec": "H.264",
+    "packet_size": 188
+  },
+  "base_dts": 127920,
+  "video_frame_rate": 29.97002997002997,
+  "segment_duration_seconds": 6.006,
+  "seeks": [
+    {
+      "playlist_start_seconds": 0.0,
+      "source_file_position": 564,
+      "source_start_dts": 127920
+    },
+    {
+      "playlist_start_seconds": 1.0,
+      "source_file_position": 564,
+      "source_start_dts": 127920
+    },
+    {
+      "playlist_start_seconds": 3.0,
+      "source_file_position": 1952380,
+      "source_start_dts": 308100
+    },
+    {
+      "playlist_start_seconds": 6.0,
+      "source_file_position": 3952888,
+      "source_start_dts": 488280
+    },
+    {
+      "playlist_start_seconds": 6.006,
+      "source_file_position": 5939672,
+      "source_start_dts": 668460
+    },
+    {
+      "playlist_start_seconds": 12.0,
+      "source_file_position": 9889552,
+      "source_start_dts": 1028820
+    },
+    {
+      "playlist_start_seconds": 18.5,
+      "source_file_position": 17815632,
+      "source_start_dts": 1749540
+    },
+    {
+      "playlist_start_seconds": 24.0,
+      "source_file_position": 21763256,
+      "source_start_dts": 2109900
+    },
+    {
+      "playlist_start_seconds": 29.0,
+      "source_file_position": 27706876,
+      "source_start_dts": 2650440
+    }
+  ],
+  "segment_durations": {
+    "29.97": 6.006,
+    "59.94": 6.006,
+    "23.976": 6.006,
+    "25.0": 6.0,
+    "30.0": 6.006,
+    "60.0": 6.0,
+    "15.0": 6.006,
+    "0.0": 6.0,
+    "-1.0": 6.0,
+    "12.345": 5.994329688132847
+  }
+}
