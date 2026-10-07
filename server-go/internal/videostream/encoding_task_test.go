@@ -155,8 +155,12 @@ type fakeProcess struct {
 	killOnce sync.Once
 	killed   chan struct{}
 	done     chan struct{}
-	finish   func() // 正常終了させる (blocking でない場合は起動直後に呼ぶ)
+	finish   func() // 正常終了させる (入力消費や出力公開が終わった時点で呼ぶ)
 	closers  []func()
+
+	// inputDrained は tsreadex の有限入力の記録と close が済んだことを通知する。
+	// Kill による終了通知 done とは分け、未消費の入力を正常終了と取り違えない。
+	inputDrained chan struct{}
 
 	mu       sync.Mutex
 	received bytes.Buffer
@@ -208,7 +212,7 @@ func (r *fakeRunner) run(spec ProcessSpec) (Process, error) {
 		r.mu.Unlock()
 		return nil, err
 	}
-	process := &fakeProcess{runner: r, spec: spec, index: len(r.specs), killed: make(chan struct{}), done: make(chan struct{})}
+	process := &fakeProcess{runner: r, spec: spec, index: len(r.specs), killed: make(chan struct{}), done: make(chan struct{}), inputDrained: make(chan struct{})}
 	r.specs = append(r.specs, spec)
 	r.procs = append(r.procs, process)
 	attempt := r.encoderStarts
@@ -227,6 +231,7 @@ func (r *fakeRunner) run(spec ProcessSpec) (Process, error) {
 
 	copyStdin := func(reader io.Reader) {
 		go func() {
+			defer close(process.inputDrained)
 			buffer := make([]byte, 32*1024)
 			for {
 				n, err := reader.Read(buffer)
@@ -274,6 +279,7 @@ func (r *fakeRunner) run(spec ProcessSpec) (Process, error) {
 		} else if spec.Stdin != nil {
 			copyStdin(spec.Stdin)
 		} else {
+			close(process.inputDrained)
 			finish()
 		}
 	case ProcessEncoder:
@@ -288,8 +294,38 @@ func (r *fakeRunner) run(spec ProcessSpec) (Process, error) {
 			go func() { _, _ = pw.Write(output) }()
 			process.closers = append(process.closers, func() { _ = pw.Close(); _ = pr.Close() })
 		} else {
-			process.stdout = io.NopCloser(bytes.NewReader(output))
-			finish()
+			// 固定 oracle 用の有限入力を記録してから合成出力を公開する。
+			// 実エンコーダー一般の streaming 契約ではなく、この fake だけの同期。
+			// リトライ時は今回起動した tsreadex を待ち、Kill では待機を解除する。
+			r.mu.Lock()
+			var upstream *fakeProcess
+			for i := len(r.procs) - 1; i >= 0; i-- {
+				if r.procs[i].spec.Kind == ProcessTSReadEx {
+					upstream = r.procs[i]
+					break
+				}
+			}
+			r.mu.Unlock()
+			pr, pw := io.Pipe()
+			process.stdout = pr
+			process.closers = append(process.closers, func() { _ = pw.Close(); _ = pr.Close() })
+			go func() {
+				defer finish()
+				defer pw.Close()
+				if upstream != nil {
+					select {
+					case <-upstream.inputDrained:
+					case <-process.killed:
+						return
+					}
+				}
+				select {
+				case <-process.killed:
+					return
+				default:
+				}
+				_, _ = pw.Write(output)
+			}()
 		}
 		if spec.Stdin != nil {
 			// エンコーダーは入力を読み捨てる (tsreadex の出力は空)
