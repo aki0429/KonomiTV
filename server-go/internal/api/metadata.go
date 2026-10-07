@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"path/filepath"
 
 	"github.com/aki0429/KonomiTV/server-go/internal/metadata"
 )
@@ -38,10 +39,15 @@ func (s *Server) newMetadataService() *metadata.Service {
 		Thumbnails: &metadata.ThumbnailGenerator{
 			Store:         store,
 			ThumbnailsDir: s.paths.ThumbnailsDir,
-			// サムネイル画像の実生成 (PyAV / OpenCV 相当) は Go 版では未移植のため Renderer は nil 。
-			// Renderer を差し込むまで GenerateAndSave はエラーを返す。
-			Renderer: nil,
-			Logger:   s.logger,
+			// サムネイル画像の実生成は、同梱 FFmpeg の tile フィルタと libwebp で行う。
+			// Linux の ffmpeg.elf は同じディレクトリの共有ライブラリを必要とするため、
+			// そのディレクトリを LD_LIBRARY_PATH として渡す。
+			Renderer: &metadata.FFMpegThumbnailRenderer{
+				FFmpegPath:  s.paths.LibraryPath("FFmpeg"),
+				LibraryPath: filepath.Dir(s.paths.LibraryPath("FFmpeg")),
+				Logger:      s.logger,
+			},
+			Logger: s.logger,
 		},
 		Logger: s.logger,
 	}

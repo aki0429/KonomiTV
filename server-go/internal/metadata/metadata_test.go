@@ -77,6 +77,12 @@ CREATE TABLE recorded_videos (
 );
 `
 
+// testFixedNow はテスト用 DB が返す「現在時刻」。
+// 録画完了判定 (scan.go) は「現在時刻 - ファイル更新日時」で行われるため、
+// ファイル側の更新日時も必ずこの値を基準に設定すること。
+// time.Now() を基準にすると実行した時刻によって判定が変わり、テストが不安定になる。
+var testFixedNow = time.Date(2026, 10, 7, 12, 0, 0, 0, constants.JST)
+
 // openTestDB はテスト用の一時 SQLite データベースを開く。
 func openTestDB(t *testing.T) *Store {
 	t.Helper()
@@ -89,8 +95,7 @@ func openTestDB(t *testing.T) *Store {
 	if _, err := db.Exec(testSchema); err != nil {
 		t.Fatalf("failed to create schema: %v", err)
 	}
-	fixed := time.Date(2026, 10, 7, 12, 0, 0, 0, constants.JST)
-	return &Store{DB: db, WriteDB: db, Now: func() time.Time { return fixed }}
+	return &Store{DB: db, WriteDB: db, Now: func() time.Time { return testFixedNow }}
 }
 
 // fakeAnalyzer は実プロセスを起動せずに固定の解析結果を返すフェイク。
@@ -455,7 +460,8 @@ func TestProcessRecordedFileAndRunBatchScan(t *testing.T) {
 		t.Fatalf("failed to write file: %v", err)
 	}
 	// ファイル更新日時を 1 時間前にして「録画完了」扱いにする
-	old := time.Now().Add(-time.Hour)
+	// 基準はテスト用 DB の現在時刻 (testFixedNow) に合わせること
+	old := testFixedNow.Add(-time.Hour)
 	if err := os.Chtimes(filePath, old, old); err != nil {
 		t.Fatalf("failed to change times: %v", err)
 	}
@@ -648,7 +654,8 @@ func TestProcessRecordedFileAnalysisFailed(t *testing.T) {
 	if err := os.WriteFile(filePath, []byte("dummy"), 0o644); err != nil {
 		t.Fatalf("failed to write file: %v", err)
 	}
-	old := time.Now().Add(-time.Hour)
+	// 基準はテスト用 DB の現在時刻 (testFixedNow) に合わせること
+	old := testFixedNow.Add(-time.Hour)
 	if err := os.Chtimes(filePath, old, old); err != nil {
 		t.Fatalf("failed to change times: %v", err)
 	}
