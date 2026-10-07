@@ -188,7 +188,7 @@ func main() {
 			"KonomiTV server (Go) started",
 			slog.String("version", constants.Version),
 			slog.String("listen", httpServer.Addr),
-			slog.String("backend", backendURL),
+			slog.Bool("proxy_enabled", backendURL != ""),
 			slog.String("server_dir", paths.ServerDir),
 			slog.String("backend_type", cfg.General.Backend),
 			slog.String("encoder", cfg.General.Encoder),
