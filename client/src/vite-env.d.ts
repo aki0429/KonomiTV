@@ -235,14 +235,14 @@ declare global {
         onleavepictureinpicture: PictureInPictureEventListener;
     }
     interface Element {
-        webkitRequestFullscreen?(): Promise<void>;
+        webkitRequestFullscreen?(): Promise<void> | void;
         onwebkitfullscreenchange?: ((this: Element, ev: Event) => any) | null;
     }
     interface Document {
         readonly pictureInPictureEnabled: boolean;
         exitPictureInPicture(): Promise<void>;
         webkitFullscreenElement?: Element;
-        webkitExitFullscreen?(): Promise<void>;
+        webkitExitFullscreen?(): Promise<void> | void;
     }
     interface DocumentOrShadowRoot {
         readonly pictureInPictureElement: HTMLVideoElement | null;

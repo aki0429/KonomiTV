@@ -116,6 +116,43 @@ html {
     --timetable-genre-background-brown: #fff2eb;
 }
 
+// 疑似フルスクリーン (iPhone Safari など Fullscreen API が使えない環境向け)
+// ページ全体を覆い、アドレスバー・ツールバーを畳んだ状態に近づける
+html.pseudo-fullscreen, body.pseudo-fullscreen {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    background: #000;
+}
+body.pseudo-fullscreen {
+    .v-application, .v-application__wrap {
+        min-height: 100dvh;
+    }
+    // 視聴画面を画面全体 (ノッチ・Home Indicator の内側まで) に広げる
+    .route-container {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        border-bottom: none !important;  // Home Indicator 分の余白を無くして映像を端まで表示
+        z-index: 9999;
+        background: #000 !important;
+    }
+    // ノッチ・Home Indicator に重ならないようコントロールだけを Safe Area の内側へ寄せる
+    .watch-container--fullscreen .dplayer-controller {
+        padding-left: max(16px, env(safe-area-inset-left)) !important;
+        padding-right: max(16px, env(safe-area-inset-right)) !important;
+        padding-bottom: env(safe-area-inset-bottom) !important;
+    }
+}
+
 // アプリケーションのルート
 .v-application {
     min-height: 100vh;

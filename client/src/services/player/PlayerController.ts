@@ -1879,9 +1879,31 @@ class PlayerController {
         // フルスクリーンにするコンテナ要素 (ページ全体)
         const fullscreen_container = document.body;
 
+        // iPhone Safari には要素に対する Fullscreen API が存在しない (video 要素専用の webkitEnterFullscreen のみ)
+        // video 要素だけがネイティブプレイヤーで全画面表示されると、コメントや KonomiTV のコントロールが使えなくなる
+        // そのため Fullscreen API が使えない環境では、ページ全体を覆う「疑似フルスクリーン」(CSS) で代替する
+        const is_native_fullscreen_supported = (
+            fullscreen_container.requestFullscreen !== undefined ||
+            fullscreen_container.webkitRequestFullscreen !== undefined
+        );
+        // 疑似フルスクリーン中かどうか
+        let is_pseudo_fullscreen = false;
+
+        // 疑似フルスクリーンの状態を適用する
+        const apply_pseudo_fullscreen = (enabled: boolean) => {
+            is_pseudo_fullscreen = enabled;
+            document.documentElement.classList.toggle('pseudo-fullscreen', enabled);
+            document.body.classList.toggle('pseudo-fullscreen', enabled);
+            if (enabled) {
+                // iPhone Safari のアドレスバー・ツールバーを畳むため、ページを先頭にスクロールしておく
+                window.scrollTo(0, 0);
+            }
+            player_store.is_fullscreen = enabled;
+        };
+
         // フルスクリーンかどうか
         this.player.fullScreen.isFullScreen = (type?: DPlayerType.FullscreenType) => {
-            return !!(document.fullscreenElement || document.webkitFullscreenElement);
+            return is_pseudo_fullscreen || !!(document.fullscreenElement || document.webkitFullscreenElement);
         };
 
         // フルスクリーンをリクエスト
@@ -1892,33 +1914,56 @@ class PlayerController {
                 this.player.fullScreen.cancel();
                 return;
             }
-            // フルスクリーンをリクエスト
-            // Safari は webkit のベンダープレフィックスが必要
-            fullscreen_container.requestFullscreen = fullscreen_container.requestFullscreen || fullscreen_container.webkitRequestFullscreen;
-            if (fullscreen_container.requestFullscreen) {
-                fullscreen_container.requestFullscreen();
+            if (is_native_fullscreen_supported) {
+                // フルスクリーンをリクエスト
+                // Safari (iPadOS / macOS) は webkit のベンダープレフィックスが必要
+                const request = fullscreen_container.requestFullscreen ?? fullscreen_container.webkitRequestFullscreen;
+                try {
+                    // webkit 版は Promise を返さない場合がある
+                    const result: Promise<void> | void = request.call(fullscreen_container);
+                    if (result instanceof Promise) {
+                        // 拒否された場合 (権限・ユーザー操作外など) は疑似フルスクリーンにフォールバック
+                        result.catch(() => apply_pseudo_fullscreen(true));
+                    }
+                } catch {
+                    apply_pseudo_fullscreen(true);
+                }
+                // 画面の向きを横に固定 (Screen Orientation API がサポートされている場合)
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('landscape').catch(() => {});
+                }
             } else {
-                // フルスクリーンがサポートされていない場合はエラーを表示
-                this.player.notice('iPhone Safari は動画のフルスクリーン表示に対応していません。', undefined, undefined, '#FF6F6A');
-                return;
-            }
-            // 画面の向きを横に固定 (Screen Orientation API がサポートされている場合)
-            if (screen.orientation) {
-                screen.orientation.lock('landscape').catch(() => {});
+                // iPhone Safari: 疑似フルスクリーンで代替する
+                apply_pseudo_fullscreen(true);
             }
         };
 
         // フルスクリーンをキャンセル
         this.player.fullScreen.cancel = (type?: DPlayerType.FullscreenType) => {
+            // 疑似フルスクリーンを終了
+            if (is_pseudo_fullscreen) {
+                apply_pseudo_fullscreen(false);
+            }
             // フルスクリーンを終了
             // Safari は webkit のベンダープレフィックスが必要
-            document.exitFullscreen = document.exitFullscreen || document.webkitExitFullscreen;
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                const exit = document.exitFullscreen ?? document.webkitExitFullscreen;
+                try {
+                    const result: Promise<void> | void = exit?.call(document);
+                    if (result instanceof Promise) {
+                        result.catch(() => {});
+                    }
+                } catch {
+                    // 失敗しても何もしない
+                }
             }
             // 画面の向きの固定を解除
-            if (screen.orientation) {
-                screen.orientation.unlock();
+            if (screen.orientation && screen.orientation.unlock) {
+                try {
+                    screen.orientation.unlock();
+                } catch {
+                    // 非対応環境では何もしない
+                }
             }
         };
 
@@ -1933,6 +1978,14 @@ class PlayerController {
         } else if (fullscreen_container.onwebkitfullscreenchange !== undefined) {
             fullscreen_container.onwebkitfullscreenchange = fullscreen_handler;
         }
+
+        // 疑似フルスクリーン中は Esc キーで解除できるようにする (外部キーボード接続時など)
+        // 画面の向きが縦に戻った場合も、疑似フルスクリーンは維持する (ユーザーが閉じるまで)
+        document.addEventListener('keydown', (event: KeyboardEvent) => {
+            if (is_pseudo_fullscreen && event.key === 'Escape') {
+                this.player?.fullScreen.cancel();
+            }
+        });
     }
 
 
