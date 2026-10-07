@@ -26,6 +26,8 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/database"
 	"github.com/aki0429/KonomiTV/server-go/internal/iptv"
 	"github.com/aki0429/KonomiTV/server-go/internal/logging"
+	"github.com/aki0429/KonomiTV/server-go/internal/stream"
+	"github.com/aki0429/KonomiTV/server-go/internal/videostream"
 )
 
 func main() {
@@ -159,6 +161,15 @@ func main() {
 		logger.Error("failed to initialize server", slog.Any("error", err))
 		os.Exit(1)
 	}
+
+	// 録画視聴 (HLS) のエンコーダーを登録する (VideoEncodingTask 相当)
+	server.SetVideoSegmentEncoderFactory(videostream.NewSessionSegmentEncoderFactory(videostream.EncodingTaskOptions{
+		LibraryPath: paths.LibraryPath,
+		IsHWEncCOptionAvailable: func(encoderType string, option string) bool {
+			return stream.HWEncCOptionAvailable(paths.LibraryPath(encoderType), option)
+		},
+		Logger: logger,
+	}))
 
 	httpServer := &http.Server{
 		Addr:              *listenAddress,

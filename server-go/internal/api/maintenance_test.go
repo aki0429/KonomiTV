@@ -204,10 +204,13 @@ func TestMaintenanceUpdateDatabase(t *testing.T) {
 		t.Errorf("body = %s", response.Body.String())
 	}
 
-	// 一括スキャン・バックグラウンド解析も Python 版へプロキシする
+	// 一括スキャン・バックグラウンド解析は Go で処理する (Python 版へはプロキシしない)
 	for _, path := range []string{"/api/maintenance/run-batch-scan", "/api/maintenance/run-background-analysis"} {
 		response = doJSONRequest(t, server.Handler(), http.MethodPost, path, "", "", "")
-		if response.Code != http.StatusOK {
+		if strings.Contains(response.Body.String(), `"from":"python"`) {
+			t.Errorf("%s: should not be proxied, body = %s", path, response.Body.String())
+		}
+		if response.Code != http.StatusNoContent {
 			t.Errorf("%s: status = %d, body = %s", path, response.Code, response.Body.String())
 		}
 	}

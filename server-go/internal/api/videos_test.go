@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -506,22 +507,20 @@ func TestVideoJikkyoWithoutChannel(t *testing.T) {
 	}
 }
 
-// TestVideoReanalyzeIsProxied はメタデータ再解析 API が Python 版へプロキシされることを検証する。
-func TestVideoReanalyzeIsProxied(t *testing.T) {
+// TestVideoReanalyzeIsHandledByGo はメタデータ再解析 API が Go で処理され、Python 版へプロキシされないことを検証する。
+func TestVideoReanalyzeIsHandledByGo(t *testing.T) {
 	backend := newProxyTestBackend(t)
 	server, _ := newTestServer(t, backend)
 	handler := server.Handler()
 
-	recorder := doJSONRequest(t, handler, http.MethodPost, "/api/videos/1/reanalyze", "", "", "")
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
-	}
-	if recorder.Body.String() != `{"from":"python","path":"/api/videos/1/reanalyze"}` {
-		t.Errorf("body = %q", recorder.Body.String())
-	}
-
-	recorder = doJSONRequest(t, handler, http.MethodPost, "/api/videos/1/thumbnail/regenerate", "", "", "")
-	if recorder.Body.String() != `{"from":"python","path":"/api/videos/1/thumbnail/regenerate"}` {
-		t.Errorf("body = %q", recorder.Body.String())
+	for _, path := range []string{"/api/videos/1/reanalyze", "/api/videos/1/thumbnail/regenerate"} {
+		recorder := doJSONRequest(t, handler, http.MethodPost, path, "", "", "")
+		if strings.Contains(recorder.Body.String(), `"from":"python"`) {
+			t.Errorf("%s: should not be proxied, body = %s", path, recorder.Body.String())
+		}
+		// 存在しない video_id は Python 版と同じ 422 を返す
+		if recorder.Code != http.StatusUnprocessableEntity {
+			t.Errorf("%s: status = %d, want 422, body = %s", path, recorder.Code, recorder.Body.String())
+		}
 	}
 }

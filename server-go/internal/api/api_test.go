@@ -129,12 +129,12 @@ func TestProxyForwardsUnimplementedAPIs(t *testing.T) {
 
 	server, _ := newTestServer(t, backend.URL)
 	recorder := httptest.NewRecorder()
-	server.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/recording/reservations", nil))
+	server.Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/unimplemented-for-proxy-test", nil))
 
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", recorder.Code)
 	}
-	if body := recorder.Body.String(); body != `{"from":"python","path":"/api/recording/reservations"}` {
+	if body := recorder.Body.String(); body != `{"from":"python","path":"/api/unimplemented-for-proxy-test"}` {
 		t.Errorf("body = %q", body)
 	}
 

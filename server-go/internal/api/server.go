@@ -18,6 +18,7 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/iptv"
 	"github.com/aki0429/KonomiTV/server-go/internal/jikkyo"
 	"github.com/aki0429/KonomiTV/server-go/internal/stream"
+	"github.com/aki0429/KonomiTV/server-go/internal/videostream"
 )
 
 // Server は Go 版 KonomiTV サーバーのインスタンス。
@@ -30,7 +31,8 @@ type Server struct {
 	logger        *slog.Logger
 	iptv          *iptv.Manager
 	liveStreams   *stream.Manager
-	proxy         http.Handler // nil の場合はプロキシ無効
+	videoStreams  *videostream.Manager // 録画視聴セッション
+	proxy         http.Handler         // nil の場合はプロキシ無効
 	latestVersion *latestVersionCache
 	// accessLogWriters はアクセスログの出力先 (標準出力とログファイル) 。
 	accessLogWriters []io.Writer
@@ -108,6 +110,7 @@ func New(options Options) (*Server, error) {
 		logger:           options.Logger,
 		iptv:             iptvManager,
 		liveStreams:      liveStreams,
+		videoStreams:     videostream.NewManager(options.Logger),
 		proxy:            proxy,
 		latestVersion:    newLatestVersionCache(options.Logger),
 		accessLogWriters: options.AccessLogWriters,
@@ -168,8 +171,6 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/videos/{video_id}/jikkyo", s.handleVideoJikkyo)
 	mux.HandleFunc("GET /api/videos/{video_id}/thumbnail", s.handleVideoThumbnail)
 	mux.HandleFunc("GET /api/videos/{video_id}/thumbnail/tiled", s.handleVideoThumbnailTile)
-	mux.HandleFunc("POST /api/videos/{video_id}/reanalyze", s.handleVideoReanalyze)
-	mux.HandleFunc("POST /api/videos/{video_id}/thumbnail/regenerate", s.handleVideoThumbnailRegenerate)
 
 	// 設定
 	mux.HandleFunc("GET /api/settings/client", s.handleClientSettings)
@@ -183,6 +184,13 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/streams/live/{display_channel_id}/{quality}/events", s.handleLiveStreamEvents)
 	mux.HandleFunc("GET /api/streams/live/{display_channel_id}/{quality}/psi-archived-data", s.handleLiveStreamPSIArchivedData)
 	mux.HandleFunc("GET /api/streams/live/{display_channel_id}/{quality}/mpegts", s.handleLiveStreamMPEGTS)
+
+	// 録画ストリーミング (playlist / keep-alive / buffer はセッション管理のみ Go で処理する。
+	// segment はエンコーダー (SetVideoSegmentEncoderFactory) 登録までは 500 を返す。offline-stream は Python 版へプロキシする)
+	mux.HandleFunc("GET /api/streams/video/{video_id}/{quality}/playlist", s.handleVideoStreamPlaylist)
+	mux.HandleFunc("GET /api/streams/video/{video_id}/{quality}/segment", s.handleVideoStreamSegment)
+	mux.HandleFunc("GET /api/streams/video/{video_id}/{quality}/buffer", s.handleVideoStreamBuffer)
+	mux.HandleFunc("PUT /api/streams/video/{video_id}/{quality}/keep-alive", s.handleVideoStreamKeepAlive)
 
 	// IPTV (M3U プレイリストの取り込みとストリームのプロキシ)
 	mux.HandleFunc("GET /api/iptv/channels", s.handleIPTVChannels)
@@ -216,10 +224,19 @@ func (s *Server) Handler() http.Handler {
 	// Go 版では未実装のため Python 版へプロキシする
 	mux.HandleFunc("GET /api/maintenance/logs/{log_type}", s.handleMaintenanceLogs)
 	mux.HandleFunc("POST /api/maintenance/update-database", s.handleMaintenanceUpdateDatabase)
-	mux.HandleFunc("POST /api/maintenance/run-batch-scan", s.handleMaintenanceBatchScan)
-	mux.HandleFunc("POST /api/maintenance/run-background-analysis", s.handleMaintenanceBackgroundAnalysis)
 	mux.HandleFunc("POST /api/maintenance/restart", s.handleMaintenanceRestart)
 	mux.HandleFunc("POST /api/maintenance/shutdown", s.handleMaintenanceShutdown)
+
+	// 録画予約・キーワード自動予約条件・録画設定プリセット
+	s.registerReservationRoutes(mux)
+	s.registerReservationConditionRoutes(mux)
+	s.registerRecordingPresetRoutes(mux)
+	// Twitter / Bluesky / ニコニコ連携
+	s.registerTwitterRoutes(mux)
+	s.registerBlueskyRoutes(mux)
+	s.registerNiconicoRoutes(mux)
+	// 録画メタデータ解析 (reanalyze / thumbnail/regenerate / run-batch-scan / run-background-analysis)
+	s.registerMetadataRoutes(mux)
 
 	// ***** 静的ファイル *****
 	// Python 版の app.mount('/assets', StaticFiles(...)) 相当

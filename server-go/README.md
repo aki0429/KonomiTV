@@ -34,6 +34,9 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `GET /api/streams/live/{display_channel_id}/{quality}/events` (状態の Server-Sent Events) | ✅ Go 実装済み |
 | `GET /api/streams/live/{display_channel_id}/{quality}/mpegts` (ライブ MPEG-TS ストリーム) | ✅ Go 実装済み |
 | `GET /api/streams/live/{display_channel_id}/{quality}/psi-archived-data` (PSI/SI アーカイブデータ) | ✅ Go 実装済み (EDCB / Mirakurun バックエンドのみ。IPTV では 500 を返す) |
+| `GET /api/streams/video/{video_id}/{quality}/playlist`・`PUT .../keep-alive`・`GET .../buffer` (録画 HLS プレイリスト・セッション維持・バッファ範囲 SSE) | ✅ Go 実装済み (セッション管理は `internal/videostream/session*.go`) |
+| `GET /api/streams/video/{video_id}/{quality}/segment` (録画 HLS セグメント) | 🚧 セッション制御は Go 実装済み。エンコーダー (VideoEncodingTask) 待ちのため、エンコーダー未登録の間は 500 を返す |
+| `GET /api/streams/video/{video_id}/{quality}/offline-stream` (オフライン保存) | 🔁 Python 版へプロキシ |
 | `GET /api/videos`・`GET /api/videos/search` (録画番組一覧・検索) | ✅ Go 実装済み (応答は Python 版と完全一致を検証済み) |
 | `GET /api/videos/{video_id}` (録画番組情報) | ✅ Go 実装済み |
 | `GET /api/videos/{video_id}/thumbnail`・`/thumbnail/tiled` (サムネイル画像、ETag / 304 対応) | ✅ Go 実装済み |
