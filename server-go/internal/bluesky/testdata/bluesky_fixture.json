@@ -1,0 +1,1798 @@
+{
+ "note": "server/app/utils/BlueskyAPI.py (Python 版) から生成した期待値",
+ "handle_cases": [
+  {
+   "input": "  KonomiTV.bsky.social  ",
+   "output": "konomitv.bsky.social"
+  },
+  {
+   "input": "@KonomiTV.bsky.social",
+   "output": "konomitv.bsky.social"
+  },
+  {
+   "input": "https://bsky.app/profile/KonomiTV.bsky.social",
+   "output": "konomitv.bsky.social"
+  },
+  {
+   "input": "https://bsky.app/profile/KonomiTV.bsky.social/post/3kabc",
+   "output": "konomitv.bsky.social"
+  },
+  {
+   "input": "http://bsky.app/profile/KonomiTV.bsky.social?lang=ja",
+   "output": "konomitv.bsky.social"
+  },
+  {
+   "input": "did:plc:abcdefg",
+   "output": "did:plc:abcdefg"
+  },
+  {
+   "input": "こんみつ.bsky.social",
+   "output": "こんみつ.bsky.social"
+  },
+  {
+   "input": "@did:plc:ABC",
+   "output": "did:plc:abc"
+  },
+  {
+   "input": "\t@Example.Bsky.Social\n",
+   "output": "example.bsky.social"
+  },
+  {
+   "input": "",
+   "output": ""
+  }
+ ],
+ "datetime_cases": [
+  {
+   "input": "2026-10-07T12:34:56.789Z",
+   "output": "2026-10-07 21:34:56.789000+09:00"
+  },
+  {
+   "input": "2026-10-07T12:34:56+00:00",
+   "output": "2026-10-07 21:34:56+09:00"
+  },
+  {
+   "input": "2026-10-07T12:34:56.789012+09:00",
+   "output": "2026-10-07 12:34:56.789012+09:00"
+  },
+  {
+   "input": "2026-10-07T03:34:56.100Z",
+   "output": "2026-10-07 12:34:56.100000+09:00"
+  }
+ ],
+ "record_key_cases": [
+  {
+   "input": "at://did:plc:test/app.bsky.feed.post/3kabc",
+   "output": "3kabc"
+  },
+  {
+   "input": "at://did:plc:test/app.bsky.feed.post/3k/a/b",
+   "output": "b"
+  },
+  {
+   "input": "no-slash",
+   "output": "no-slash"
+  }
+ ],
+ "tag_cases": [
+  {
+   "text": "サイト https://example.com,いいね！",
+   "built_text": "サイト https://example.com,いいね！",
+   "facets": [
+    {
+     "features": [
+      {
+       "uri": "https://example.com,いいね",
+       "$type": "app.bsky.richtext.facet#link"
+      }
+     ],
+     "index": {
+      "byteEnd": 39,
+      "byteStart": 10,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    }
+   ]
+  },
+  {
+   "text": "これはテストです #KonomiTV #テスト",
+   "built_text": "これはテストです #KonomiTV #テスト",
+   "facets": [
+    {
+     "features": [
+      {
+       "tag": "KonomiTV",
+       "$type": "app.bsky.richtext.facet#tag"
+      }
+     ],
+     "index": {
+      "byteEnd": 34,
+      "byteStart": 25,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    },
+    {
+     "features": [
+      {
+       "tag": "テスト",
+       "$type": "app.bsky.richtext.facet#tag"
+      }
+     ],
+     "index": {
+      "byteEnd": 45,
+      "byteStart": 35,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    }
+   ]
+  },
+  {
+   "text": "末尾 https://example.com。",
+   "built_text": "末尾 https://example.com。",
+   "facets": [
+    {
+     "features": [
+      {
+       "uri": "https://example.com",
+       "$type": "app.bsky.richtext.facet#link"
+      }
+     ],
+     "index": {
+      "byteEnd": 26,
+      "byteStart": 7,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    }
+   ]
+  },
+  {
+   "text": "#＃全角ハッシュタグ",
+   "built_text": "#＃全角ハッシュタグ",
+   "facets": [
+    {
+     "features": [
+      {
+       "tag": "全角ハッシュタグ",
+       "$type": "app.bsky.richtext.facet#tag"
+      }
+     ],
+     "index": {
+      "byteEnd": 28,
+      "byteStart": 1,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    }
+   ]
+  },
+  {
+   "text": "https://example.com/path?a=1&b=2)」",
+   "built_text": "https://example.com/path?a=1&b=2)」",
+   "facets": [
+    {
+     "features": [
+      {
+       "uri": "https://example.com/path?a=1&b=2",
+       "$type": "app.bsky.richtext.facet#link"
+      }
+     ],
+     "index": {
+      "byteEnd": 32,
+      "byteStart": 0,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    }
+   ]
+  },
+  {
+   "text": "記号のみ #。 タグなし",
+   "built_text": "記号のみ #。 タグなし",
+   "facets": []
+  },
+  {
+   "text": "URL なしタグ #tag と # と #あ",
+   "built_text": "URL なしタグ #tag と # と #あ",
+   "facets": [
+    {
+     "features": [
+      {
+       "tag": "tag",
+       "$type": "app.bsky.richtext.facet#tag"
+      }
+     ],
+     "index": {
+      "byteEnd": 21,
+      "byteStart": 17,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    },
+    {
+     "features": [
+      {
+       "tag": "あ",
+       "$type": "app.bsky.richtext.facet#tag"
+      }
+     ],
+     "index": {
+      "byteEnd": 36,
+      "byteStart": 32,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    }
+   ]
+  },
+  {
+   "text": "複数 https://a.example.com と https://b.example.com/x,y #c #d",
+   "built_text": "複数 https://a.example.com と https://b.example.com/x,y #c #d",
+   "facets": [
+    {
+     "features": [
+      {
+       "uri": "https://a.example.com",
+       "$type": "app.bsky.richtext.facet#link"
+      }
+     ],
+     "index": {
+      "byteEnd": 28,
+      "byteStart": 7,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    },
+    {
+     "features": [
+      {
+       "uri": "https://b.example.com/x,y",
+       "$type": "app.bsky.richtext.facet#link"
+      }
+     ],
+     "index": {
+      "byteEnd": 58,
+      "byteStart": 33,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    },
+    {
+     "features": [
+      {
+       "tag": "c",
+       "$type": "app.bsky.richtext.facet#tag"
+      }
+     ],
+     "index": {
+      "byteEnd": 61,
+      "byteStart": 59,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    },
+    {
+     "features": [
+      {
+       "tag": "d",
+       "$type": "app.bsky.richtext.facet#tag"
+      }
+     ],
+     "index": {
+      "byteEnd": 64,
+      "byteStart": 62,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    }
+   ]
+  },
+  {
+   "text": "https://example.com",
+   "built_text": "https://example.com",
+   "facets": [
+    {
+     "features": [
+      {
+       "uri": "https://example.com",
+       "$type": "app.bsky.richtext.facet#link"
+      }
+     ],
+     "index": {
+      "byteEnd": 19,
+      "byteStart": 0,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    }
+   ]
+  },
+  {
+   "text": "emptyなハッシュ ##",
+   "built_text": "emptyなハッシュ ##",
+   "facets": []
+  },
+  {
+   "text": "テキストのみ",
+   "built_text": "テキストのみ",
+   "facets": []
+  },
+  {
+   "text": "全角スペース　#タグ　おわり",
+   "built_text": "全角スペース　#タグ　おわり",
+   "facets": [
+    {
+     "features": [
+      {
+       "tag": "タグ",
+       "$type": "app.bsky.richtext.facet#tag"
+      }
+     ],
+     "index": {
+      "byteEnd": 28,
+      "byteStart": 21,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    }
+   ]
+  },
+  {
+   "text": "括弧 (https://example.com/test) を含む",
+   "built_text": "括弧 (https://example.com/test) を含む",
+   "facets": [
+    {
+     "features": [
+      {
+       "uri": "https://example.com/test",
+       "$type": "app.bsky.richtext.facet#link"
+      }
+     ],
+     "index": {
+      "byteEnd": 32,
+      "byteStart": 8,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    }
+   ]
+  }
+ ],
+ "facet_expand_cases": [
+  {
+   "text": "リンクは こちら https://example.com/test です",
+   "facets": [
+    {
+     "features": [
+      {
+       "uri": "https://example.com/test",
+       "$type": "app.bsky.richtext.facet#link"
+      }
+     ],
+     "index": {
+      "byteEnd": 47,
+      "byteStart": 23,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    }
+   ],
+   "output": "リンクは こちら https://example.com/test です"
+  },
+  {
+   "text": "リンクは こちら https://example.com/test です",
+   "facets": [
+    {
+     "features": [
+      {
+       "uri": "https://example.com/test",
+       "$type": "app.bsky.richtext.facet#link"
+      }
+     ],
+     "index": {
+      "byteEnd": 2,
+      "byteStart": 3,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    }
+   ],
+   "output": "リンクは こちら https://example.com/test です"
+  },
+  {
+   "text": "A https://a.example B https://b.example C",
+   "facets": [
+    {
+     "features": [
+      {
+       "uri": "https://a.example/expanded?a=1",
+       "$type": "app.bsky.richtext.facet#link"
+      }
+     ],
+     "index": {
+      "byteEnd": 19,
+      "byteStart": 2,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    },
+    {
+     "features": [
+      {
+       "uri": "https://b.example",
+       "$type": "app.bsky.richtext.facet#link"
+      }
+     ],
+     "index": {
+      "byteEnd": 39,
+      "byteStart": 22,
+      "$type": "app.bsky.richtext.facet#byteSlice"
+     },
+     "$type": "app.bsky.richtext.facet"
+    }
+   ],
+   "output": "A https://a.example/expanded?a=1 B https://b.example C"
+  },
+  {
+   "text": "リンクは こちら https://example.com/test です",
+   "facets": [],
+   "output": "リンクは こちら https://example.com/test です"
+  },
+  {
+   "text": "リンクは こちら https://example.com/test です",
+   "facets": null,
+   "output": "リンクは こちら https://example.com/test です"
+  }
+ ],
+ "post_views": [
+  {
+   "name": "plain_with_images_and_viewer",
+   "post": {
+    "$type": "app.bsky.feed.defs#postView",
+    "uri": "at://did:plc:test/app.bsky.feed.post/3kplain",
+    "cid": "bafyplain",
+    "author": {
+     "did": "did:plc:test",
+     "handle": "test.bsky.social",
+     "displayName": "テスト",
+     "avatar": "https://cdn.example/avatar.png"
+    },
+    "record": {
+     "$type": "app.bsky.feed.post",
+     "text": "リンクは こちら https://example.com/short です #タグ",
+     "createdAt": "2026-10-07T03:34:56.789Z",
+     "facets": [
+      {
+       "index": {
+        "byteStart": 22,
+        "byteEnd": 46
+       },
+       "features": [
+        {
+         "$type": "app.bsky.richtext.facet#link",
+         "uri": "https://example.com/very/long/url"
+        }
+       ]
+      }
+     ]
+    },
+    "embed": {
+     "$type": "app.bsky.embed.images#view",
+     "images": [
+      {
+       "thumb": "https://cdn.example/1.jpg",
+       "fullsize": "https://cdn.example/1.png",
+       "alt": "1",
+       "aspectRatio": {
+        "width": 1,
+        "height": 1
+       }
+      },
+      {
+       "thumb": "https://cdn.example/2.jpg",
+       "fullsize": "https://cdn.example/2.png",
+       "alt": "2",
+       "aspectRatio": {
+        "width": 1,
+        "height": 1
+       }
+      }
+     ]
+    },
+    "replyCount": 0,
+    "repostCount": 3,
+    "likeCount": 5,
+    "quoteCount": 0,
+    "indexedAt": "2026-10-07T03:34:57.000Z",
+    "viewer": {
+     "repost": "at://did:plc:test/app.bsky.feed.repost/1",
+     "like": "at://did:plc:test/app.bsky.feed.like/1"
+    }
+   }
+  },
+  {
+   "name": "repost_reason",
+   "reason": {
+    "$type": "app.bsky.feed.defs#reasonRepost",
+    "by": {
+     "did": "did:plc:reposter",
+     "handle": "reposter.bsky.social",
+     "displayName": ""
+    },
+    "indexedAt": "2026-10-07T04:00:00.000Z"
+   },
+   "post": {
+    "$type": "app.bsky.feed.defs#postView",
+    "uri": "at://did:plc:original/app.bsky.feed.post/3korig",
+    "cid": "bafyorig",
+    "author": {
+     "did": "did:plc:original",
+     "handle": "original.bsky.social"
+    },
+    "record": {
+     "$type": "app.bsky.feed.post",
+     "text": "オリジナル投稿",
+     "createdAt": "2026-10-06T01:02:03.000+09:00"
+    },
+    "replyCount": 1,
+    "repostCount": 0,
+    "likeCount": 2,
+    "quoteCount": 0,
+    "indexedAt": "2026-10-06T01:02:04.000+09:00",
+    "viewer": {}
+   }
+  },
+  {
+   "name": "unknown_embed_and_reason",
+   "reason": {
+    "$type": "app.bsky.feed.defs#reasonPin",
+    "indexedAt": "2026-10-07T04:00:00.000Z"
+   },
+   "post": {
+    "$type": "app.bsky.feed.defs#postView",
+    "uri": "at://did:plc:test/app.bsky.feed.post/3kunknown",
+    "cid": "bafyunknown",
+    "author": {
+     "did": "did:plc:test",
+     "handle": "test.bsky.social"
+    },
+    "record": {
+     "$type": "app.bsky.feed.post",
+     "text": "未知 embed",
+     "createdAt": "2026-10-07T03:34:56.000Z"
+    },
+    "embed": {
+     "$type": "app.bsky.embed.recordWithMedia#view",
+     "record": {
+      "$type": "app.bsky.embed.record#view",
+      "record": {
+       "$type": "app.bsky.embed.record#viewNotFound",
+       "uri": "at://x",
+       "notFound": true
+      }
+     },
+     "media": {
+      "$type": "app.bsky.embed.futureMedia#view",
+      "novel": true
+     }
+    },
+    "replyCount": 0,
+    "repostCount": 0,
+    "likeCount": 0,
+    "quoteCount": 0,
+    "indexedAt": "2026-10-07T03:34:57.000Z"
+   }
+  },
+  {
+   "name": "non_post_record",
+   "post": {
+    "$type": "app.bsky.feed.defs#postView",
+    "uri": "at://did:plc:test/app.bsky.feed.post/3kweird",
+    "cid": "bafyweird",
+    "author": {
+     "did": "did:plc:test",
+     "handle": "test.bsky.social"
+    },
+    "record": {
+     "$type": "app.bsky.feed.repost",
+     "createdAt": "2020-01-01T00:00:00.000Z",
+     "subject": {
+      "cid": "x",
+      "uri": "at://y"
+     }
+    },
+    "replyCount": null,
+    "repostCount": null,
+    "likeCount": null,
+    "quoteCount": null,
+    "indexedAt": "2026-10-07T03:34:57.000Z"
+   }
+  },
+  {
+   "name": "video_embed",
+   "post": {
+    "$type": "app.bsky.feed.defs#postView",
+    "uri": "at://did:plc:test/app.bsky.feed.post/3kvideo",
+    "cid": "bafyvideo",
+    "author": {
+     "did": "did:plc:test",
+     "handle": "test.bsky.social"
+    },
+    "record": {
+     "$type": "app.bsky.feed.post",
+     "text": "動画",
+     "createdAt": "2026-10-07T03:34:56.000Z"
+    },
+    "embed": {
+     "$type": "app.bsky.embed.video#view",
+     "cid": "b",
+     "playlist": "https://video.example/playlist.m3u8",
+     "thumbnail": "https://video.example/thumb.jpg"
+    },
+    "replyCount": 0,
+    "repostCount": 0,
+    "likeCount": 0,
+    "quoteCount": 0,
+    "indexedAt": "2026-10-07T03:34:57.000Z"
+   }
+  }
+ ],
+ "client_scenarios": [
+  {
+   "name": "home_latest_timeline",
+   "session_string": "test.bsky.social:::did:plc:test:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTM0MjE3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::https://pds.example.com",
+   "operation": {
+    "type": "home_latest_timeline",
+    "cursor_id": null
+   },
+   "responses": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "body": {
+      "did": "did:plc:test",
+      "handle": "test.bsky.social",
+      "displayName": "テストアカウント",
+      "avatar": "https://cdn.example/avatar.png"
+     }
+    },
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.feed.getTimeline",
+     "body": {
+      "cursor": "next-cursor-1",
+      "feed": [
+       {
+        "post": {
+         "$type": "app.bsky.feed.defs#postView",
+         "uri": "at://did:plc:test/app.bsky.feed.post/3ktl1",
+         "cid": "bafytl1",
+         "author": {
+          "did": "did:plc:test",
+          "handle": "test.bsky.social",
+          "displayName": "テストアカウント"
+         },
+         "record": {
+          "$type": "app.bsky.feed.post",
+          "text": "タイムライン1 https://example.com",
+          "createdAt": "2026-10-07T03:34:56.789Z"
+         },
+         "replyCount": 0,
+         "repostCount": 1,
+         "likeCount": 2,
+         "quoteCount": 0,
+         "indexedAt": "2026-10-07T03:34:57.000Z",
+         "viewer": {
+          "like": "at://did:plc:test/app.bsky.feed.like/9"
+         }
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "result": {
+    "is_success": true,
+    "detail": "Bluesky のタイムラインを取得しました。",
+    "tweets": [
+     {
+      "source": "Bluesky",
+      "id": "at://did:plc:test/app.bsky.feed.post/3ktl1",
+      "created_at": "2026-10-07T12:34:56.789000+09:00",
+      "user": {
+       "source": "Bluesky",
+       "id": "did:plc:test",
+       "name": "テストアカウント",
+       "screen_name": "test.bsky.social",
+       "icon_url": ""
+      },
+      "text": "タイムライン1 https://example.com",
+      "lang": "",
+      "via": "",
+      "image_urls": null,
+      "movie_url": null,
+      "retweet_count": 1,
+      "retweeted": false,
+      "favorite_count": 2,
+      "favorited": true,
+      "retweeted_tweet": null,
+      "quoted_tweet": null
+     }
+    ],
+    "newer_cursor_id": null,
+    "load_more_cursors": [
+     {
+      "cursor_type": "Older",
+      "cursor_id": "next-cursor-1",
+      "upper_created_at": "2026-10-07T12:34:56.789000+09:00"
+     }
+    ],
+    "is_cursor_consumed": true
+   },
+   "requests": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "query": "actor=test.bsky.social",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    },
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.feed.getTimeline",
+     "query": "limit=30",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    }
+   ],
+   "saved_session_strings": []
+  },
+  {
+   "name": "home_latest_timeline_with_cursor",
+   "session_string": "test.bsky.social:::did:plc:test:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTM0MjE3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::https://pds.example.com",
+   "operation": {
+    "type": "home_latest_timeline",
+    "cursor_id": "cursor-in"
+   },
+   "responses": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "body": {
+      "did": "did:plc:test",
+      "handle": "test.bsky.social",
+      "displayName": "テストアカウント",
+      "avatar": "https://cdn.example/avatar.png"
+     }
+    },
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.feed.getTimeline",
+     "body": {
+      "feed": [
+       {
+        "post": {
+         "$type": "app.bsky.feed.defs#postView",
+         "uri": "at://did:plc:test/app.bsky.feed.post/3ktl1",
+         "cid": "bafytl1",
+         "author": {
+          "did": "did:plc:test",
+          "handle": "test.bsky.social",
+          "displayName": "テストアカウント"
+         },
+         "record": {
+          "$type": "app.bsky.feed.post",
+          "text": "タイムライン1 https://example.com",
+          "createdAt": "2026-10-07T03:34:56.789Z"
+         },
+         "replyCount": 0,
+         "repostCount": 1,
+         "likeCount": 2,
+         "quoteCount": 0,
+         "indexedAt": "2026-10-07T03:34:57.000Z",
+         "viewer": {
+          "like": "at://did:plc:test/app.bsky.feed.like/9"
+         }
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "result": {
+    "is_success": true,
+    "detail": "Bluesky のタイムラインを取得しました。",
+    "tweets": [
+     {
+      "source": "Bluesky",
+      "id": "at://did:plc:test/app.bsky.feed.post/3ktl1",
+      "created_at": "2026-10-07T12:34:56.789000+09:00",
+      "user": {
+       "source": "Bluesky",
+       "id": "did:plc:test",
+       "name": "テストアカウント",
+       "screen_name": "test.bsky.social",
+       "icon_url": ""
+      },
+      "text": "タイムライン1 https://example.com",
+      "lang": "",
+      "via": "",
+      "image_urls": null,
+      "movie_url": null,
+      "retweet_count": 1,
+      "retweeted": false,
+      "favorite_count": 2,
+      "favorited": true,
+      "retweeted_tweet": null,
+      "quoted_tweet": null
+     }
+    ],
+    "newer_cursor_id": null,
+    "load_more_cursors": [],
+    "is_cursor_consumed": true
+   },
+   "requests": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "query": "actor=test.bsky.social",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    },
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.feed.getTimeline",
+     "query": "cursor=cursor-in&limit=30",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    }
+   ],
+   "saved_session_strings": []
+  },
+  {
+   "name": "search_timeline",
+   "session_string": "test.bsky.social:::did:plc:test:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTM0MjE3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::https://pds.example.com",
+   "operation": {
+    "type": "search_timeline",
+    "query": "KonomiTV テスト",
+    "cursor_id": null
+   },
+   "responses": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "body": {
+      "did": "did:plc:test",
+      "handle": "test.bsky.social",
+      "displayName": "テストアカウント",
+      "avatar": "https://cdn.example/avatar.png"
+     }
+    },
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.feed.searchPosts",
+     "body": {
+      "cursor": "search-cursor",
+      "posts": [
+       {
+        "$type": "app.bsky.feed.defs#postView",
+        "uri": "at://did:plc:test/app.bsky.feed.post/3ktl1",
+        "cid": "bafytl1",
+        "author": {
+         "did": "did:plc:test",
+         "handle": "test.bsky.social",
+         "displayName": "テストアカウント"
+        },
+        "record": {
+         "$type": "app.bsky.feed.post",
+         "text": "タイムライン1 https://example.com",
+         "createdAt": "2026-10-07T03:34:56.789Z"
+        },
+        "replyCount": 0,
+        "repostCount": 1,
+        "likeCount": 2,
+        "quoteCount": 0,
+        "indexedAt": "2026-10-07T03:34:57.000Z",
+        "viewer": {
+         "like": "at://did:plc:test/app.bsky.feed.like/9"
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "result": {
+    "is_success": true,
+    "detail": "Bluesky の検索結果を取得しました。",
+    "tweets": [
+     {
+      "source": "Bluesky",
+      "id": "at://did:plc:test/app.bsky.feed.post/3ktl1",
+      "created_at": "2026-10-07T12:34:56.789000+09:00",
+      "user": {
+       "source": "Bluesky",
+       "id": "did:plc:test",
+       "name": "テストアカウント",
+       "screen_name": "test.bsky.social",
+       "icon_url": ""
+      },
+      "text": "タイムライン1 https://example.com",
+      "lang": "",
+      "via": "",
+      "image_urls": null,
+      "movie_url": null,
+      "retweet_count": 1,
+      "retweeted": false,
+      "favorite_count": 2,
+      "favorited": true,
+      "retweeted_tweet": null,
+      "quoted_tweet": null
+     }
+    ],
+    "newer_cursor_id": null,
+    "load_more_cursors": [
+     {
+      "cursor_type": "Older",
+      "cursor_id": "search-cursor",
+      "upper_created_at": "2026-10-07T12:34:56.789000+09:00"
+     }
+    ],
+    "is_cursor_consumed": true
+   },
+   "requests": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "query": "actor=test.bsky.social",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    },
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.feed.searchPosts",
+     "query": "q=KonomiTV+%E3%83%86%E3%82%B9%E3%83%88&limit=30&sort=latest",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    }
+   ],
+   "saved_session_strings": []
+  },
+  {
+   "name": "create_post_text_and_image",
+   "session_string": "test.bsky.social:::did:plc:test:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTM0MjE3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::https://pds.example.com",
+   "image": {
+    "name": "test.png",
+    "content_type": "image/png",
+    "data": "iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAIAAAAuKetIAAAAZ0lEQVR4nNXOQREAIAzAsFIh8y8FWYjgsWsU5NwZyiRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4iRO4twO/HqvFwFk8Pd6vAAAAABJRU5ErkJggg=="
+   },
+   "operation": {
+    "type": "create_post",
+    "text": "投稿テスト https://example.com #KonomiTV",
+    "with_image": true,
+    "reply_to": null
+   },
+   "responses": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "body": {
+      "did": "did:plc:test",
+      "handle": "test.bsky.social",
+      "displayName": "テストアカウント",
+      "avatar": "https://cdn.example/avatar.png"
+     }
+    },
+    {
+     "method": "POST",
+     "path": "/xrpc/com.atproto.repo.uploadBlob",
+     "body": {
+      "blob": {
+       "$type": "blob",
+       "ref": {
+        "$link": "bafyblob"
+       },
+       "mimeType": "image/png",
+       "size": 160
+      }
+     }
+    },
+    {
+     "method": "POST",
+     "path": "/xrpc/com.atproto.repo.createRecord",
+     "body": {
+      "uri": "at://did:plc:test/app.bsky.feed.post/3knew",
+      "cid": "bafynew"
+     }
+    }
+   ],
+   "result": {
+    "is_success": true,
+    "detail": "Bluesky にポストしました。",
+    "tweet_url": "https://bsky.app/profile//post/3knew",
+    "tweet_id": null,
+    "post_uri": "at://did:plc:test/app.bsky.feed.post/3knew",
+    "post_cid": "bafynew"
+   },
+   "requests": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "query": "actor=test.bsky.social",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    },
+    {
+     "method": "POST",
+     "path": "/xrpc/com.atproto.repo.uploadBlob",
+     "query": "",
+     "content_type": "*/*",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "47896fe7242ba93a1bf3560b2b8f0ef4f1354439b1987d890dc70849626cbeaa",
+     "body": {
+      "content_type": "*/*",
+      "sha256": "47896fe7242ba93a1bf3560b2b8f0ef4f1354439b1987d890dc70849626cbeaa",
+      "length": 160
+     }
+    },
+    {
+     "method": "POST",
+     "path": "/xrpc/com.atproto.repo.createRecord",
+     "query": "",
+     "content_type": "application/json",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "84476aa9d676a0e2a33c46a572626931a0b289a97d02b8b1f0053aa7cc0c7f68",
+     "body": {
+      "collection": "app.bsky.feed.post",
+      "record": {
+       "createdAt": "2026-10-07T01:02:59.915054+00:00",
+       "text": "投稿テスト https://example.com #KonomiTV",
+       "embed": {
+        "images": [
+         {
+          "alt": "",
+          "image": {
+           "mimeType": "image/png",
+           "size": 160,
+           "ref": {
+            "$link": "bafyblob"
+           },
+           "$type": "blob"
+          },
+          "aspectRatio": {
+           "height": 48,
+           "width": 64,
+           "$type": "app.bsky.embed.defs#aspectRatio"
+          },
+          "$type": "app.bsky.embed.images#image"
+         }
+        ],
+        "$type": "app.bsky.embed.images"
+       },
+       "facets": [
+        {
+         "features": [
+          {
+           "uri": "https://example.com",
+           "$type": "app.bsky.richtext.facet#link"
+          }
+         ],
+         "index": {
+          "byteEnd": 35,
+          "byteStart": 16,
+          "$type": "app.bsky.richtext.facet#byteSlice"
+         },
+         "$type": "app.bsky.richtext.facet"
+        },
+        {
+         "features": [
+          {
+           "tag": "KonomiTV",
+           "$type": "app.bsky.richtext.facet#tag"
+          }
+         ],
+         "index": {
+          "byteEnd": 45,
+          "byteStart": 36,
+          "$type": "app.bsky.richtext.facet#byteSlice"
+         },
+         "$type": "app.bsky.richtext.facet"
+        }
+       ],
+       "langs": [
+        "ja"
+       ],
+       "$type": "app.bsky.feed.post"
+      },
+      "repo": "did:plc:test",
+      "validate": true
+     }
+    }
+   ],
+   "saved_session_strings": []
+  },
+  {
+   "name": "create_post_reply",
+   "session_string": "test.bsky.social:::did:plc:test:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTM0MjE3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::https://pds.example.com",
+   "operation": {
+    "type": "create_post",
+    "text": "返信です",
+    "with_image": false,
+    "reply_to": {
+     "root_uri": "at://did:plc:test/app.bsky.feed.post/3kroot",
+     "root_cid": "bafyroot",
+     "parent_uri": "at://did:plc:test/app.bsky.feed.post/3kparent",
+     "parent_cid": "bafyparent"
+    }
+   },
+   "responses": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "body": {
+      "did": "did:plc:test",
+      "handle": "test.bsky.social",
+      "displayName": "テストアカウント",
+      "avatar": "https://cdn.example/avatar.png"
+     }
+    },
+    {
+     "method": "POST",
+     "path": "/xrpc/com.atproto.repo.createRecord",
+     "body": {
+      "uri": "at://did:plc:test/app.bsky.feed.post/3kreply",
+      "cid": "bafyreply"
+     }
+    }
+   ],
+   "result": {
+    "is_success": true,
+    "detail": "Bluesky にポストしました。",
+    "tweet_url": "https://bsky.app/profile//post/3kreply",
+    "tweet_id": null,
+    "post_uri": "at://did:plc:test/app.bsky.feed.post/3kreply",
+    "post_cid": "bafyreply"
+   },
+   "requests": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "query": "actor=test.bsky.social",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    },
+    {
+     "method": "POST",
+     "path": "/xrpc/com.atproto.repo.createRecord",
+     "query": "",
+     "content_type": "application/json",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "56694e897c51359e58b4a1409df14da2ffd390792e7a3cbbb9cd23a993a47eb1",
+     "body": {
+      "collection": "app.bsky.feed.post",
+      "record": {
+       "createdAt": "2026-10-07T01:02:59.918054+00:00",
+       "text": "返信です",
+       "facets": [],
+       "langs": [
+        "ja"
+       ],
+       "reply": {
+        "parent": {
+         "cid": "bafyparent",
+         "uri": "at://did:plc:test/app.bsky.feed.post/3kparent",
+         "$type": "com.atproto.repo.strongRef"
+        },
+        "root": {
+         "cid": "bafyroot",
+         "uri": "at://did:plc:test/app.bsky.feed.post/3kroot",
+         "$type": "com.atproto.repo.strongRef"
+        },
+        "$type": "app.bsky.feed.post#replyRef"
+       },
+       "$type": "app.bsky.feed.post"
+      },
+      "repo": "did:plc:test",
+      "validate": true
+     }
+    }
+   ],
+   "saved_session_strings": []
+  },
+  {
+   "name": "create_post_too_many_images",
+   "session_string": "test.bsky.social:::did:plc:test:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTM0MjE3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::https://pds.example.com",
+   "operation": {
+    "type": "create_post",
+    "text": "5枚",
+    "with_image_count": 5
+   },
+   "responses": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "body": {
+      "did": "did:plc:test",
+      "handle": "test.bsky.social",
+      "displayName": "テストアカウント",
+      "avatar": "https://cdn.example/avatar.png"
+     }
+    }
+   ],
+   "result": {
+    "is_success": false,
+    "detail": "Bluesky では画像は 4 枚まで添付できます。"
+   },
+   "requests": [],
+   "saved_session_strings": []
+  },
+  {
+   "name": "create_repost",
+   "session_string": "test.bsky.social:::did:plc:test:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTM0MjE3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::https://pds.example.com",
+   "operation": {
+    "type": "create_repost",
+    "post_id": "at://did:plc:test/app.bsky.feed.post/3kother"
+   },
+   "responses": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "body": {
+      "did": "did:plc:test",
+      "handle": "test.bsky.social",
+      "displayName": "テストアカウント",
+      "avatar": "https://cdn.example/avatar.png"
+     }
+    },
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.feed.getPosts",
+     "body": {
+      "posts": [
+       {
+        "$type": "app.bsky.feed.defs#postView",
+        "uri": "at://did:plc:test/app.bsky.feed.post/3kother",
+        "cid": "bafyother",
+        "author": {
+         "did": "did:plc:other",
+         "handle": "other.bsky.social"
+        },
+        "record": {
+         "$type": "app.bsky.feed.post",
+         "text": "対象",
+         "createdAt": "2026-10-07T00:00:00.000Z"
+        },
+        "indexedAt": "2026-10-07T00:00:01.000Z"
+       }
+      ]
+     }
+    },
+    {
+     "method": "POST",
+     "path": "/xrpc/com.atproto.repo.createRecord",
+     "body": {
+      "uri": "at://did:plc:test/app.bsky.feed.repost/3krepost",
+      "cid": "bafyrepost"
+     }
+    }
+   ],
+   "result": {
+    "is_success": true,
+    "detail": "Bluesky の投稿をリポストしました。"
+   },
+   "requests": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "query": "actor=test.bsky.social",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    },
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.feed.getPosts",
+     "query": "uris=at%3A%2F%2Fdid%3Aplc%3Atest%2Fapp.bsky.feed.post%2F3kother",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    },
+    {
+     "method": "POST",
+     "path": "/xrpc/com.atproto.repo.createRecord",
+     "query": "",
+     "content_type": "application/json",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "2a0134aa9d1d1c789ac2e822cb9bde4f27e89f3a77e37b4d80859d951db35fe5",
+     "body": {
+      "collection": "app.bsky.feed.repost",
+      "record": {
+       "createdAt": "2026-10-07T01:02:59.924054+00:00",
+       "subject": {
+        "cid": "bafyother",
+        "uri": "at://did:plc:test/app.bsky.feed.post/3kother",
+        "$type": "com.atproto.repo.strongRef"
+       },
+       "$type": "app.bsky.feed.repost"
+      },
+      "repo": "did:plc:test",
+      "validate": true
+     }
+    }
+   ],
+   "saved_session_strings": []
+  },
+  {
+   "name": "delete_repost",
+   "session_string": "test.bsky.social:::did:plc:test:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTM0MjE3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::https://pds.example.com",
+   "operation": {
+    "type": "delete_repost",
+    "post_id": "at://did:plc:test/app.bsky.feed.post/3kother"
+   },
+   "responses": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "body": {
+      "did": "did:plc:test",
+      "handle": "test.bsky.social",
+      "displayName": "テストアカウント",
+      "avatar": "https://cdn.example/avatar.png"
+     }
+    },
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.feed.getPosts",
+     "body": {
+      "posts": [
+       {
+        "$type": "app.bsky.feed.defs#postView",
+        "uri": "at://did:plc:test/app.bsky.feed.post/3kother",
+        "cid": "bafyother",
+        "author": {
+         "did": "did:plc:other",
+         "handle": "other.bsky.social"
+        },
+        "record": {
+         "$type": "app.bsky.feed.post",
+         "text": "対象",
+         "createdAt": "2026-10-07T00:00:00.000Z"
+        },
+        "indexedAt": "2026-10-07T00:00:01.000Z",
+        "viewer": {
+         "repost": "at://did:plc:test/app.bsky.feed.repost/3krepost"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "method": "POST",
+     "path": "/xrpc/com.atproto.repo.deleteRecord",
+     "body": {}
+    }
+   ],
+   "result": {
+    "is_success": true,
+    "detail": "Bluesky のリポストを取り消しました。"
+   },
+   "requests": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "query": "actor=test.bsky.social",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    },
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.feed.getPosts",
+     "query": "uris=at%3A%2F%2Fdid%3Aplc%3Atest%2Fapp.bsky.feed.post%2F3kother",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    },
+    {
+     "method": "POST",
+     "path": "/xrpc/com.atproto.repo.deleteRecord",
+     "query": "",
+     "content_type": "application/json",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e64f533ddd1d5d57cec2a6b2641ac1c46b4eb77b2dfeec6afe515eaf49953f24",
+     "body": {
+      "collection": "app.bsky.feed.repost",
+      "repo": "did:plc:test",
+      "rkey": "3krepost"
+     }
+    }
+   ],
+   "saved_session_strings": []
+  },
+  {
+   "name": "delete_repost_missing_viewer",
+   "session_string": "test.bsky.social:::did:plc:test:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTM0MjE3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::https://pds.example.com",
+   "operation": {
+    "type": "delete_repost",
+    "post_id": "at://did:plc:test/app.bsky.feed.post/3kother"
+   },
+   "responses": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "body": {
+      "did": "did:plc:test",
+      "handle": "test.bsky.social",
+      "displayName": "テストアカウント",
+      "avatar": "https://cdn.example/avatar.png"
+     }
+    },
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.feed.getPosts",
+     "body": {
+      "posts": [
+       {
+        "$type": "app.bsky.feed.defs#postView",
+        "uri": "at://did:plc:test/app.bsky.feed.post/3kother",
+        "cid": "bafyother",
+        "author": {
+         "did": "did:plc:other",
+         "handle": "other.bsky.social"
+        },
+        "record": {
+         "$type": "app.bsky.feed.post",
+         "text": "対象",
+         "createdAt": "2026-10-07T00:00:00.000Z"
+        },
+        "indexedAt": "2026-10-07T00:00:01.000Z",
+        "viewer": {}
+       }
+      ]
+     }
+    }
+   ],
+   "result": {
+    "is_success": false,
+    "detail": "Bluesky のリポスト情報を取得できませんでした。"
+   },
+   "requests": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "query": "actor=test.bsky.social",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    },
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.feed.getPosts",
+     "query": "uris=at%3A%2F%2Fdid%3Aplc%3Atest%2Fapp.bsky.feed.post%2F3kother",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    }
+   ],
+   "saved_session_strings": []
+  },
+  {
+   "name": "favorite_and_unfavorite",
+   "session_string": "test.bsky.social:::did:plc:test:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTM0MjE3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::https://pds.example.com",
+   "operation": {
+    "type": "favorite_post",
+    "post_id": "at://did:plc:test/app.bsky.feed.post/3kother"
+   },
+   "responses": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "body": {
+      "did": "did:plc:test",
+      "handle": "test.bsky.social",
+      "displayName": "テストアカウント",
+      "avatar": "https://cdn.example/avatar.png"
+     }
+    },
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.feed.getPosts",
+     "body": {
+      "posts": [
+       {
+        "$type": "app.bsky.feed.defs#postView",
+        "uri": "at://did:plc:test/app.bsky.feed.post/3kother",
+        "cid": "bafyother",
+        "author": {
+         "did": "did:plc:other",
+         "handle": "other.bsky.social"
+        },
+        "record": {
+         "$type": "app.bsky.feed.post",
+         "text": "対象",
+         "createdAt": "2026-10-07T00:00:00.000Z"
+        },
+        "indexedAt": "2026-10-07T00:00:01.000Z",
+        "viewer": {
+         "like": "at://did:plc:test/app.bsky.feed.like/3klike"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "method": "POST",
+     "path": "/xrpc/com.atproto.repo.createRecord",
+     "body": {
+      "uri": "at://did:plc:test/app.bsky.feed.like/3klike",
+      "cid": "bafylike"
+     }
+    }
+   ],
+   "result": {
+    "is_success": true,
+    "detail": "Bluesky の投稿をいいねしました。"
+   },
+   "requests": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "query": "actor=test.bsky.social",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    },
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.feed.getPosts",
+     "query": "uris=at%3A%2F%2Fdid%3Aplc%3Atest%2Fapp.bsky.feed.post%2F3kother",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    },
+    {
+     "method": "POST",
+     "path": "/xrpc/com.atproto.repo.createRecord",
+     "query": "",
+     "content_type": "application/json",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e4d591a1994ae9d243ed6f055a9f6078e255e525b4d9c6e80225cc05954dc469",
+     "body": {
+      "collection": "app.bsky.feed.like",
+      "record": {
+       "createdAt": "2026-10-07T01:02:59.935106+00:00",
+       "subject": {
+        "cid": "bafyother",
+        "uri": "at://did:plc:test/app.bsky.feed.post/3kother",
+        "$type": "com.atproto.repo.strongRef"
+       },
+       "$type": "app.bsky.feed.like"
+      },
+      "repo": "did:plc:test",
+      "validate": true
+     }
+    }
+   ],
+   "saved_session_strings": []
+  },
+  {
+   "name": "repost_invalid_uri",
+   "session_string": "test.bsky.social:::did:plc:test:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTM0MjE3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8:::https://pds.example.com",
+   "operation": {
+    "type": "create_repost",
+    "post_id": "https://example.com/not-at-uri"
+   },
+   "responses": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "body": {
+      "did": "did:plc:test",
+      "handle": "test.bsky.social",
+      "displayName": "テストアカウント",
+      "avatar": "https://cdn.example/avatar.png"
+     }
+    }
+   ],
+   "result": {
+    "is_success": false,
+    "detail": "Bluesky 投稿情報を取得できませんでした。"
+   },
+   "requests": [
+    {
+     "method": "GET",
+     "path": "/xrpc/app.bsky.actor.getProfile",
+     "query": "actor=test.bsky.social",
+     "content_type": "",
+     "authorization": "Bearer eyJ0eXAiOiAiSldUIiwgImFsZyI6ICJub25lIn0.eyJzY29wZSI6ICJjb20uYXRwcm90by5hY2Nlc3MiLCAic3ViIjogImRpZDpwbGM6dGVzdCIsICJpYXQiOiAxNzkxMzM0OTE5LCAiZXhwIjogMTc5MTMzODU3OX0.AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+     "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+     "body": null
+    }
+   ],
+   "saved_session_strings": []
+  }
+ ],
+ "post_view_results": [
+  {
+   "name": "plain_with_images_and_viewer",
+   "tweet": {
+    "source": "Bluesky",
+    "id": "at://did:plc:test/app.bsky.feed.post/3kplain",
+    "created_at": "2026-10-07T12:34:56.789000+09:00",
+    "user": {
+     "source": "Bluesky",
+     "id": "did:plc:test",
+     "name": "テスト",
+     "screen_name": "test.bsky.social",
+     "icon_url": "https://cdn.example/avatar.png"
+    },
+    "text": "リンクは こちらhttps://example.com/very/long/urlrt です #タグ",
+    "lang": "",
+    "via": "",
+    "image_urls": [
+     "https://cdn.example/1.jpg",
+     "https://cdn.example/2.jpg"
+    ],
+    "movie_url": null,
+    "retweet_count": 3,
+    "retweeted": true,
+    "favorite_count": 5,
+    "favorited": true,
+    "retweeted_tweet": null,
+    "quoted_tweet": null
+   }
+  },
+  {
+   "name": "repost_reason",
+   "tweet": {
+    "source": "Bluesky",
+    "id": "at://did:plc:original/app.bsky.feed.post/3korig",
+    "created_at": "2026-10-06T01:02:03+09:00",
+    "user": {
+     "source": "Bluesky",
+     "id": "did:plc:reposter",
+     "name": "reposter.bsky.social",
+     "screen_name": "reposter.bsky.social",
+     "icon_url": ""
+    },
+    "text": "オリジナル投稿",
+    "lang": "",
+    "via": "",
+    "image_urls": null,
+    "movie_url": null,
+    "retweet_count": 0,
+    "retweeted": false,
+    "favorite_count": 2,
+    "favorited": false,
+    "retweeted_tweet": {
+     "source": "Bluesky",
+     "id": "at://did:plc:original/app.bsky.feed.post/3korig",
+     "created_at": "2026-10-06T01:02:03+09:00",
+     "user": {
+      "source": "Bluesky",
+      "id": "did:plc:original",
+      "name": "original.bsky.social",
+      "screen_name": "original.bsky.social",
+      "icon_url": ""
+     },
+     "text": "オリジナル投稿",
+     "lang": "",
+     "via": "",
+     "image_urls": null,
+     "movie_url": null,
+     "retweet_count": 0,
+     "retweeted": false,
+     "favorite_count": 2,
+     "favorited": false,
+     "retweeted_tweet": null,
+     "quoted_tweet": null
+    },
+    "quoted_tweet": null
+   }
+  },
+  {
+   "name": "unknown_embed_and_reason",
+   "tweet": {
+    "source": "Bluesky",
+    "id": "at://did:plc:test/app.bsky.feed.post/3kunknown",
+    "created_at": "2026-10-07T12:34:56+09:00",
+    "user": {
+     "source": "Bluesky",
+     "id": "did:plc:test",
+     "name": "test.bsky.social",
+     "screen_name": "test.bsky.social",
+     "icon_url": ""
+    },
+    "text": "未知 embed",
+    "lang": "",
+    "via": "",
+    "image_urls": null,
+    "movie_url": null,
+    "retweet_count": 0,
+    "retweeted": false,
+    "favorite_count": 0,
+    "favorited": false,
+    "retweeted_tweet": null,
+    "quoted_tweet": null
+   }
+  },
+  {
+   "name": "non_post_record",
+   "tweet": {
+    "source": "Bluesky",
+    "id": "at://did:plc:test/app.bsky.feed.post/3kweird",
+    "created_at": "2026-10-07T12:34:57+09:00",
+    "user": {
+     "source": "Bluesky",
+     "id": "did:plc:test",
+     "name": "test.bsky.social",
+     "screen_name": "test.bsky.social",
+     "icon_url": ""
+    },
+    "text": "",
+    "lang": "",
+    "via": "",
+    "image_urls": null,
+    "movie_url": null,
+    "retweet_count": 0,
+    "retweeted": false,
+    "favorite_count": 0,
+    "favorited": false,
+    "retweeted_tweet": null,
+    "quoted_tweet": null
+   }
+  },
+  {
+   "name": "video_embed",
+   "tweet": {
+    "source": "Bluesky",
+    "id": "at://did:plc:test/app.bsky.feed.post/3kvideo",
+    "created_at": "2026-10-07T12:34:56+09:00",
+    "user": {
+     "source": "Bluesky",
+     "id": "did:plc:test",
+     "name": "test.bsky.social",
+     "screen_name": "test.bsky.social",
+     "icon_url": ""
+    },
+    "text": "動画",
+    "lang": "",
+    "via": "",
+    "image_urls": null,
+    "movie_url": null,
+    "retweet_count": 0,
+    "retweeted": false,
+    "favorite_count": 0,
+    "favorited": false,
+    "retweeted_tweet": null,
+    "quoted_tweet": null
+   }
+  }
+ ]
+}

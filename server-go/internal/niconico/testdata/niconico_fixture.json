@@ -1,0 +1,472 @@
+{
+ "note": "server/app/routers/NiconicoRouter.py (Python 版) から生成した期待値",
+ "auth_url_cases": [
+  {
+   "name": "with_origin",
+   "host": "konomitv.example.com",
+   "origin": "https://client.example.com",
+   "authorization": "Bearer test-user-access-token",
+   "expected_netloc": "konomitv.example.com",
+   "expected": {
+    "authorization_url": "https://oauth.nicovideo.jp/oauth2/authorize?response_type=code&scope=offline_access%20openid%20profile%20user.authorities.relives.watch.get%20user.authorities.relives.watch.interact%20user.premium&client_id=4JTJdyBZLwMJwaI7&redirect_uri=https://app.konomi.tv/api/redirect/niconico&state=eyJzZXJ2ZXIiOiAiaHR0cHM6Ly9rb25vbWl0di5leGFtcGxlLmNvbS8iLCAiY2xpZW50IjogImh0dHBzOi8vY2xpZW50LmV4YW1wbGUuY29tLyIsICJ1c2VyX2FjY2Vzc190b2tlbiI6ICJ0ZXN0LXVzZXItYWNjZXNzLXRva2VuIn0"
+   }
+  },
+  {
+   "name": "without_origin",
+   "host": "konomitv.example.com",
+   "origin": null,
+   "authorization": "Bearer test-user-access-token",
+   "expected_netloc": "konomitv.example.com",
+   "expected": {
+    "authorization_url": "https://oauth.nicovideo.jp/oauth2/authorize?response_type=code&scope=offline_access%20openid%20profile%20user.authorities.relives.watch.get%20user.authorities.relives.watch.interact%20user.premium&client_id=4JTJdyBZLwMJwaI7&redirect_uri=https://app.konomi.tv/api/redirect/niconico&state=eyJzZXJ2ZXIiOiAiaHR0cHM6Ly9rb25vbWl0di5leGFtcGxlLmNvbS8iLCAiY2xpZW50IjogImh0dHBzOi8va29ub21pdHYuZXhhbXBsZS5jb20vIiwgInVzZXJfYWNjZXNzX3Rva2VuIjogInRlc3QtdXNlci1hY2Nlc3MtdG9rZW4ifQ"
+   }
+  },
+  {
+   "name": "origin_with_trailing_slash",
+   "host": "konomitv.example.com",
+   "origin": "https://client.example.com/",
+   "authorization": "Bearer test-user-access-token",
+   "expected_netloc": "konomitv.example.com",
+   "expected": {
+    "authorization_url": "https://oauth.nicovideo.jp/oauth2/authorize?response_type=code&scope=offline_access%20openid%20profile%20user.authorities.relives.watch.get%20user.authorities.relives.watch.interact%20user.premium&client_id=4JTJdyBZLwMJwaI7&redirect_uri=https://app.konomi.tv/api/redirect/niconico&state=eyJzZXJ2ZXIiOiAiaHR0cHM6Ly9rb25vbWl0di5leGFtcGxlLmNvbS8iLCAiY2xpZW50IjogImh0dHBzOi8vY2xpZW50LmV4YW1wbGUuY29tLyIsICJ1c2VyX2FjY2Vzc190b2tlbiI6ICJ0ZXN0LXVzZXItYWNjZXNzLXRva2VuIn0"
+   }
+  },
+  {
+   "name": "host_with_port",
+   "host": "konomitv.example.com:7010",
+   "origin": null,
+   "authorization": null,
+   "expected_netloc": "konomitv.example.com:7010",
+   "expected": {
+    "authorization_url": "https://oauth.nicovideo.jp/oauth2/authorize?response_type=code&scope=offline_access%20openid%20profile%20user.authorities.relives.watch.get%20user.authorities.relives.watch.interact%20user.premium&client_id=4JTJdyBZLwMJwaI7&redirect_uri=https://app.konomi.tv/api/redirect/niconico&state=eyJzZXJ2ZXIiOiAiaHR0cHM6Ly9rb25vbWl0di5leGFtcGxlLmNvbTo3MDEwLyIsICJjbGllbnQiOiAiaHR0cHM6Ly9rb25vbWl0di5leGFtcGxlLmNvbTo3MDEwLyIsICJ1c2VyX2FjY2Vzc190b2tlbiI6ICIifQ"
+   }
+  }
+ ],
+ "callback_cases": [
+  {
+   "name": "error_denied",
+   "client": "https://client.example.com/",
+   "user_access_token": "test-user-access-token",
+   "code": null,
+   "error": "access_denied",
+   "token_status": null,
+   "token_body": null,
+   "user_status": null,
+   "user_body": null,
+   "token_network_error": false,
+   "user_network_error": false,
+   "expected": {
+    "status_code": 401,
+    "content_type": "text/html; charset=utf-8",
+    "body_html": "\n        <!DOCTYPE html>\n        <html lang=\"ja\">\n        <head>\n            <meta charset=\"utf-8\">\n            <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n            <meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n            <script>\n                window.onload = () => {\n                    // (PC) ポップアップ経由で OAuth 連携を行った場合\n                    if (window.opener) {\n                        window.opener.postMessage({\n                            'KonomiTV-OAuthPopup': {\n                                'status': 401,\n                                'detail': 'Authorization was denied (access_denied)',\n                            }\n                        }, '*');\n                    // (スマホ・タブレット) リダイレクト経由で OAuth 連携を行った場合\n                    } else {\n                        location.href = `https://client.example.com/settings/jikkyo#status=401&detail=${encodeURIComponent('Authorization was denied (access_denied)')}`;\n                    }\n                };\n            </script>\n        </head>\n        <body style=\"background: #1E1310; color: #FFEAEA;\">\n        </body>\n        </html>\n        ",
+    "body_sha256": "5438ac1da3a5a4635297b29cb236db947904d94dc2bbc25e23e394e594775307"
+   },
+   "expected_requests": [],
+   "expected_user": null,
+   "test_interlaced_secret": "test-client-secret-for-server-go"
+  },
+  {
+   "name": "missing_code",
+   "client": "https://client.example.com/",
+   "user_access_token": "test-user-access-token",
+   "code": null,
+   "error": null,
+   "token_status": null,
+   "token_body": null,
+   "user_status": null,
+   "user_body": null,
+   "token_network_error": false,
+   "user_network_error": false,
+   "expected": {
+    "status_code": 500,
+    "content_type": "text/html; charset=utf-8",
+    "body_html": "\n        <!DOCTYPE html>\n        <html lang=\"ja\">\n        <head>\n            <meta charset=\"utf-8\">\n            <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n            <meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n            <script>\n                window.onload = () => {\n                    // (PC) ポップアップ経由で OAuth 連携を行った場合\n                    if (window.opener) {\n                        window.opener.postMessage({\n                            'KonomiTV-OAuthPopup': {\n                                'status': 500,\n                                'detail': 'Authorization code does not exist',\n                            }\n                        }, '*');\n                    // (スマホ・タブレット) リダイレクト経由で OAuth 連携を行った場合\n                    } else {\n                        location.href = `https://client.example.com/settings/jikkyo#status=500&detail=${encodeURIComponent('Authorization code does not exist')}`;\n                    }\n                };\n            </script>\n        </head>\n        <body style=\"background: #1E1310; color: #FFEAEA;\">\n        </body>\n        </html>\n        ",
+    "body_sha256": "bebe9af1185cafa80857d21d853f88de8414142a88cbd6bac60591b2f206f1de"
+   },
+   "expected_requests": [],
+   "expected_user": null,
+   "test_interlaced_secret": "test-client-secret-for-server-go"
+  },
+  {
+   "name": "token_api_error",
+   "client": "https://client.example.com/",
+   "user_access_token": "test-user-access-token",
+   "code": "code",
+   "error": null,
+   "token_status": 400,
+   "token_body": {
+    "error": "invalid_grant"
+   },
+   "user_status": null,
+   "user_body": null,
+   "token_network_error": false,
+   "user_network_error": false,
+   "expected": {
+    "status_code": 500,
+    "content_type": "text/html; charset=utf-8",
+    "body_html": "\n        <!DOCTYPE html>\n        <html lang=\"ja\">\n        <head>\n            <meta charset=\"utf-8\">\n            <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n            <meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n            <script>\n                window.onload = () => {\n                    // (PC) ポップアップ経由で OAuth 連携を行った場合\n                    if (window.opener) {\n                        window.opener.postMessage({\n                            'KonomiTV-OAuthPopup': {\n                                'status': 500,\n                                'detail': 'Failed to get access token. (HTTP Error 400)',\n                            }\n                        }, '*');\n                    // (スマホ・タブレット) リダイレクト経由で OAuth 連携を行った場合\n                    } else {\n                        location.href = `https://client.example.com/settings/jikkyo#status=500&detail=${encodeURIComponent('Failed to get access token. (HTTP Error 400)')}`;\n                    }\n                };\n            </script>\n        </head>\n        <body style=\"background: #1E1310; color: #FFEAEA;\">\n        </body>\n        </html>\n        ",
+    "body_sha256": "6321c7a37b9a904f5fe8934256d95960e40a2cb2bb2a2e348393b793f4ae8446"
+   },
+   "expected_requests": [
+    {
+     "method": "POST",
+     "path": "/oauth2/token",
+     "user_agent": "KonomiTV/0.14.1",
+     "x_frontend_id": null,
+     "form": {
+      "grant_type": "authorization_code",
+      "client_id": "4JTJdyBZLwMJwaI7",
+      "client_secret": "<client_secret>",
+      "code": "code",
+      "redirect_uri": "https://app.konomi.tv/api/redirect/niconico"
+     }
+    }
+   ],
+   "expected_user": {
+    "niconico_user_id": null,
+    "niconico_user_name": null,
+    "niconico_user_premium": null,
+    "niconico_access_token": null,
+    "niconico_refresh_token": null,
+    "save_calls": 0
+   },
+   "test_interlaced_secret": "test-client-secret-for-server-go"
+  },
+  {
+   "name": "token_api_network_error",
+   "client": "https://client.example.com/",
+   "user_access_token": "test-user-access-token",
+   "code": "code",
+   "error": null,
+   "token_status": null,
+   "token_body": null,
+   "user_status": null,
+   "user_body": null,
+   "token_network_error": true,
+   "user_network_error": false,
+   "expected": {
+    "status_code": 500,
+    "content_type": "text/html; charset=utf-8",
+    "body_html": "\n        <!DOCTYPE html>\n        <html lang=\"ja\">\n        <head>\n            <meta charset=\"utf-8\">\n            <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n            <meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n            <script>\n                window.onload = () => {\n                    // (PC) ポップアップ経由で OAuth 連携を行った場合\n                    if (window.opener) {\n                        window.opener.postMessage({\n                            'KonomiTV-OAuthPopup': {\n                                'status': 500,\n                                'detail': 'Failed to get access token. (Connection Timeout)',\n                            }\n                        }, '*');\n                    // (スマホ・タブレット) リダイレクト経由で OAuth 連携を行った場合\n                    } else {\n                        location.href = `https://client.example.com/settings/jikkyo#status=500&detail=${encodeURIComponent('Failed to get access token. (Connection Timeout)')}`;\n                    }\n                };\n            </script>\n        </head>\n        <body style=\"background: #1E1310; color: #FFEAEA;\">\n        </body>\n        </html>\n        ",
+    "body_sha256": "bfd489500b71b3d5ab70fb3864e5180946eb418812a515ceec733a4c3c895d3f"
+   },
+   "expected_requests": [
+    {
+     "method": "POST",
+     "path": "/oauth2/token",
+     "user_agent": "KonomiTV/0.14.1",
+     "x_frontend_id": null,
+     "form": {
+      "grant_type": "authorization_code",
+      "client_id": "4JTJdyBZLwMJwaI7",
+      "client_secret": "<client_secret>",
+      "code": "code",
+      "redirect_uri": "https://app.konomi.tv/api/redirect/niconico"
+     }
+    }
+   ],
+   "expected_user": {
+    "niconico_user_id": null,
+    "niconico_user_name": null,
+    "niconico_user_premium": null,
+    "niconico_access_token": null,
+    "niconico_refresh_token": null,
+    "save_calls": 0
+   },
+   "test_interlaced_secret": "test-client-secret-for-server-go"
+  },
+  {
+   "name": "user_api_error",
+   "client": "https://client.example.com/",
+   "user_access_token": "test-user-access-token",
+   "code": "code",
+   "error": null,
+   "token_status": 200,
+   "token_body": {
+    "access_token": "at",
+    "refresh_token": "rt",
+    "id_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NSIsImF1ZCI6IjRKVEpkeUJaTHdNSndhSTciLCJpc3MiOiJodHRwczovL29hdXRoLm5pY292aWRlby5qcCJ9.oZBnM50y__LdaLZupesvpryPdh2GzInu2lpQduTbAIg"
+   },
+   "user_status": 500,
+   "user_body": {},
+   "token_network_error": false,
+   "user_network_error": false,
+   "expected": {
+    "status_code": 500,
+    "content_type": "text/html; charset=utf-8",
+    "body_html": "\n        <!DOCTYPE html>\n        <html lang=\"ja\">\n        <head>\n            <meta charset=\"utf-8\">\n            <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n            <meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n            <script>\n                window.onload = () => {\n                    // (PC) ポップアップ経由で OAuth 連携を行った場合\n                    if (window.opener) {\n                        window.opener.postMessage({\n                            'KonomiTV-OAuthPopup': {\n                                'status': 500,\n                                'detail': 'Failed to get user information (HTTP Error 500)',\n                            }\n                        }, '*');\n                    // (スマホ・タブレット) リダイレクト経由で OAuth 連携を行った場合\n                    } else {\n                        location.href = `https://client.example.com/settings/jikkyo#status=500&detail=${encodeURIComponent('Failed to get user information (HTTP Error 500)')}`;\n                    }\n                };\n            </script>\n        </head>\n        <body style=\"background: #1E1310; color: #FFEAEA;\">\n        </body>\n        </html>\n        ",
+    "body_sha256": "9219fb8b59f6ed20444ee2941bb12fa6b85f6238aa9df5f14c11c3ac1f1ce021"
+   },
+   "expected_requests": [
+    {
+     "method": "POST",
+     "path": "/oauth2/token",
+     "user_agent": "KonomiTV/0.14.1",
+     "x_frontend_id": null,
+     "form": {
+      "grant_type": "authorization_code",
+      "client_id": "4JTJdyBZLwMJwaI7",
+      "client_secret": "<client_secret>",
+      "code": "code",
+      "redirect_uri": "https://app.konomi.tv/api/redirect/niconico"
+     }
+    },
+    {
+     "method": "GET",
+     "path": "/v1/users/12345",
+     "user_agent": "KonomiTV/0.14.1",
+     "x_frontend_id": "6",
+     "form": null
+    }
+   ],
+   "expected_user": {
+    "niconico_user_id": 12345,
+    "niconico_user_name": null,
+    "niconico_user_premium": null,
+    "niconico_access_token": "at",
+    "niconico_refresh_token": "rt",
+    "save_calls": 0
+   },
+   "test_interlaced_secret": "test-client-secret-for-server-go"
+  },
+  {
+   "name": "user_api_network_error",
+   "client": "https://client.example.com/",
+   "user_access_token": "test-user-access-token",
+   "code": "code",
+   "error": null,
+   "token_status": 200,
+   "token_body": {
+    "access_token": "at",
+    "refresh_token": "rt",
+    "id_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NSIsImF1ZCI6IjRKVEpkeUJaTHdNSndhSTciLCJpc3MiOiJodHRwczovL29hdXRoLm5pY292aWRlby5qcCJ9.oZBnM50y__LdaLZupesvpryPdh2GzInu2lpQduTbAIg"
+   },
+   "user_status": null,
+   "user_body": null,
+   "token_network_error": false,
+   "user_network_error": true,
+   "expected": {
+    "status_code": 500,
+    "content_type": "text/html; charset=utf-8",
+    "body_html": "\n        <!DOCTYPE html>\n        <html lang=\"ja\">\n        <head>\n            <meta charset=\"utf-8\">\n            <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n            <meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n            <script>\n                window.onload = () => {\n                    // (PC) ポップアップ経由で OAuth 連携を行った場合\n                    if (window.opener) {\n                        window.opener.postMessage({\n                            'KonomiTV-OAuthPopup': {\n                                'status': 500,\n                                'detail': 'Failed to get user information (Connection Timeout)',\n                            }\n                        }, '*');\n                    // (スマホ・タブレット) リダイレクト経由で OAuth 連携を行った場合\n                    } else {\n                        location.href = `https://client.example.com/settings/jikkyo#status=500&detail=${encodeURIComponent('Failed to get user information (Connection Timeout)')}`;\n                    }\n                };\n            </script>\n        </head>\n        <body style=\"background: #1E1310; color: #FFEAEA;\">\n        </body>\n        </html>\n        ",
+    "body_sha256": "a2bfb4507a4cdd8797d8068d3dc9bd46378cc09aa686077b01faf27c014bb8aa"
+   },
+   "expected_requests": [
+    {
+     "method": "POST",
+     "path": "/oauth2/token",
+     "user_agent": "KonomiTV/0.14.1",
+     "x_frontend_id": null,
+     "form": {
+      "grant_type": "authorization_code",
+      "client_id": "4JTJdyBZLwMJwaI7",
+      "client_secret": "<client_secret>",
+      "code": "code",
+      "redirect_uri": "https://app.konomi.tv/api/redirect/niconico"
+     }
+    },
+    {
+     "method": "GET",
+     "path": "/v1/users/12345",
+     "user_agent": "KonomiTV/0.14.1",
+     "x_frontend_id": "6",
+     "form": null
+    }
+   ],
+   "expected_user": {
+    "niconico_user_id": 12345,
+    "niconico_user_name": null,
+    "niconico_user_premium": null,
+    "niconico_access_token": "at",
+    "niconico_refresh_token": "rt",
+    "save_calls": 0
+   },
+   "test_interlaced_secret": "test-client-secret-for-server-go"
+  },
+  {
+   "name": "success",
+   "client": "https://client.example.com/",
+   "user_access_token": "test-user-access-token",
+   "code": "code",
+   "error": null,
+   "token_status": 200,
+   "token_body": {
+    "access_token": "at-1",
+    "refresh_token": "rt-1",
+    "id_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2Nzg5MCIsImF1ZCI6IjRKVEpkeUJaTHdNSndhSTciLCJpc3MiOiJodHRwczovL29hdXRoLm5pY292aWRlby5qcCJ9.dcwyn30K7sPv-akV8xw-hT8JuKjAI9fYVpGOWS9Y_n4"
+   },
+   "user_status": 200,
+   "user_body": {
+    "data": {
+     "user": {
+      "nickname": "テストユーザー",
+      "isPremium": true
+     }
+    }
+   },
+   "token_network_error": false,
+   "user_network_error": false,
+   "expected": {
+    "status_code": 200,
+    "content_type": "text/html; charset=utf-8",
+    "body_html": "\n        <!DOCTYPE html>\n        <html lang=\"ja\">\n        <head>\n            <meta charset=\"utf-8\">\n            <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n            <meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n            <script>\n                window.onload = () => {\n                    // (PC) ポップアップ経由で OAuth 連携を行った場合\n                    if (window.opener) {\n                        window.opener.postMessage({\n                            'KonomiTV-OAuthPopup': {\n                                'status': 200,\n                                'detail': 'Success',\n                            }\n                        }, '*');\n                    // (スマホ・タブレット) リダイレクト経由で OAuth 連携を行った場合\n                    } else {\n                        location.href = `https://client.example.com/settings/jikkyo#status=200&detail=${encodeURIComponent('Success')}`;\n                    }\n                };\n            </script>\n        </head>\n        <body style=\"background: #1E1310; color: #FFEAEA;\">\n        </body>\n        </html>\n        ",
+    "body_sha256": "38582e58cd78757f10c12aa2ed0b9cf506c45f3b2806fbd113746638888649a9"
+   },
+   "expected_requests": [
+    {
+     "method": "POST",
+     "path": "/oauth2/token",
+     "user_agent": "KonomiTV/0.14.1",
+     "x_frontend_id": null,
+     "form": {
+      "grant_type": "authorization_code",
+      "client_id": "4JTJdyBZLwMJwaI7",
+      "client_secret": "<client_secret>",
+      "code": "code",
+      "redirect_uri": "https://app.konomi.tv/api/redirect/niconico"
+     }
+    },
+    {
+     "method": "GET",
+     "path": "/v1/users/67890",
+     "user_agent": "KonomiTV/0.14.1",
+     "x_frontend_id": "6",
+     "form": null
+    }
+   ],
+   "expected_user": {
+    "niconico_user_id": 67890,
+    "niconico_user_name": "テストユーザー",
+    "niconico_user_premium": true,
+    "niconico_access_token": "at-1",
+    "niconico_refresh_token": "rt-1",
+    "save_calls": 1
+   },
+   "test_interlaced_secret": "test-client-secret-for-server-go"
+  }
+ ],
+ "callback_invalid_token_case": {
+  "name": "invalid_user_access_token",
+  "client": "https://client.example.com/",
+  "user_access_token": "invalid-user-access-token",
+  "code": "code",
+  "error": null,
+  "expected_exception_type": "AttributeError",
+  "expected_exception_message": "'HTTPException' object has no attribute 'message'",
+  "expected_status_code": 500
+ },
+ "missing_param_cases": [
+  {
+   "name": "missing_all",
+   "query": {},
+   "expected_status_code": 422,
+   "expected_content_type": "application/json",
+   "expected_body": {
+    "detail": [
+     {
+      "type": "missing",
+      "loc": [
+       "query",
+       "client"
+      ],
+      "msg": "Field required",
+      "input": null
+     },
+     {
+      "type": "missing",
+      "loc": [
+       "query",
+       "user_access_token"
+      ],
+      "msg": "Field required",
+      "input": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "missing_user_access_token",
+   "query": {
+    "client": "https://client.example.com/"
+   },
+   "expected_status_code": 422,
+   "expected_content_type": "application/json",
+   "expected_body": {
+    "detail": [
+     {
+      "type": "missing",
+      "loc": [
+       "query",
+       "user_access_token"
+      ],
+      "msg": "Field required",
+      "input": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "missing_client",
+   "query": {
+    "user_access_token": "test-user-access-token"
+   },
+   "expected_status_code": 422,
+   "expected_content_type": "application/json",
+   "expected_body": {
+    "detail": [
+     {
+      "type": "missing",
+      "loc": [
+       "query",
+       "client"
+      ],
+      "msg": "Field required",
+      "input": null
+     }
+    ]
+   }
+  }
+ ],
+ "oauth_callback_response_cases": [
+  {
+   "detail": "Success",
+   "redirect_to": "https://client.example.com/settings/jikkyo",
+   "status_code": 200,
+   "content_type": "text/html; charset=utf-8",
+   "body_html": "\n        <!DOCTYPE html>\n        <html lang=\"ja\">\n        <head>\n            <meta charset=\"utf-8\">\n            <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n            <meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n            <script>\n                window.onload = () => {\n                    // (PC) ポップアップ経由で OAuth 連携を行った場合\n                    if (window.opener) {\n                        window.opener.postMessage({\n                            'KonomiTV-OAuthPopup': {\n                                'status': 200,\n                                'detail': 'Success',\n                            }\n                        }, '*');\n                    // (スマホ・タブレット) リダイレクト経由で OAuth 連携を行った場合\n                    } else {\n                        location.href = `https://client.example.com/settings/jikkyo#status=200&detail=${encodeURIComponent('Success')}`;\n                    }\n                };\n            </script>\n        </head>\n        <body style=\"background: #1E1310; color: #FFEAEA;\">\n        </body>\n        </html>\n        "
+  },
+  {
+   "detail": "Authorization was denied (access_denied)",
+   "redirect_to": "https://client.example.com/settings/jikkyo",
+   "status_code": 401,
+   "content_type": "text/html; charset=utf-8",
+   "body_html": "\n        <!DOCTYPE html>\n        <html lang=\"ja\">\n        <head>\n            <meta charset=\"utf-8\">\n            <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n            <meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n            <script>\n                window.onload = () => {\n                    // (PC) ポップアップ経由で OAuth 連携を行った場合\n                    if (window.opener) {\n                        window.opener.postMessage({\n                            'KonomiTV-OAuthPopup': {\n                                'status': 401,\n                                'detail': 'Authorization was denied (access_denied)',\n                            }\n                        }, '*');\n                    // (スマホ・タブレット) リダイレクト経由で OAuth 連携を行った場合\n                    } else {\n                        location.href = `https://client.example.com/settings/jikkyo#status=401&detail=${encodeURIComponent('Authorization was denied (access_denied)')}`;\n                    }\n                };\n            </script>\n        </head>\n        <body style=\"background: #1E1310; color: #FFEAEA;\">\n        </body>\n        </html>\n        "
+  },
+  {
+   "detail": "Failed to get access token. (HTTP Error 400)",
+   "redirect_to": "https://client.example.com/settings/jikkyo",
+   "status_code": 500,
+   "content_type": "text/html; charset=utf-8",
+   "body_html": "\n        <!DOCTYPE html>\n        <html lang=\"ja\">\n        <head>\n            <meta charset=\"utf-8\">\n            <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n            <meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n            <script>\n                window.onload = () => {\n                    // (PC) ポップアップ経由で OAuth 連携を行った場合\n                    if (window.opener) {\n                        window.opener.postMessage({\n                            'KonomiTV-OAuthPopup': {\n                                'status': 500,\n                                'detail': 'Failed to get access token. (HTTP Error 400)',\n                            }\n                        }, '*');\n                    // (スマホ・タブレット) リダイレクト経由で OAuth 連携を行った場合\n                    } else {\n                        location.href = `https://client.example.com/settings/jikkyo#status=500&detail=${encodeURIComponent('Failed to get access token. (HTTP Error 400)')}`;\n                    }\n                };\n            </script>\n        </head>\n        <body style=\"background: #1E1310; color: #FFEAEA;\">\n        </body>\n        </html>\n        "
+  },
+  {
+   "detail": "詳細メッセージ & <tag>",
+   "redirect_to": "https://client.example.com/settings/jikkyo",
+   "status_code": 500,
+   "content_type": "text/html; charset=utf-8",
+   "body_html": "\n        <!DOCTYPE html>\n        <html lang=\"ja\">\n        <head>\n            <meta charset=\"utf-8\">\n            <meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n            <meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\">\n            <script>\n                window.onload = () => {\n                    // (PC) ポップアップ経由で OAuth 連携を行った場合\n                    if (window.opener) {\n                        window.opener.postMessage({\n                            'KonomiTV-OAuthPopup': {\n                                'status': 500,\n                                'detail': '詳細メッセージ & <tag>',\n                            }\n                        }, '*');\n                    // (スマホ・タブレット) リダイレクト経由で OAuth 連携を行った場合\n                    } else {\n                        location.href = `https://client.example.com/settings/jikkyo#status=500&detail=${encodeURIComponent('詳細メッセージ & <tag>')}`;\n                    }\n                };\n            </script>\n        </head>\n        <body style=\"background: #1E1310; color: #FFEAEA;\">\n        </body>\n        </html>\n        "
+  }
+ ],
+ "logout_cases": [
+  {
+   "expected_user": {
+    "niconico_user_id": null,
+    "niconico_user_name": null,
+    "niconico_user_premium": null,
+    "niconico_access_token": null,
+    "niconico_refresh_token": null,
+    "save_calls": 1
+   }
+  }
+ ]
+}
