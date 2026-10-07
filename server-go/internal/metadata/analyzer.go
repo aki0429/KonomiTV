@@ -26,6 +26,12 @@ type ProgramAnalyzer interface {
 	AnalyzeProgram(video *RecordedVideo, endTSOffset *int64) (*RecordedProgram, bool)
 }
 
+// ContextProgramAnalyzer は呼び出し元のキャンセルと FFprobe 由来の優先サービス ID を
+// 受け取れる追加インターフェース。既存の ProgramAnalyzer 実装との互換性を保持する。
+type ContextProgramAnalyzer interface {
+	AnalyzeProgramContext(ctx context.Context, video *RecordedVideo, endTSOffset *int64, preferredServiceID *int) (*RecordedProgram, bool)
+}
+
 // Analyzer は録画ファイルのメタデータを解析する。
 // 移植元: MetadataAnalyzer
 //
@@ -315,8 +321,17 @@ func (a *Analyzer) Analyze(ctx context.Context, path string) (*RecordedProgram, 
 	var recordedProgram *RecordedProgram
 	analyzed := false
 	if a.ProgramAnalyzer != nil {
-		program, ok := a.ProgramAnalyzer.AnalyzeProgram(&recordedVideo, endTSOffset)
-		if ok {
+		var program *RecordedProgram
+		var ok bool
+		if parser, supportsContext := a.ProgramAnalyzer.(ContextProgramAnalyzer); supportsContext {
+			program, ok = parser.AnalyzeProgramContext(ctx, &recordedVideo, endTSOffset, preferredServiceID)
+		} else {
+			program, ok = a.ProgramAnalyzer.AnalyzeProgram(&recordedVideo, endTSOffset)
+		}
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if ok && program != nil {
 			recordedProgram = program
 			analyzed = true
 			// 取得成功時は録画開始時刻と録画終了時刻も解析する
@@ -329,8 +344,6 @@ func (a *Analyzer) Analyze(ctx context.Context, path string) (*RecordedProgram, 
 			}
 		}
 	}
-	_ = preferredServiceID
-
 	// 番組情報を取得できなかった場合、末尾の更新日時が近ければまだ録画中の可能性が高いため None を返す
 	if !analyzed {
 		if now.Sub(recordedVideo.FileModifiedAt).Seconds() < 30 {
@@ -360,12 +373,15 @@ func (a *Analyzer) Analyze(ctx context.Context, path string) (*RecordedProgram, 
 		}
 	} else {
 		recordedProgram.Video = recordedVideo
-		// 録画マージンを算出する
-		recordedProgram.RecordingStartMargin = math.Max(recordedProgram.StartTime.Sub(*recordedVideo.RecordingStartTime).Seconds(), 0.0)
-		recordedProgram.RecordingEndMargin = math.Max(recordedVideo.RecordingEndTime.Sub(recordedProgram.EndTime).Seconds(), 0.0)
-		// 部分的に録画されているかを判定する
-		recordedProgram.IsPartiallyRecorded = recordedProgram.StartTime.Before(*recordedVideo.RecordingStartTime) ||
-			recordedVideo.RecordingEndTime.Before(recordedProgram.EndTime)
+		// Python 版と同様に、TOT 等から両端の録画時刻を取得できた場合だけ算出する。
+		// EIT を取得できても TOT が欠落するファイルではデフォルト値を保持する。
+		if recordedVideo.RecordingStartTime != nil && recordedVideo.RecordingEndTime != nil {
+			recordedProgram.RecordingStartMargin = math.Max(recordedProgram.StartTime.Sub(*recordedVideo.RecordingStartTime).Seconds(), 0.0)
+			recordedProgram.RecordingEndMargin = math.Max(recordedVideo.RecordingEndTime.Sub(recordedProgram.EndTime).Seconds(), 0.0)
+			// 部分的に録画されているかを判定する
+			recordedProgram.IsPartiallyRecorded = recordedProgram.StartTime.Before(*recordedVideo.RecordingStartTime) ||
+				recordedVideo.RecordingEndTime.Before(recordedProgram.EndTime)
+		}
 	}
 	return recordedProgram, nil
 }

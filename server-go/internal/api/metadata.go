@@ -24,9 +24,9 @@ func (s *Server) newMetadataService() *metadata.Service {
 		// FFprobe は KonomiTV 同梱のライブラリを使う (Python 版 MetadataAnalyzer と同じ引数で起動する) 。
 		FFprobePath: s.paths.LibraryPath("FFprobe"),
 		Logger:      s.logger,
-		// MPEG-TS の SDT/EIT 解析 (TSInfoAnalyzer 相当) は Go 版では未移植のため nil 。
-		// その場合番組情報はファイル名から生成される (Python 版のフォールバックと同じ経路) 。
-		ProgramAnalyzer: nil,
+		// 188-byte MPEG-TS の SDT/EIT/TOT を bounded・stateless に解析する。
+		// PSI/SI 書庫 (.psc) と解析失敗時は従来のファイル名フォールバックを使う。
+		ProgramAnalyzer: metadata.NewTSInfoProgramAnalyzer(s.db, s.logger),
 	}
 	return &metadata.Service{
 		Store: store,
