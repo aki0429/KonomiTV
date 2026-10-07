@@ -1,0 +1,204 @@
+[
+  {
+    "name": "timeline_bad_cursor_type",
+    "method": "GET",
+    "path": "/api/twitter/accounts/dummy/timeline?cursor_type=Bad",
+    "body": null,
+    "status_code": 422,
+    "response_json": {
+      "detail": [
+        {
+          "type": "literal_error",
+          "loc": [
+            "query",
+            "cursor_type"
+          ],
+          "msg": "Input should be 'Top', 'Bottom', 'Gap' or 'ShowMore'",
+          "input": "Bad",
+          "ctx": {
+            "expected": "'Top', 'Bottom', 'Gap' or 'ShowMore'"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "search_missing_query",
+    "method": "GET",
+    "path": "/api/twitter/accounts/dummy/search",
+    "body": null,
+    "status_code": 422,
+    "response_json": {
+      "detail": [
+        {
+          "type": "missing",
+          "loc": [
+            "query",
+            "query"
+          ],
+          "msg": "Field required",
+          "input": null
+        }
+      ]
+    }
+  },
+  {
+    "name": "search_bad_search_type",
+    "method": "GET",
+    "path": "/api/twitter/accounts/dummy/search?query=test&search_type=Bad",
+    "body": null,
+    "status_code": 422,
+    "response_json": {
+      "detail": [
+        {
+          "type": "literal_error",
+          "loc": [
+            "query",
+            "search_type"
+          ],
+          "msg": "Input should be 'Top' or 'Latest'",
+          "input": "Bad",
+          "ctx": {
+            "expected": "'Top' or 'Latest'"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "video_proxy_missing_url",
+    "method": "GET",
+    "path": "/api/twitter/video-proxy",
+    "body": null,
+    "status_code": 422,
+    "response_json": {
+      "detail": [
+        {
+          "type": "missing",
+          "loc": [
+            "query",
+            "url"
+          ],
+          "msg": "Field required",
+          "input": null
+        }
+      ]
+    }
+  },
+  {
+    "name": "auth_empty_body",
+    "method": "POST",
+    "path": "/api/twitter/auth",
+    "body": {},
+    "status_code": 422,
+    "response_json": {
+      "detail": [
+        {
+          "type": "missing",
+          "loc": [
+            "body",
+            "cookies_txt"
+          ],
+          "msg": "Field required",
+          "input": {}
+        }
+      ]
+    }
+  },
+  {
+    "name": "auth_cookies_txt_null",
+    "method": "POST",
+    "path": "/api/twitter/auth",
+    "body": {
+      "cookies_txt": null
+    },
+    "status_code": 422,
+    "response_json": {
+      "detail": [
+        {
+          "type": "string_type",
+          "loc": [
+            "body",
+            "cookies_txt"
+          ],
+          "msg": "Input should be a valid string",
+          "input": null
+        }
+      ]
+    }
+  },
+  {
+    "name": "auth_cookies_txt_number",
+    "method": "POST",
+    "path": "/api/twitter/auth",
+    "body": {
+      "cookies_txt": 123
+    },
+    "status_code": 422,
+    "response_json": {
+      "detail": [
+        {
+          "type": "string_type",
+          "loc": [
+            "body",
+            "cookies_txt"
+          ],
+          "msg": "Input should be a valid string",
+          "input": 123
+        }
+      ]
+    }
+  },
+  {
+    "name": "auth_invalid_browser_info",
+    "method": "POST",
+    "path": "/api/twitter/auth",
+    "body": {
+      "cookies_txt": "# Netscape HTTP Cookie File",
+      "browser_info": {
+        "locale": "ja"
+      }
+    },
+    "status_code": 422,
+    "response_json": {
+      "detail": [
+        {
+          "type": "missing",
+          "loc": [
+            "body",
+            "browser_info",
+            "user_agent_data"
+          ],
+          "msg": "Field required",
+          "input": {
+            "locale": "ja"
+          }
+        },
+        {
+          "type": "missing",
+          "loc": [
+            "body",
+            "browser_info",
+            "navigator_platform"
+          ],
+          "msg": "Field required",
+          "input": {
+            "locale": "ja"
+          }
+        },
+        {
+          "type": "missing",
+          "loc": [
+            "body",
+            "browser_info",
+            "timezone"
+          ],
+          "msg": "Field required",
+          "input": {
+            "locale": "ja"
+          }
+        }
+      ]
+    }
+  }
+]
