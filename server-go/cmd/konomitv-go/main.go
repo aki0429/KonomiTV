@@ -61,6 +61,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	// ***** プロキシ先の決定と自己転送の拒否 *****
+	// 誤設定は DB やバックグラウンド処理を開始する前に停止する。
+	backendURL := *pythonBackend
+	if *noProxy {
+		backendURL = ""
+	} else if backendURL == "" {
+		backendURL = cfg.BackendAPIURL()
+	}
+	if err := validateProxyTarget(*listenAddress, backendURL); err != nil {
+		fmt.Fprintf(os.Stderr, "[Fatal] Invalid proxy configuration: %v\n", err)
+		os.Exit(1)
+	}
+
 	// ***** ロガーの初期化 *****
 
 	logLevel := slog.LevelInfo
@@ -106,15 +119,6 @@ func main() {
 		os.Exit(1)
 	}
 	defer func() { _ = writeDB.Close() }()
-
-	// ***** プロキシ先の決定 *****
-
-	backendURL := *pythonBackend
-	if *noProxy {
-		backendURL = ""
-	} else if backendURL == "" {
-		backendURL = cfg.BackendAPIURL()
-	}
 
 	// ***** 認証マネージャーの初期化 *****
 
