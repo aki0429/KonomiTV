@@ -61,6 +61,11 @@ func (a *Analyzer) Analyze(ctx context.Context, path string) (*RecordedProgram, 
 		}
 		return nil, err
 	}
+	// Python 版と同様に、全体・部分解析の結果を取得できなければ再生不能として戻る。
+	// 番組情報・録画時刻の解析やファイル名フォールバックへ進めてはならない。
+	if fullProbe == nil || sampleProbe == nil {
+		return nil, nil
+	}
 
 	// MPEG-TS の TS パケットサイズが 188 以外であれば弾く (BDAV 等は非対応)
 	if fullProbe.Format.FormatName == "mpegts" {
