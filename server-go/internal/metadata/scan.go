@@ -70,9 +70,8 @@ type Service struct {
 	// Logger はログ出力先。
 	Logger *slog.Logger
 
-	mu               sync.Mutex
-	batchScanRunning bool
-	recordingFiles   map[string]*FileRecordingInfo
+	mu             sync.Mutex
+	recordingFiles map[string]*FileRecordingInfo
 }
 
 // logger は slog.Logger を返す (未指定の場合は標準ロガー) 。
@@ -91,22 +90,34 @@ func (s *Service) now() time.Time {
 	return time.Now()
 }
 
+// batchScanGuardMu / batchScanGuardRunning は録画フォルダ一括スキャンの排他ガード。
+//
+// ハンドラー (internal/api) はリクエストごとに新しい Service を生成するため、
+// ガードを Service インスタンスに持たせると並行リクエストが各々スキャンを実行できてしまう。
+// 移植元の Python 実装 (MaintenanceRouter.py のモジュールグローバル batch_scan_task) と同様に、
+// プロセスで共有されるスコープで排他する。
+var (
+	batchScanGuardMu      sync.Mutex
+	batchScanGuardRunning bool
+)
+
 // RunBatchScan は録画フォルダ以下の一括スキャンと DB への同期を実行する。
 // 移植元: RecordedScanTask.runBatchScan()
 //
-// 既に一括スキャンを実行中の場合は (ErrBatchScanRunning, false) を返す (API では 429 に対応) 。
+// 既に一括スキャンを実行中 (他リクエストが生成した Service インスタンスを含む) の場合は
+// (ErrBatchScanRunning, false) を返す (API では 429 に対応) 。
 func (s *Service) RunBatchScan(ctx context.Context) (bool, error) {
-	s.mu.Lock()
-	if s.batchScanRunning {
-		s.mu.Unlock()
+	batchScanGuardMu.Lock()
+	if batchScanGuardRunning {
+		batchScanGuardMu.Unlock()
 		return false, ErrBatchScanRunning
 	}
-	s.batchScanRunning = true
-	s.mu.Unlock()
+	batchScanGuardRunning = true
+	batchScanGuardMu.Unlock()
 	defer func() {
-		s.mu.Lock()
-		s.batchScanRunning = false
-		s.mu.Unlock()
+		batchScanGuardMu.Lock()
+		batchScanGuardRunning = false
+		batchScanGuardMu.Unlock()
 	}()
 
 	s.logger().Info("Batch scan of recording folders has been started.")

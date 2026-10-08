@@ -143,18 +143,10 @@ func (s *Server) handleMaintenanceUpdateDatabase(w http.ResponseWriter, r *http.
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// handleMaintenanceBatchScan は録画フォルダ一括スキャン API (POST /api/maintenance/run-batch-scan) を処理する。
-// 録画ファイルのメタデータ解析は Go 版では未実装のため、Python 版へプロキシする。
-func (s *Server) handleMaintenanceBatchScan(w http.ResponseWriter, r *http.Request) {
-	s.proxyRequest(w, r)
-}
-
-// handleMaintenanceBackgroundAnalysis はバックグラウンド解析タスク手動実行 API
-// (POST /api/maintenance/run-background-analysis) を処理する。
-// CM 区間検出とサムネイル生成は Go 版では未実装のため、Python 版へプロキシする。
-func (s *Server) handleMaintenanceBackgroundAnalysis(w http.ResponseWriter, r *http.Request) {
-	s.proxyRequest(w, r)
-}
+// /api/maintenance/run-batch-scan と /api/maintenance/run-background-analysis は、
+// 録画メタデータ解析系 API として metadata.go のネイティブ実装
+// (handleMetadataBatchScan / handleMetadataBackgroundAnalysis) が
+// registerMetadataRoutes() で登録されている (Python 版へはプロキシしない) 。
 
 // handleMaintenanceRestart はサーバー再起動 API (POST /api/maintenance/restart) を処理する。
 // 移植元: server/app/routers/MaintenanceRouter.py の ServerRestartAPI()
