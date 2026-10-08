@@ -1,0 +1,1676 @@
+{
+ "now": "2026-10-09T12:00:00+09:00",
+ "seed_sql": [
+  "INSERT INTO channels VALUES ('NID32736-SID1024','gr011',32736,1024,NULL,1,'011','GR','ＮＨＫ総合１・東京',5,0,0,1)",
+  "INSERT INTO channels VALUES ('NID4-SID101','bs101',4,101,16625,1,'101','BS','ＮＨＫ　ＢＳ',NULL,0,0,1)",
+  "INSERT INTO channels VALUES ('NID32391-SID23608','gr071',32391,23608,32391,7,'071','GR','テレビ東京',NULL,0,0,1)",
+  "INSERT INTO channels VALUES ('NID4-SID211','bs211',4,211,16624,11,'211','BS','ＢＳ１１イレブン',NULL,0,0,1)",
+  "INSERT INTO channels VALUES ('NID4-SID141','bs141',4,141,16529,4,'141','BS','ＢＳ日テレ',NULL,0,0,0)",
+  "INSERT INTO channels VALUES ('NID4-SID103','bs103',4,103,16626,3,'103','BS','ＮＨＫ　ＢＳプレミアム',NULL,0,0,0)",
+  "INSERT INTO channels VALUES ('NID32738-SID1040','gr041',32738,1040,32738,4,'041','GR','日テレ',NULL,0,0,0)",
+  "INSERT INTO recorded_programs (id, recording_start_margin, recording_end_margin, is_partially_recorded, channel_id, network_id, service_id, event_id, title, description, detail, start_time, end_time, duration, is_free, genres, primary_audio_type, primary_audio_language, created_at, updated_at) VALUES (1,0,0,0,'NID32391-SID23608',32391,23608,1,'録画','','{}','2026-10-01 00:00:00+09:00','2026-10-01 01:00:00+09:00',3600,1,'[]','','','2026-10-01 00:00:00+09:00','2026-10-01 00:00:00+09:00')",
+  "INSERT INTO programs (id, channel_id, network_id, service_id, event_id, title, description, detail, start_time, end_time, duration, is_free, genres, video_type, video_codec, video_resolution, primary_audio_type, primary_audio_language, primary_audio_sampling_rate, secondary_audio_type, secondary_audio_language, secondary_audio_sampling_rate) VALUES ('NID32736-SID1024-EID100','NID32736-SID1024',32736,1024,100,'変更なし','概要','{}','2026-10-09 13:00:00+09:00','2026-10-09 14:00:00+09:00',3600.0,1,'[]',NULL,NULL,NULL,'古い音声','日本語','48kHz',NULL,NULL,NULL)",
+  "INSERT INTO programs (id, channel_id, network_id, service_id, event_id, title, description, detail, start_time, end_time, duration, is_free, genres, video_type, video_codec, video_resolution, primary_audio_type, primary_audio_language, primary_audio_sampling_rate, secondary_audio_type, secondary_audio_language, secondary_audio_sampling_rate) VALUES ('NID32736-SID1024-EID101','NID32736-SID1024',32736,1024,101,'延長','','{}','2026-10-09 14:00:00+09:00','2026-10-09 15:00:00+09:00',3600.0,1,'[]',NULL,NULL,NULL,'','','',NULL,NULL,NULL)",
+  "INSERT INTO programs (id, channel_id, network_id, service_id, event_id, title, description, detail, start_time, end_time, duration, is_free, genres, video_type, video_codec, video_resolution, primary_audio_type, primary_audio_language, primary_audio_sampling_rate, secondary_audio_type, secondary_audio_language, secondary_audio_sampling_rate) VALUES ('NID32736-SID1024-EID999','NID32736-SID1024',32736,1024,999,'消えた','','{}','2026-10-01 00:00:00+09:00','2026-10-01 01:00:00+09:00',3600.0,1,'[]',NULL,NULL,NULL,'','','',NULL,NULL,NULL)"
+ ],
+ "services": [
+  {
+   "id": 3273601024,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "name": "ＮＨＫ総合１・東京",
+   "type": 1,
+   "remoteControlKeyId": 1
+  },
+  {
+   "id": 3273601025,
+   "serviceId": 1025,
+   "networkId": 32736,
+   "name": "ＮＨＫ総合２・東京",
+   "type": 1,
+   "remoteControlKeyId": 1
+  },
+  {
+   "id": 3273601408,
+   "serviceId": 1408,
+   "networkId": 32736,
+   "name": "ＮＨＫワンセグ",
+   "type": 192,
+   "remoteControlKeyId": 1
+  },
+  {
+   "id": 3273701032,
+   "serviceId": 1032,
+   "networkId": 32737,
+   "name": "ＮＨＫＥテレ１東京",
+   "type": 1,
+   "remoteControlKeyId": 2
+  },
+  {
+   "id": 3239123656,
+   "serviceId": 23656,
+   "networkId": 32391,
+   "name": "ＮＨＫ総合・千葉",
+   "type": 1,
+   "remoteControlKeyId": 1
+  },
+  {
+   "id": 3274001048,
+   "serviceId": 1048,
+   "networkId": 32740,
+   "name": "リモコン無し",
+   "type": 161
+  },
+  {
+   "id": 400101,
+   "serviceId": 101,
+   "networkId": 4,
+   "name": "ＮＨＫ　ＢＳ",
+   "type": 1,
+   "remoteControlKeyId": 1
+  },
+  {
+   "id": 400103,
+   "serviceId": 103,
+   "networkId": 4,
+   "name": "ＮＨＫ　ＢＳプレミアム",
+   "type": 1
+  },
+  {
+   "id": 400141,
+   "serviceId": 141,
+   "networkId": 4,
+   "name": "ＢＳ日テレ",
+   "type": 1
+  },
+  {
+   "id": 400531,
+   "serviceId": 531,
+   "networkId": 4,
+   "name": "放送大学ラジオ",
+   "type": 2
+  },
+  {
+   "id": 600161,
+   "serviceId": 161,
+   "networkId": 6,
+   "name": "ＱＶＣ",
+   "type": 1
+  },
+  {
+   "id": 1033024,
+   "serviceId": 33024,
+   "networkId": 10,
+   "name": "スカパー",
+   "type": 1
+  },
+  {
+   "id": 6553500100,
+   "serviceId": 100,
+   "networkId": 65535,
+   "name": "試験チャンネル１",
+   "type": 1
+  },
+  {
+   "id": 1234500001,
+   "serviceId": 1,
+   "networkId": 12345,
+   "name": "不明",
+   "type": 1
+  }
+ ],
+ "programs": [
+  {
+   "id": 327360102400100,
+   "eventId": 100,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "startAt": 1791518400000,
+   "duration": 3600000,
+   "isFree": true,
+   "name": "変更なし",
+   "description": "概要",
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 327360102400101,
+   "eventId": 101,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "startAt": 1791523800000,
+   "duration": 1,
+   "isFree": true,
+   "name": "延長",
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 327360102400102,
+   "eventId": 102,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "startAt": 1791529200000,
+   "duration": 1,
+   "isFree": true,
+   "name": "未定新規",
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 327360102400103,
+   "eventId": 103,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "startAt": 1791532800000,
+   "duration": 5400000,
+   "isFree": true,
+   "name": "【字】ドラマ",
+   "description": "",
+   "extended": {
+    "◇出演者": "山田太郎",
+    "": "本文",
+    "内容": "A",
+    "◇内容": "B"
+   },
+   "genres": [
+    {
+     "lv1": 3,
+     "lv2": 0,
+     "un1": 15,
+     "un2": 15
+    },
+    {
+     "lv1": 14,
+     "lv2": 0,
+     "un1": 1,
+     "un2": 4
+    },
+    {
+     "lv1": 14,
+     "lv2": 1,
+     "un1": 0,
+     "un2": 0
+    },
+    {
+     "lv1": 15,
+     "lv2": 0,
+     "un1": 0,
+     "un2": 0
+    },
+    {
+     "lv1": 7,
+     "lv2": 15,
+     "un1": 0,
+     "un2": 0
+    }
+   ],
+   "video": {
+    "type": "mpeg2",
+    "resolution": "1080i",
+    "streamContent": 1,
+    "componentType": 179
+   },
+   "audios": [
+    {
+     "componentType": 2,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn",
+      "eng"
+     ]
+    },
+    {
+     "componentType": 2,
+     "componentTag": 16,
+     "isMain": false,
+     "samplingRate": 44100,
+     "langs": [
+      "eng"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 327360102400104,
+   "eventId": 104,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "startAt": 1791536400000,
+   "duration": 600000,
+   "isFree": false,
+   "name": "旧形式",
+   "video": {
+    "type": null,
+    "resolution": null,
+    "streamContent": null,
+    "componentType": null
+   },
+   "audio": {
+    "componentType": 2,
+    "samplingRate": 32000
+   }
+  },
+  {
+   "id": 327360102400105,
+   "eventId": 105,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "startAt": 1791540000000,
+   "duration": 600000,
+   "isFree": true,
+   "name": "映像不明",
+   "video": {
+    "type": "h264",
+    "resolution": "720p",
+    "streamContent": 5,
+    "componentType": 127
+   },
+   "audios": [
+    {
+     "componentType": 127,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 24000,
+     "langs": [
+      "xyz"
+     ]
+    },
+    {
+     "componentType": 2,
+     "componentTag": 16,
+     "isMain": false,
+     "samplingRate": 48000,
+     "langs": [
+      "fra"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 327360102500106,
+   "eventId": 106,
+   "serviceId": 1025,
+   "networkId": 32736,
+   "startAt": 1791543600000,
+   "duration": 600000,
+   "isFree": true,
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 327360102400107,
+   "eventId": 107,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "startAt": 1791547200000,
+   "duration": 600000,
+   "isFree": true,
+   "name": "共有副側",
+   "relatedItems": [
+    {
+     "type": "shared",
+     "networkId": 32736,
+     "serviceId": 1025,
+     "eventId": 900
+    }
+   ],
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 327360102400108,
+   "eventId": 108,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "startAt": 1791550800000,
+   "duration": 600000,
+   "isFree": true,
+   "name": "共有主側",
+   "relatedItems": [
+    {
+     "type": "shared",
+     "networkId": 32736,
+     "serviceId": 1024,
+     "eventId": 108
+    }
+   ],
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 327360102400109,
+   "eventId": 109,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "startAt": 1791554400000,
+   "duration": 600000,
+   "isFree": true,
+   "name": "リレー",
+   "relatedItems": [
+    {
+     "type": "relay",
+     "networkId": 32736,
+     "serviceId": 1032,
+     "eventId": 1
+    }
+   ],
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 327360102400110,
+   "eventId": 110,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "startAt": 1791558000000,
+   "duration": 600000,
+   "isFree": true,
+   "name": "旧Mirakurun",
+   "relatedItems": [
+    {
+     "networkId": 32736,
+     "serviceId": 1032,
+     "eventId": 1
+    }
+   ],
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 327360102400111,
+   "eventId": 111,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "startAt": 1791561600000,
+   "duration": 600000,
+   "isFree": true,
+   "name": "不明type",
+   "relatedItems": [
+    {
+     "type": "unknown",
+     "networkId": 32736,
+     "serviceId": 1032,
+     "eventId": 1
+    }
+   ],
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 327360102400112,
+   "eventId": 112,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "startAt": 1791565200000,
+   "duration": 600000,
+   "isFree": true,
+   "name": "空関連",
+   "relatedItems": [],
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 327360102400113,
+   "eventId": 113,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "startAt": 1791464400000,
+   "duration": 3600000,
+   "isFree": true,
+   "name": "古い",
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 327360102400114,
+   "eventId": 114,
+   "serviceId": 1024,
+   "networkId": 32736,
+   "startAt": 1791471600000,
+   "duration": 3600000,
+   "isFree": true,
+   "name": "少し前",
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 40010300115,
+   "eventId": 115,
+   "serviceId": 103,
+   "networkId": 4,
+   "startAt": 1791518400000,
+   "duration": 600000,
+   "isFree": true,
+   "name": "閉局BS",
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 327360140800116,
+   "eventId": 116,
+   "serviceId": 1408,
+   "networkId": 32736,
+   "startAt": 1791518400000,
+   "duration": 600000,
+   "isFree": true,
+   "name": "ワンセグ",
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 40010100117,
+   "eventId": 117,
+   "serviceId": 101,
+   "networkId": 4,
+   "startAt": 1791518400360,
+   "duration": 123456,
+   "isFree": true,
+   "name": "　ＢＳの番組　",
+   "description": "  説明  ",
+   "audios": [
+    {
+     "componentType": 3,
+     "componentTag": 16,
+     "isMain": true,
+     "samplingRate": 48000,
+     "langs": [
+      "jpn"
+     ]
+    }
+   ]
+  }
+ ],
+ "cases": [
+  {
+   "name": "default",
+   "preferred_terrestrial_region": null,
+   "schema": [
+    "CREATE TABLE \"channels\" (\n    \"id\" VARCHAR(255) NOT NULL PRIMARY KEY,\n    \"display_channel_id\" VARCHAR(255) NOT NULL UNIQUE,\n    \"network_id\" INT NOT NULL,\n    \"service_id\" INT NOT NULL,\n    \"transport_stream_id\" INT,\n    \"remocon_id\" INT NOT NULL,\n    \"channel_number\" VARCHAR(255) NOT NULL,\n    \"type\" VARCHAR(255) NOT NULL,\n    \"name\" TEXT NOT NULL,\n    \"jikkyo_force\" INT,\n    \"is_subchannel\" INT NOT NULL,\n    \"is_radiochannel\" INT NOT NULL,\n    \"is_watchable\" INT NOT NULL\n)",
+    "CREATE TABLE \"programs\" (\n    \"id\" VARCHAR(255) NOT NULL PRIMARY KEY,\n    \"network_id\" INT NOT NULL,\n    \"service_id\" INT NOT NULL,\n    \"event_id\" INT NOT NULL,\n    \"title\" TEXT NOT NULL,\n    \"description\" TEXT NOT NULL,\n    \"detail\" JSON NOT NULL,\n    \"start_time\" TIMESTAMP NOT NULL,\n    \"end_time\" TIMESTAMP NOT NULL,\n    \"duration\" REAL NOT NULL,\n    \"is_free\" INT NOT NULL,\n    \"genres\" JSON NOT NULL,\n    \"video_type\" TEXT,\n    \"video_codec\" TEXT,\n    \"video_resolution\" TEXT,\n    \"primary_audio_type\" TEXT NOT NULL,\n    \"primary_audio_language\" TEXT NOT NULL,\n    \"primary_audio_sampling_rate\" TEXT NOT NULL,\n    \"secondary_audio_type\" TEXT,\n    \"secondary_audio_language\" TEXT,\n    \"secondary_audio_sampling_rate\" TEXT,\n    \"channel_id\" VARCHAR(255) NOT NULL REFERENCES \"channels\" (\"id\") ON DELETE CASCADE\n)",
+    "CREATE INDEX \"idx_programs_start_t_a4db3e\" ON \"programs\" (\"start_time\")",
+    "CREATE INDEX \"idx_programs_end_tim_0dadb6\" ON \"programs\" (\"end_time\")",
+    "CREATE INDEX \"idx_programs_channel_18c724\" ON \"programs\" (\"channel_id\")",
+    "CREATE TABLE \"series\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"title\" TEXT NOT NULL,\n    \"description\" TEXT NOT NULL,\n    \"genres\" JSON NOT NULL,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)",
+    "CREATE TABLE \"series_broadcast_periods\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"start_date\" DATE NOT NULL,\n    \"end_date\" DATE NOT NULL,\n    \"channel_id\" VARCHAR(255) NOT NULL REFERENCES \"channels\" (\"id\") ON DELETE CASCADE,\n    \"series_id\" INT NOT NULL REFERENCES \"series\" (\"id\") ON DELETE CASCADE\n)",
+    "CREATE TABLE \"recorded_programs\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"recording_start_margin\" REAL NOT NULL,\n    \"recording_end_margin\" REAL NOT NULL,\n    \"is_partially_recorded\" INT NOT NULL,\n    \"network_id\" INT,\n    \"service_id\" INT,\n    \"event_id\" INT,\n    \"title\" TEXT NOT NULL,\n    \"series_title\" TEXT,\n    \"episode_number\" VARCHAR(255),\n    \"subtitle\" TEXT,\n    \"description\" TEXT NOT NULL,\n    \"detail\" JSON NOT NULL,\n    \"start_time\" TIMESTAMP NOT NULL,\n    \"end_time\" TIMESTAMP NOT NULL,\n    \"duration\" REAL NOT NULL,\n    \"is_free\" INT NOT NULL,\n    \"genres\" JSON NOT NULL,\n    \"primary_audio_type\" TEXT NOT NULL,\n    \"primary_audio_language\" TEXT NOT NULL,\n    \"secondary_audio_type\" TEXT,\n    \"secondary_audio_language\" TEXT,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"channel_id\" VARCHAR(255) REFERENCES \"channels\" (\"id\") ON DELETE CASCADE,\n    \"series_id\" INT REFERENCES \"series\" (\"id\") ON DELETE CASCADE,\n    \"series_broadcast_period_id\" INT REFERENCES \"series_broadcast_periods\" (\"id\") ON DELETE CASCADE\n)",
+    "CREATE TABLE \"recorded_videos\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"status\" VARCHAR(255) NOT NULL,\n    \"file_path\" TEXT NOT NULL,\n    \"file_hash\" TEXT NOT NULL,\n    \"file_size\" INT NOT NULL,\n    \"file_created_at\" TIMESTAMP NOT NULL,\n    \"file_modified_at\" TIMESTAMP NOT NULL,\n    \"recording_start_time\" TIMESTAMP,\n    \"recording_end_time\" TIMESTAMP,\n    \"duration\" REAL NOT NULL,\n    \"container_format\" VARCHAR(255) NOT NULL,\n    \"video_codec\" VARCHAR(255) NOT NULL,\n    \"video_codec_profile\" VARCHAR(255) NOT NULL,\n    \"video_scan_type\" VARCHAR(255) NOT NULL,\n    \"video_frame_rate\" REAL NOT NULL,\n    \"video_resolution_width\" INT NOT NULL,\n    \"video_resolution_height\" INT NOT NULL,\n    \"has_video_stream_changes\" INT NOT NULL DEFAULT 0,\n    \"primary_audio_codec\" VARCHAR(255) NOT NULL,\n    \"primary_audio_channel\" VARCHAR(255) NOT NULL,\n    \"primary_audio_sampling_rate\" INT NOT NULL,\n    \"secondary_audio_codec\" VARCHAR(255),\n    \"secondary_audio_channel\" VARCHAR(255),\n    \"secondary_audio_sampling_rate\" INT,\n    \"key_frames\" JSON NOT NULL,\n    \"segment_map\" JSON NOT NULL,\n    \"cm_sections\" JSON,\n    \"thumbnail_info\" JSON,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"recorded_program_id\" INT NOT NULL UNIQUE REFERENCES \"recorded_programs\" (\"id\") ON DELETE CASCADE\n)",
+    "CREATE INDEX \"idx_recorded_vi_status_8df5bd\" ON \"recorded_videos\" (\"status\")",
+    "CREATE TABLE \"users\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"name\" TEXT NOT NULL,\n    \"password\" TEXT NOT NULL,\n    \"is_admin\" INT NOT NULL,\n    \"client_settings\" JSON NOT NULL,\n    \"niconico_user_id\" INT,\n    \"niconico_user_name\" TEXT,\n    \"niconico_user_premium\" INT,\n    \"niconico_access_token\" TEXT,\n    \"niconico_refresh_token\" TEXT,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)",
+    "CREATE TABLE \"bluesky_accounts\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"did\" TEXT NOT NULL,\n    \"handle\" TEXT NOT NULL,\n    \"name\" TEXT NOT NULL,\n    \"icon_url\" TEXT NOT NULL,\n    \"session_string\" TEXT NOT NULL,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"user_id\" INT NOT NULL REFERENCES \"users\" (\"id\") ON DELETE CASCADE,\n    CONSTRAINT \"uid_bluesky_acc_user_id_87c9b2\" UNIQUE (\"user_id\", \"did\")\n)",
+    "CREATE TABLE \"capture_folders\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"name\" TEXT NOT NULL,\n    \"sort_order\" INT NOT NULL DEFAULT 0,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"user_id\" INT NOT NULL REFERENCES \"users\" (\"id\") ON DELETE CASCADE\n)",
+    "CREATE TABLE \"capture_bookmarks\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"filename\" TEXT NOT NULL,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"folder_id\" INT NOT NULL REFERENCES \"capture_folders\" (\"id\") ON DELETE CASCADE,\n    CONSTRAINT \"uid_capture_boo_folder__5124d0\" UNIQUE (\"folder_id\", \"filename\")\n)",
+    "CREATE TABLE \"twitter_accounts\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"name\" TEXT NOT NULL,\n    \"screen_name\" TEXT NOT NULL,\n    \"icon_url\" TEXT NOT NULL,\n    \"access_token\" TEXT NOT NULL,\n    \"access_token_secret\" TEXT NOT NULL,\n    \"cookie_browser_info\" JSON,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"user_id\" INT NOT NULL REFERENCES \"users\" (\"id\") ON DELETE CASCADE\n)",
+    "CREATE TABLE \"account_links\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"user_id\" INT NOT NULL REFERENCES \"users\" (\"id\") ON DELETE CASCADE,\n    \"twitter_account_id\" INT NOT NULL UNIQUE REFERENCES \"twitter_accounts\" (\"id\") ON DELETE CASCADE,\n    \"bluesky_account_id\" INT NOT NULL UNIQUE REFERENCES \"bluesky_accounts\" (\"id\") ON DELETE CASCADE\n)",
+    "CREATE TABLE \"aerich\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"version\" VARCHAR(255) NOT NULL,\n    \"app\" VARCHAR(100) NOT NULL,\n    \"content\" JSON NOT NULL\n)"
+   ],
+   "expected": {
+    "channels": {
+     "columns": [
+      "id",
+      "display_channel_id",
+      "network_id",
+      "service_id",
+      "transport_stream_id",
+      "remocon_id",
+      "channel_number",
+      "type",
+      "name",
+      "jikkyo_force",
+      "is_subchannel",
+      "is_radiochannel",
+      "is_watchable"
+     ],
+     "rows": [
+      [
+       "NID10-SID33024",
+       "sky256",
+       10,
+       33024,
+       null,
+       256,
+       "256",
+       "SKY",
+       "スカパー",
+       null,
+       0,
+       0,
+       1
+      ],
+      [
+       "NID32391-SID23608",
+       "gr072",
+       32391,
+       23608,
+       32391,
+       7,
+       "072",
+       "GR",
+       "テレビ東京",
+       null,
+       0,
+       0,
+       0
+      ],
+      [
+       "NID32391-SID23656",
+       "gr011",
+       32391,
+       23656,
+       32391,
+       1,
+       "011",
+       "GR",
+       "NHK総合・千葉",
+       null,
+       0,
+       0,
+       1
+      ],
+      [
+       "NID32736-SID1024",
+       "gr011-1",
+       32736,
+       1024,
+       32736,
+       1,
+       "011-1",
+       "GR",
+       "NHK総合1・東京",
+       null,
+       0,
+       0,
+       1
+      ],
+      [
+       "NID32736-SID1025",
+       "gr012-1",
+       32736,
+       1025,
+       32736,
+       1,
+       "012-1",
+       "GR",
+       "NHK総合2・東京",
+       null,
+       1,
+       0,
+       1
+      ],
+      [
+       "NID32737-SID1032",
+       "gr021",
+       32737,
+       1032,
+       32737,
+       2,
+       "021",
+       "GR",
+       "NHKEテレ1東京",
+       null,
+       0,
+       0,
+       1
+      ],
+      [
+       "NID32738-SID1040",
+       "gr041",
+       32738,
+       1040,
+       32738,
+       4,
+       "041",
+       "GR",
+       "日テレ",
+       null,
+       0,
+       0,
+       0
+      ],
+      [
+       "NID32740-SID1048",
+       "gr001",
+       32740,
+       1048,
+       32740,
+       0,
+       "001",
+       "GR",
+       "リモコン無し",
+       null,
+       0,
+       0,
+       1
+      ],
+      [
+       "NID4-SID101",
+       "bs101",
+       4,
+       101,
+       16625,
+       1,
+       "101",
+       "BS",
+       "NHK BS",
+       null,
+       0,
+       0,
+       1
+      ],
+      [
+       "NID4-SID103",
+       "bs103",
+       4,
+       103,
+       16626,
+       3,
+       "103",
+       "BS",
+       "ＮＨＫ　ＢＳプレミアム",
+       null,
+       0,
+       0,
+       0
+      ],
+      [
+       "NID4-SID141",
+       "bs141",
+       4,
+       141,
+       16529,
+       4,
+       "141",
+       "BS",
+       "BS日テレ",
+       null,
+       0,
+       0,
+       1
+      ],
+      [
+       "NID4-SID531",
+       "bs531",
+       4,
+       531,
+       null,
+       531,
+       "531",
+       "BS",
+       "放送大学ラジオ",
+       null,
+       0,
+       1,
+       1
+      ],
+      [
+       "NID6-SID161",
+       "cs161",
+       6,
+       161,
+       null,
+       161,
+       "161",
+       "CS",
+       "QVC",
+       null,
+       0,
+       0,
+       1
+      ]
+     ]
+    },
+    "programs": {
+     "columns": [
+      "id",
+      "network_id",
+      "service_id",
+      "event_id",
+      "title",
+      "description",
+      "detail",
+      "start_time",
+      "end_time",
+      "duration",
+      "is_free",
+      "genres",
+      "video_type",
+      "video_codec",
+      "video_resolution",
+      "primary_audio_type",
+      "primary_audio_language",
+      "primary_audio_sampling_rate",
+      "secondary_audio_type",
+      "secondary_audio_language",
+      "secondary_audio_sampling_rate",
+      "channel_id"
+     ],
+     "rows": [
+      [
+       "NID32736-SID1024-EID100",
+       32736,
+       1024,
+       100,
+       "変更なし",
+       "概要",
+       "{}",
+       "2026-10-09 13:00:00+09:00",
+       "2026-10-09 14:00:00+09:00",
+       3600.0,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "古い音声",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID101",
+       32736,
+       1024,
+       101,
+       "延長",
+       "",
+       "{}",
+       "2026-10-09 14:30:00+09:00",
+       "2026-10-09 15:00:00+09:00",
+       1800.0,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "2/0モード(ステレオ)",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID102",
+       32736,
+       1024,
+       102,
+       "未定新規",
+       "",
+       "{}",
+       "2026-10-09 16:00:00+09:00",
+       "2026-10-09 16:05:00+09:00",
+       300.0,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "2/0モード(ステレオ)",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID103",
+       32736,
+       1024,
+       103,
+       "【字】ドラマ",
+       "山田太郎",
+       "{\"出演者\": \"山田太郎\", \"番組内容\": \"本文\", \"内容\": \"B\"}",
+       "2026-10-09 17:00:00+09:00",
+       "2026-10-09 18:30:00+09:00",
+       5400.0,
+       1,
+       "[{\"major\": \"ドラマ\", \"middle\": \"国内ドラマ\"}, {\"major\": \"拡張\", \"middle\": \"未定義\"}, {\"major\": \"その他\", \"middle\": \"未定義\"}, {\"major\": \"アニメ・特撮\", \"middle\": \"その他\"}]",
+       "映像1080i(1125i)、アスペクト比16:9 パンベクトルなし",
+       "mpeg2",
+       "1080i",
+       "1/0+1/0モード(デュアルモノ)",
+       "日本語+英語",
+       "48kHz",
+       "1/0+1/0モード(デュアルモノ)",
+       "英語+副音声",
+       "44kHz",
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID104",
+       32736,
+       1024,
+       104,
+       "旧形式",
+       "",
+       "{}",
+       "2026-10-09 18:00:00+09:00",
+       "2026-10-09 18:10:00+09:00",
+       600.0,
+       0,
+       "[]",
+       "Unknown",
+       null,
+       null,
+       "1/0+1/0モード(デュアルモノ)",
+       "日本語+英語",
+       "32kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID105",
+       32736,
+       1024,
+       105,
+       "映像不明",
+       "",
+       "{}",
+       "2026-10-09 19:00:00+09:00",
+       "2026-10-09 19:10:00+09:00",
+       600.0,
+       1,
+       "[]",
+       "Unknown",
+       "h264",
+       "720p",
+       "Unknown",
+       "その他の言語",
+       "24kHz",
+       "1/0+1/0モード(デュアルモノ)",
+       "フランス語+副音声",
+       "48kHz",
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID108",
+       32736,
+       1024,
+       108,
+       "共有主側",
+       "",
+       "{}",
+       "2026-10-09 22:00:00+09:00",
+       "2026-10-09 22:10:00+09:00",
+       600.0,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "2/0モード(ステレオ)",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID109",
+       32736,
+       1024,
+       109,
+       "リレー",
+       "",
+       "{}",
+       "2026-10-09 23:00:00+09:00",
+       "2026-10-09 23:10:00+09:00",
+       600.0,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "2/0モード(ステレオ)",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID110",
+       32736,
+       1024,
+       110,
+       "旧Mirakurun",
+       "",
+       "{}",
+       "2026-10-10 00:00:00+09:00",
+       "2026-10-10 00:10:00+09:00",
+       600.0,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "2/0モード(ステレオ)",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID114",
+       32736,
+       1024,
+       114,
+       "少し前",
+       "",
+       "{}",
+       "2026-10-09 00:00:00+09:00",
+       "2026-10-09 01:00:00+09:00",
+       3600.0,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "2/0モード(ステレオ)",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID4-SID101-EID117",
+       4,
+       101,
+       117,
+       "BSの番組",
+       "説明",
+       "{}",
+       "2026-10-09 13:00:00.360000+09:00",
+       "2026-10-09 13:02:03.816000+09:00",
+       123.456,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "2/0モード(ステレオ)",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID4-SID101"
+      ]
+     ]
+    }
+   }
+  },
+  {
+   "name": "preferred-kanagawa",
+   "preferred_terrestrial_region": "神奈川県",
+   "schema": [
+    "CREATE TABLE \"channels\" (\n    \"id\" VARCHAR(255) NOT NULL PRIMARY KEY,\n    \"display_channel_id\" VARCHAR(255) NOT NULL UNIQUE,\n    \"network_id\" INT NOT NULL,\n    \"service_id\" INT NOT NULL,\n    \"transport_stream_id\" INT,\n    \"remocon_id\" INT NOT NULL,\n    \"channel_number\" VARCHAR(255) NOT NULL,\n    \"type\" VARCHAR(255) NOT NULL,\n    \"name\" TEXT NOT NULL,\n    \"jikkyo_force\" INT,\n    \"is_subchannel\" INT NOT NULL,\n    \"is_radiochannel\" INT NOT NULL,\n    \"is_watchable\" INT NOT NULL\n)",
+    "CREATE TABLE \"programs\" (\n    \"id\" VARCHAR(255) NOT NULL PRIMARY KEY,\n    \"network_id\" INT NOT NULL,\n    \"service_id\" INT NOT NULL,\n    \"event_id\" INT NOT NULL,\n    \"title\" TEXT NOT NULL,\n    \"description\" TEXT NOT NULL,\n    \"detail\" JSON NOT NULL,\n    \"start_time\" TIMESTAMP NOT NULL,\n    \"end_time\" TIMESTAMP NOT NULL,\n    \"duration\" REAL NOT NULL,\n    \"is_free\" INT NOT NULL,\n    \"genres\" JSON NOT NULL,\n    \"video_type\" TEXT,\n    \"video_codec\" TEXT,\n    \"video_resolution\" TEXT,\n    \"primary_audio_type\" TEXT NOT NULL,\n    \"primary_audio_language\" TEXT NOT NULL,\n    \"primary_audio_sampling_rate\" TEXT NOT NULL,\n    \"secondary_audio_type\" TEXT,\n    \"secondary_audio_language\" TEXT,\n    \"secondary_audio_sampling_rate\" TEXT,\n    \"channel_id\" VARCHAR(255) NOT NULL REFERENCES \"channels\" (\"id\") ON DELETE CASCADE\n)",
+    "CREATE INDEX \"idx_programs_start_t_a4db3e\" ON \"programs\" (\"start_time\")",
+    "CREATE INDEX \"idx_programs_end_tim_0dadb6\" ON \"programs\" (\"end_time\")",
+    "CREATE INDEX \"idx_programs_channel_18c724\" ON \"programs\" (\"channel_id\")",
+    "CREATE TABLE \"series\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"title\" TEXT NOT NULL,\n    \"description\" TEXT NOT NULL,\n    \"genres\" JSON NOT NULL,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)",
+    "CREATE TABLE \"series_broadcast_periods\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"start_date\" DATE NOT NULL,\n    \"end_date\" DATE NOT NULL,\n    \"channel_id\" VARCHAR(255) NOT NULL REFERENCES \"channels\" (\"id\") ON DELETE CASCADE,\n    \"series_id\" INT NOT NULL REFERENCES \"series\" (\"id\") ON DELETE CASCADE\n)",
+    "CREATE TABLE \"recorded_programs\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"recording_start_margin\" REAL NOT NULL,\n    \"recording_end_margin\" REAL NOT NULL,\n    \"is_partially_recorded\" INT NOT NULL,\n    \"network_id\" INT,\n    \"service_id\" INT,\n    \"event_id\" INT,\n    \"title\" TEXT NOT NULL,\n    \"series_title\" TEXT,\n    \"episode_number\" VARCHAR(255),\n    \"subtitle\" TEXT,\n    \"description\" TEXT NOT NULL,\n    \"detail\" JSON NOT NULL,\n    \"start_time\" TIMESTAMP NOT NULL,\n    \"end_time\" TIMESTAMP NOT NULL,\n    \"duration\" REAL NOT NULL,\n    \"is_free\" INT NOT NULL,\n    \"genres\" JSON NOT NULL,\n    \"primary_audio_type\" TEXT NOT NULL,\n    \"primary_audio_language\" TEXT NOT NULL,\n    \"secondary_audio_type\" TEXT,\n    \"secondary_audio_language\" TEXT,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"channel_id\" VARCHAR(255) REFERENCES \"channels\" (\"id\") ON DELETE CASCADE,\n    \"series_id\" INT REFERENCES \"series\" (\"id\") ON DELETE CASCADE,\n    \"series_broadcast_period_id\" INT REFERENCES \"series_broadcast_periods\" (\"id\") ON DELETE CASCADE\n)",
+    "CREATE TABLE \"recorded_videos\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"status\" VARCHAR(255) NOT NULL,\n    \"file_path\" TEXT NOT NULL,\n    \"file_hash\" TEXT NOT NULL,\n    \"file_size\" INT NOT NULL,\n    \"file_created_at\" TIMESTAMP NOT NULL,\n    \"file_modified_at\" TIMESTAMP NOT NULL,\n    \"recording_start_time\" TIMESTAMP,\n    \"recording_end_time\" TIMESTAMP,\n    \"duration\" REAL NOT NULL,\n    \"container_format\" VARCHAR(255) NOT NULL,\n    \"video_codec\" VARCHAR(255) NOT NULL,\n    \"video_codec_profile\" VARCHAR(255) NOT NULL,\n    \"video_scan_type\" VARCHAR(255) NOT NULL,\n    \"video_frame_rate\" REAL NOT NULL,\n    \"video_resolution_width\" INT NOT NULL,\n    \"video_resolution_height\" INT NOT NULL,\n    \"has_video_stream_changes\" INT NOT NULL DEFAULT 0,\n    \"primary_audio_codec\" VARCHAR(255) NOT NULL,\n    \"primary_audio_channel\" VARCHAR(255) NOT NULL,\n    \"primary_audio_sampling_rate\" INT NOT NULL,\n    \"secondary_audio_codec\" VARCHAR(255),\n    \"secondary_audio_channel\" VARCHAR(255),\n    \"secondary_audio_sampling_rate\" INT,\n    \"key_frames\" JSON NOT NULL,\n    \"segment_map\" JSON NOT NULL,\n    \"cm_sections\" JSON,\n    \"thumbnail_info\" JSON,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"recorded_program_id\" INT NOT NULL UNIQUE REFERENCES \"recorded_programs\" (\"id\") ON DELETE CASCADE\n)",
+    "CREATE INDEX \"idx_recorded_vi_status_8df5bd\" ON \"recorded_videos\" (\"status\")",
+    "CREATE TABLE \"users\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"name\" TEXT NOT NULL,\n    \"password\" TEXT NOT NULL,\n    \"is_admin\" INT NOT NULL,\n    \"client_settings\" JSON NOT NULL,\n    \"niconico_user_id\" INT,\n    \"niconico_user_name\" TEXT,\n    \"niconico_user_premium\" INT,\n    \"niconico_access_token\" TEXT,\n    \"niconico_refresh_token\" TEXT,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n)",
+    "CREATE TABLE \"bluesky_accounts\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"did\" TEXT NOT NULL,\n    \"handle\" TEXT NOT NULL,\n    \"name\" TEXT NOT NULL,\n    \"icon_url\" TEXT NOT NULL,\n    \"session_string\" TEXT NOT NULL,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"user_id\" INT NOT NULL REFERENCES \"users\" (\"id\") ON DELETE CASCADE,\n    CONSTRAINT \"uid_bluesky_acc_user_id_87c9b2\" UNIQUE (\"user_id\", \"did\")\n)",
+    "CREATE TABLE \"capture_folders\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"name\" TEXT NOT NULL,\n    \"sort_order\" INT NOT NULL DEFAULT 0,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"user_id\" INT NOT NULL REFERENCES \"users\" (\"id\") ON DELETE CASCADE\n)",
+    "CREATE TABLE \"capture_bookmarks\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"filename\" TEXT NOT NULL,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"folder_id\" INT NOT NULL REFERENCES \"capture_folders\" (\"id\") ON DELETE CASCADE,\n    CONSTRAINT \"uid_capture_boo_folder__5124d0\" UNIQUE (\"folder_id\", \"filename\")\n)",
+    "CREATE TABLE \"twitter_accounts\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"name\" TEXT NOT NULL,\n    \"screen_name\" TEXT NOT NULL,\n    \"icon_url\" TEXT NOT NULL,\n    \"access_token\" TEXT NOT NULL,\n    \"access_token_secret\" TEXT NOT NULL,\n    \"cookie_browser_info\" JSON,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"user_id\" INT NOT NULL REFERENCES \"users\" (\"id\") ON DELETE CASCADE\n)",
+    "CREATE TABLE \"account_links\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"created_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"updated_at\" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    \"user_id\" INT NOT NULL REFERENCES \"users\" (\"id\") ON DELETE CASCADE,\n    \"twitter_account_id\" INT NOT NULL UNIQUE REFERENCES \"twitter_accounts\" (\"id\") ON DELETE CASCADE,\n    \"bluesky_account_id\" INT NOT NULL UNIQUE REFERENCES \"bluesky_accounts\" (\"id\") ON DELETE CASCADE\n)",
+    "CREATE TABLE \"aerich\" (\n    \"id\" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\n    \"version\" VARCHAR(255) NOT NULL,\n    \"app\" VARCHAR(100) NOT NULL,\n    \"content\" JSON NOT NULL\n)"
+   ],
+   "expected": {
+    "channels": {
+     "columns": [
+      "id",
+      "display_channel_id",
+      "network_id",
+      "service_id",
+      "transport_stream_id",
+      "remocon_id",
+      "channel_number",
+      "type",
+      "name",
+      "jikkyo_force",
+      "is_subchannel",
+      "is_radiochannel",
+      "is_watchable"
+     ],
+     "rows": [
+      [
+       "NID10-SID33024",
+       "sky256",
+       10,
+       33024,
+       null,
+       256,
+       "256",
+       "SKY",
+       "スカパー",
+       null,
+       0,
+       0,
+       1
+      ],
+      [
+       "NID32391-SID23608",
+       "gr072",
+       32391,
+       23608,
+       32391,
+       7,
+       "072",
+       "GR",
+       "テレビ東京",
+       null,
+       0,
+       0,
+       0
+      ],
+      [
+       "NID32391-SID23656",
+       "gr011-1",
+       32391,
+       23656,
+       32391,
+       1,
+       "011-1",
+       "GR",
+       "NHK総合・千葉",
+       null,
+       0,
+       0,
+       1
+      ],
+      [
+       "NID32736-SID1024",
+       "gr011",
+       32736,
+       1024,
+       32736,
+       1,
+       "011",
+       "GR",
+       "NHK総合1・東京",
+       null,
+       0,
+       0,
+       1
+      ],
+      [
+       "NID32736-SID1025",
+       "gr012",
+       32736,
+       1025,
+       32736,
+       1,
+       "012",
+       "GR",
+       "NHK総合2・東京",
+       null,
+       1,
+       0,
+       1
+      ],
+      [
+       "NID32737-SID1032",
+       "gr021",
+       32737,
+       1032,
+       32737,
+       2,
+       "021",
+       "GR",
+       "NHKEテレ1東京",
+       null,
+       0,
+       0,
+       1
+      ],
+      [
+       "NID32738-SID1040",
+       "gr041",
+       32738,
+       1040,
+       32738,
+       4,
+       "041",
+       "GR",
+       "日テレ",
+       null,
+       0,
+       0,
+       0
+      ],
+      [
+       "NID32740-SID1048",
+       "gr001",
+       32740,
+       1048,
+       32740,
+       0,
+       "001",
+       "GR",
+       "リモコン無し",
+       null,
+       0,
+       0,
+       1
+      ],
+      [
+       "NID4-SID101",
+       "bs101",
+       4,
+       101,
+       16625,
+       1,
+       "101",
+       "BS",
+       "NHK BS",
+       null,
+       0,
+       0,
+       1
+      ],
+      [
+       "NID4-SID103",
+       "bs103",
+       4,
+       103,
+       16626,
+       3,
+       "103",
+       "BS",
+       "ＮＨＫ　ＢＳプレミアム",
+       null,
+       0,
+       0,
+       0
+      ],
+      [
+       "NID4-SID141",
+       "bs141",
+       4,
+       141,
+       16529,
+       4,
+       "141",
+       "BS",
+       "BS日テレ",
+       null,
+       0,
+       0,
+       1
+      ],
+      [
+       "NID4-SID531",
+       "bs531",
+       4,
+       531,
+       null,
+       531,
+       "531",
+       "BS",
+       "放送大学ラジオ",
+       null,
+       0,
+       1,
+       1
+      ],
+      [
+       "NID6-SID161",
+       "cs161",
+       6,
+       161,
+       null,
+       161,
+       "161",
+       "CS",
+       "QVC",
+       null,
+       0,
+       0,
+       1
+      ]
+     ]
+    },
+    "programs": {
+     "columns": [
+      "id",
+      "network_id",
+      "service_id",
+      "event_id",
+      "title",
+      "description",
+      "detail",
+      "start_time",
+      "end_time",
+      "duration",
+      "is_free",
+      "genres",
+      "video_type",
+      "video_codec",
+      "video_resolution",
+      "primary_audio_type",
+      "primary_audio_language",
+      "primary_audio_sampling_rate",
+      "secondary_audio_type",
+      "secondary_audio_language",
+      "secondary_audio_sampling_rate",
+      "channel_id"
+     ],
+     "rows": [
+      [
+       "NID32736-SID1024-EID100",
+       32736,
+       1024,
+       100,
+       "変更なし",
+       "概要",
+       "{}",
+       "2026-10-09 13:00:00+09:00",
+       "2026-10-09 14:00:00+09:00",
+       3600.0,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "古い音声",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID101",
+       32736,
+       1024,
+       101,
+       "延長",
+       "",
+       "{}",
+       "2026-10-09 14:30:00+09:00",
+       "2026-10-09 15:00:00+09:00",
+       1800.0,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "2/0モード(ステレオ)",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID102",
+       32736,
+       1024,
+       102,
+       "未定新規",
+       "",
+       "{}",
+       "2026-10-09 16:00:00+09:00",
+       "2026-10-09 16:05:00+09:00",
+       300.0,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "2/0モード(ステレオ)",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID103",
+       32736,
+       1024,
+       103,
+       "【字】ドラマ",
+       "山田太郎",
+       "{\"出演者\": \"山田太郎\", \"番組内容\": \"本文\", \"内容\": \"B\"}",
+       "2026-10-09 17:00:00+09:00",
+       "2026-10-09 18:30:00+09:00",
+       5400.0,
+       1,
+       "[{\"major\": \"ドラマ\", \"middle\": \"国内ドラマ\"}, {\"major\": \"拡張\", \"middle\": \"未定義\"}, {\"major\": \"その他\", \"middle\": \"未定義\"}, {\"major\": \"アニメ・特撮\", \"middle\": \"その他\"}]",
+       "映像1080i(1125i)、アスペクト比16:9 パンベクトルなし",
+       "mpeg2",
+       "1080i",
+       "1/0+1/0モード(デュアルモノ)",
+       "日本語+英語",
+       "48kHz",
+       "1/0+1/0モード(デュアルモノ)",
+       "英語+副音声",
+       "44kHz",
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID104",
+       32736,
+       1024,
+       104,
+       "旧形式",
+       "",
+       "{}",
+       "2026-10-09 18:00:00+09:00",
+       "2026-10-09 18:10:00+09:00",
+       600.0,
+       0,
+       "[]",
+       "Unknown",
+       null,
+       null,
+       "1/0+1/0モード(デュアルモノ)",
+       "日本語+英語",
+       "32kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID105",
+       32736,
+       1024,
+       105,
+       "映像不明",
+       "",
+       "{}",
+       "2026-10-09 19:00:00+09:00",
+       "2026-10-09 19:10:00+09:00",
+       600.0,
+       1,
+       "[]",
+       "Unknown",
+       "h264",
+       "720p",
+       "Unknown",
+       "その他の言語",
+       "24kHz",
+       "1/0+1/0モード(デュアルモノ)",
+       "フランス語+副音声",
+       "48kHz",
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID108",
+       32736,
+       1024,
+       108,
+       "共有主側",
+       "",
+       "{}",
+       "2026-10-09 22:00:00+09:00",
+       "2026-10-09 22:10:00+09:00",
+       600.0,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "2/0モード(ステレオ)",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID109",
+       32736,
+       1024,
+       109,
+       "リレー",
+       "",
+       "{}",
+       "2026-10-09 23:00:00+09:00",
+       "2026-10-09 23:10:00+09:00",
+       600.0,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "2/0モード(ステレオ)",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID110",
+       32736,
+       1024,
+       110,
+       "旧Mirakurun",
+       "",
+       "{}",
+       "2026-10-10 00:00:00+09:00",
+       "2026-10-10 00:10:00+09:00",
+       600.0,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "2/0モード(ステレオ)",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID32736-SID1024-EID114",
+       32736,
+       1024,
+       114,
+       "少し前",
+       "",
+       "{}",
+       "2026-10-09 00:00:00+09:00",
+       "2026-10-09 01:00:00+09:00",
+       3600.0,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "2/0モード(ステレオ)",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID32736-SID1024"
+      ],
+      [
+       "NID4-SID101-EID117",
+       4,
+       101,
+       117,
+       "BSの番組",
+       "説明",
+       "{}",
+       "2026-10-09 13:00:00.360000+09:00",
+       "2026-10-09 13:02:03.816000+09:00",
+       123.456,
+       1,
+       "[]",
+       null,
+       null,
+       null,
+       "2/0モード(ステレオ)",
+       "日本語",
+       "48kHz",
+       null,
+       null,
+       null,
+       "NID4-SID101"
+      ]
+     ]
+    }
+   }
+  }
+ ]
+}

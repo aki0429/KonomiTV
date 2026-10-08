@@ -53,6 +53,8 @@ type Server struct {
 	jikkyoStatuses epgupdate.JikkyoStatuses
 	// edcbUpdateSource はテスト用に差し替える EDCB クライアント (nil なら config の edcb_url に接続する) 。
 	edcbUpdateSource epgupdate.EDCBSource
+	// mirakurunSource はテスト用に差し替える Mirakurun API (nil なら config の mirakurun_url に接続する) 。
+	mirakurunSource epgupdate.MirakurunSource
 	// jikkyoStatusFetch はテスト用に差し替える NX-Jikkyo のチャンネル情報取得 (nil なら HTTP で取得する) 。
 	jikkyoStatusFetch epgupdate.FetchJikkyoChannels
 }

@@ -10,18 +10,25 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/reservations"
 )
 
-// updateDatabaseFromEDCB はチャンネル情報・実況ステータス・番組情報を EDCB から順に更新する。
+// updateDatabaseNative はチャンネル情報・実況ステータス・番組情報をバックエンドから順に更新する。
 // 移植元: MaintenanceRouter.UpdateDatabaseAPI() (Channel.update / Channel.updateJikkyoStatus / Program.update)
-func (s *Server) updateDatabaseFromEDCB(ctx context.Context) {
+func (s *Server) updateDatabaseNative(ctx context.Context) {
 	s.updateDatabaseMu.Lock()
 	defer s.updateDatabaseMu.Unlock()
 
 	start := time.Now()
 	s.logger.Info("Channels updating...")
-	if source, err := s.newEDCBUpdateSource(5 * time.Second); err != nil {
-		s.logger.Error("Failed to update channels:", "error", err)
-	} else if err := epgupdate.UpdateChannelsFromEDCB(ctx, s.writeDB, source, s.config.TV.PreferredTerrestrialRegion, s.logger); err != nil {
-		s.logger.Error("Failed to update channels:", "error", err)
+	switch s.config.General.Backend {
+	case "Mirakurun":
+		if err := epgupdate.UpdateChannelsFromMirakurun(ctx, s.writeDB, s.mirakurunUpdateSource(), s.config.TV.PreferredTerrestrialRegion, s.logger); err != nil {
+			s.logger.Error("Failed to update channels:", "error", err)
+		}
+	case "EDCB":
+		if source, err := s.newEDCBUpdateSource(5 * time.Second); err != nil {
+			s.logger.Error("Failed to update channels:", "error", err)
+		} else if err := epgupdate.UpdateChannelsFromEDCB(ctx, s.writeDB, source, s.config.TV.PreferredTerrestrialRegion, s.logger); err != nil {
+			s.logger.Error("Failed to update channels:", "error", err)
+		}
 	}
 	s.logger.Info(fmt.Sprintf("Channels update complete. (%.3f sec)", time.Since(start).Seconds()))
 
@@ -35,10 +42,17 @@ func (s *Server) updateDatabaseFromEDCB(ctx context.Context) {
 
 	start = time.Now()
 	s.logger.Info("Programs updating...")
-	if source, err := s.newEDCBUpdateSource(10 * time.Second); err != nil {
-		s.logger.Error("Failed to update programs from EDCB:", "error", err)
-	} else if err := epgupdate.UpdateProgramsFromEDCB(ctx, s.writeDB, source, time.Now(), s.logger); err != nil {
-		s.logger.Error("Failed to update programs from EDCB:", "error", err)
+	switch s.config.General.Backend {
+	case "Mirakurun":
+		if err := epgupdate.UpdateProgramsFromMirakurun(ctx, s.writeDB, s.mirakurunUpdateSource(), time.Now(), s.logger); err != nil {
+			s.logger.Error("Failed to update programs from Mirakurun:", "error", err)
+		}
+	case "EDCB":
+		if source, err := s.newEDCBUpdateSource(10 * time.Second); err != nil {
+			s.logger.Error("Failed to update programs from EDCB:", "error", err)
+		} else if err := epgupdate.UpdateProgramsFromEDCB(ctx, s.writeDB, source, time.Now(), s.logger); err != nil {
+			s.logger.Error("Failed to update programs from EDCB:", "error", err)
+		}
 	}
 	s.logger.Info(fmt.Sprintf("Programs update complete. (%.3f sec)", time.Since(start).Seconds()))
 }
@@ -54,4 +68,12 @@ func (s *Server) newEDCBUpdateSource(timeout time.Duration) (epgupdate.EDCBSourc
 	}
 	client.SetTimeout(timeout)
 	return client, nil
+}
+
+// mirakurunUpdateSource は更新処理用の Mirakurun API クライアントを返す (テストでは差し替え可能) 。
+func (s *Server) mirakurunUpdateSource() epgupdate.MirakurunSource {
+	if s.mirakurunSource != nil {
+		return s.mirakurunSource
+	}
+	return epgupdate.HTTPMirakurun{BaseURL: s.config.General.MirakurunURL, Client: &http.Client{}}
 }

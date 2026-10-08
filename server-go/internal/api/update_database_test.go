@@ -58,3 +58,34 @@ func TestUpdateDatabaseEDCBFailureStill204(t *testing.T) {
 		t.Fatalf("status = %d body=%s", response.Code, response.Body.String())
 	}
 }
+
+type updateDatabaseFakeMirakurun struct{ programsCalled bool }
+
+func (f *updateDatabaseFakeMirakurun) Services(context.Context) ([]byte, error) {
+	return []byte(`[{"serviceId":1024,"networkId":32736,"name":"ＮＨＫ総合１・東京","type":1,"remoteControlKeyId":1}]`), nil
+}
+func (f *updateDatabaseFakeMirakurun) Programs(context.Context) ([]byte, error) {
+	f.programsCalled = true
+	return []byte(`[]`), nil
+}
+
+// TestUpdateDatabaseNativeMirakurun は proxy 無効の Mirakurun バックエンドで Go 版が更新して 204 を返すことを検証する。
+func TestUpdateDatabaseNativeMirakurun(t *testing.T) {
+	s, _ := newTestServer(t, "")
+	s.config.General.Backend = "Mirakurun"
+	fake := &updateDatabaseFakeMirakurun{}
+	s.mirakurunSource = fake
+	s.jikkyoStatusFetch = func(context.Context) ([]byte, error) { return nil, errors.New("offline") }
+	response := doJSONRequest(t, s.Handler(), http.MethodPost, "/api/maintenance/update-database", "", "", "")
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("status = %d body=%s", response.Code, response.Body.String())
+	}
+	var displayID string
+	var tsid int
+	if err := s.db.QueryRow(`SELECT display_channel_id, transport_stream_id FROM channels WHERE id = 'NID32736-SID1024'`).Scan(&displayID, &tsid); err != nil {
+		t.Fatalf("channel was not created: %v", err)
+	}
+	if displayID != "gr011" || tsid != 32736 || !fake.programsCalled {
+		t.Errorf("channel = %s %d programs=%v", displayID, tsid, fake.programsCalled)
+	}
+}

@@ -128,13 +128,13 @@ func (s *Server) handleMaintenanceUpdateDatabase(w http.ResponseWriter, r *http.
 	// IPTV バックエンドではチャンネル情報・番組情報を DB に保存しないため、
 	// Python 版と同じく何も更新しない (プレイリストの再取得のみ行う) 。
 	if s.config.General.Backend != "IPTV" {
-		// プロキシ無効時の EDCB バックエンドは Go 版で直接更新する (Python 版と同じく失敗はログのみで 204) 。
-		if s.config.General.Backend == "EDCB" && s.proxy == nil {
-			s.updateDatabaseFromEDCB(context.WithoutCancel(r.Context()))
+		// プロキシ無効時は Go 版で直接更新する (Python 版と同じく失敗はログのみで 204) 。
+		// プロキシ有効時は既存どおり Python 版へ転送する。
+		if s.proxy == nil {
+			s.updateDatabaseNative(context.WithoutCancel(r.Context()))
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		// Mirakurun バックエンドの更新は Go 版では未実装のため、Python 版へプロキシする
 		s.proxyRequest(w, r)
 		return
 	}
