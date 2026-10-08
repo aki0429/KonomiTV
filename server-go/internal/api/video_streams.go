@@ -19,6 +19,10 @@ import (
 // 未登録の間、GET /api/streams/video/{video_id}/{quality}/segment は 500 を返す。
 func (s *Server) SetVideoSegmentEncoderFactory(factory videostream.SegmentEncoderFactory) {
 	s.videoStreams.SetEncoderFactory(factory)
+	// main の既存起動配線から保存用工場も登録する。保存は通常視聴と同じセッション/エンコーダーで行う。
+	if s.offlineFactory == nil {
+		s.offlineFactory = s.newSessionOfflineEncoder
+	}
 }
 
 // videoStreamRequest は録画ストリーム API 共通のバリデーション結果。
@@ -28,9 +32,10 @@ type videoStreamRequest struct {
 	SessionID     string
 }
 
-// parseVideoStreamRequest はパスと session_id を検証する。
+// parseVideoStreamPath は録画 ID と品質を共通の順序で検証する。
 // 移植元: VideoStreamsRouter.ValidateVideoID() / ValidateQuality()
-func (s *Server) parseVideoStreamRequest(w http.ResponseWriter, r *http.Request) (*videoStreamRequest, bool) {
+// unknownVideoStatus は既存 HLS の 422 と offline-stream の明示契約 404 を分離する。
+func (s *Server) parseVideoStreamPath(w http.ResponseWriter, r *http.Request, unknownVideoStatus int) (*videoStreamRequest, bool) {
 	videoID, ok := parsePathID(w, r, "video_id")
 	if !ok {
 		return nil, false
@@ -43,7 +48,7 @@ func (s *Server) parseVideoStreamRequest(w http.ResponseWriter, r *http.Request)
 	}
 	if detail == nil {
 		s.logger.Error("[VideoStreamsRouter][ValidateVideoID] Specified video_id was not found.", "video_id", videoID)
-		writeError(w, http.StatusUnprocessableEntity, "Specified video_id was not found")
+		writeError(w, unknownVideoStatus, "Specified video_id was not found")
 		return nil, false
 	}
 
@@ -61,12 +66,83 @@ func (s *Server) parseVideoStreamRequest(w http.ResponseWriter, r *http.Request)
 		return nil, false
 	}
 
-	sessionID := r.URL.Query().Get("session_id")
+	return &videoStreamRequest{Detail: detail, StreamQuality: streamQuality}, true
+}
+
+// parseVideoStreamRequest は既存 HLS のパス検証に続いて必須 session_id を検証する。
+// 品質が不正なら session_id 欠落より先にエラーにする既存の順序を保持する。
+func (s *Server) parseVideoStreamRequest(w http.ResponseWriter, r *http.Request) (*videoStreamRequest, bool) {
+	request, ok := s.parseVideoStreamPath(w, r, http.StatusUnprocessableEntity)
+	if !ok {
+		return nil, false
+	}
 	if !r.URL.Query().Has("session_id") {
 		writeError(w, http.StatusUnprocessableEntity, "Field required: query.session_id")
 		return nil, false
 	}
-	return &videoStreamRequest{Detail: detail, StreamQuality: streamQuality, SessionID: sessionID}, true
+	request.SessionID = r.URL.Query().Get("session_id")
+	return request, true
+}
+
+// handleVideoStreamOffline はオフライン保存 API の検証層だけを処理する。
+// Python の session_id 非必須・品質検証・Recording 拒否を移植するが、
+// unknown ID はこの slice の明示契約 404 とし、KTVODLP 本体の未実装は 501 で区別する。
+func (s *Server) handleVideoStreamOffline(w http.ResponseWriter, r *http.Request) {
+	request, ok := s.parseVideoStreamPath(w, r, http.StatusNotFound)
+	if !ok {
+		return
+	}
+	// 録画中はファイル終端とハッシュが確定しないため保存を開始できない。
+	if request.Detail.Video.Status == "Recording" {
+		writeError(w, http.StatusConflict, "Recording video cannot be saved for offline playback")
+		return
+	}
+	// 旧保存機能の未対応形式を阻害しないよう、proxy 有効時は検証後に転送する。
+	// no-proxy のときだけ Go-native 本体を使う。
+	if s.proxy != nil {
+		s.proxy.ServeHTTP(w, r)
+		return
+	}
+	// 未登録の工場は旧検証 slice の gate を保持する。登録時だけ保存本体を開始する。
+	if s.offlineFactory == nil {
+		writeError(w, http.StatusNotImplemented, "Offline stream generation is not implemented")
+		return
+	}
+	// 待機中は応答を開始せず、キャンセル時にも実行枠を消費しない。
+	select {
+	case s.offlineSlots <- struct{}{}:
+	case <-r.Context().Done():
+		return
+	}
+	defer func() { <-s.offlineSlots }()
+	if r.Context().Err() != nil {
+		return
+	}
+	started := false
+	// 本文開始後の panic も上位 middleware に JSON を追記させない。
+	defer func() {
+		if failure := recover(); failure != nil {
+			s.logger.Error("Offline stream panic.", "error", failure)
+			if !started {
+				writeError(w, http.StatusInternalServerError, "Failed to initialize offline stream")
+			}
+		}
+	}()
+	encoder, err := s.offlineFactory(r.Context(), videostream.OfflineParams{Program: request.Detail, Quality: request.StreamQuality.Quality, EncodingOptions: request.StreamQuality.EncodingOptions, Encoder: s.config.General.Encoder})
+	if err != nil || encoder == nil {
+		writeError(w, http.StatusInternalServerError, "Failed to initialize offline stream")
+		return
+	}
+	defer encoder.Close()
+	// 応答開始後の失敗は JSON を継ぎ足さず、終端を欠落させて保存失敗として検出させる。
+	metadata := videostream.OfflineMetadata{VideoID: request.Detail.Program.ID, FileHash: request.Detail.Video.FileHash, Quality: r.PathValue("quality"), DurationSeconds: request.Detail.Video.Duration}
+	writer := &offlineResponseWriter{ResponseWriter: w, started: &started}
+	if err := videostream.WriteOffline(r.Context(), writer, metadata, encoder); err != nil {
+		s.logger.Error("Failed to generate offline stream.", "error", err)
+		if !started {
+			writeError(w, http.StatusInternalServerError, "Failed to initialize offline stream")
+		}
+	}
 }
 
 // getVideoSession は録画視聴セッションを取得する。allowNew のときだけ新規作成する。

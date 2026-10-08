@@ -23,17 +23,19 @@ import (
 
 // Server は Go 版 KonomiTV サーバーのインスタンス。
 type Server struct {
-	config        *config.Config
-	paths         constants.Paths
-	db            *sql.DB // 読み取り専用
-	writeDB       *sql.DB // 書き込み用 (SQLite の書き込みを直列化するため別接続)
-	auth          *auth.Manager
-	logger        *slog.Logger
-	iptv          *iptv.Manager
-	liveStreams   *stream.Manager
-	videoStreams  *videostream.Manager // 録画視聴セッション
-	proxy         http.Handler         // nil の場合はプロキシ無効
-	latestVersion *latestVersionCache
+	config         *config.Config
+	paths          constants.Paths
+	db             *sql.DB // 読み取り専用
+	writeDB        *sql.DB // 書き込み用 (SQLite の書き込みを直列化するため別接続)
+	auth           *auth.Manager
+	logger         *slog.Logger
+	iptv           *iptv.Manager
+	liveStreams    *stream.Manager
+	videoStreams   *videostream.Manager              // 録画視聴セッション
+	offlineFactory videostream.OfflineEncoderFactory // 保存専用エンコーダー工場
+	offlineSlots   chan struct{}                     // 通常視聴の余裕を残す三枠の保存上限
+	proxy          http.Handler                      // nil の場合はプロキシ無効
+	latestVersion  *latestVersionCache
 	// accessLogWriters はアクセスログの出力先 (標準出力とログファイル) 。
 	accessLogWriters []io.Writer
 	// shutdown はサーバーを終了するための関数 (main.go から設定する) 。
@@ -111,6 +113,7 @@ func New(options Options) (*Server, error) {
 		iptv:             iptvManager,
 		liveStreams:      liveStreams,
 		videoStreams:     videostream.NewManager(options.Logger),
+		offlineSlots:     make(chan struct{}, 3),
 		proxy:            proxy,
 		latestVersion:    newLatestVersionCache(options.Logger),
 		accessLogWriters: options.AccessLogWriters,
@@ -186,11 +189,13 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/streams/live/{display_channel_id}/{quality}/mpegts", s.handleLiveStreamMPEGTS)
 
 	// 録画ストリーミング (playlist / keep-alive / buffer はセッション管理のみ Go で処理する。
-	// segment はエンコーダー (SetVideoSegmentEncoderFactory) 登録までは 500 を返す。offline-stream は Python 版へプロキシする)
+	// segment はエンコーダー (SetVideoSegmentEncoderFactory) 登録までは 500 を返す。
+	// offline-stream はネイティブ検証のみ実装済みで、KTVODLP 本体は未実装のため 501 を返す)
 	mux.HandleFunc("GET /api/streams/video/{video_id}/{quality}/playlist", s.handleVideoStreamPlaylist)
 	mux.HandleFunc("GET /api/streams/video/{video_id}/{quality}/segment", s.handleVideoStreamSegment)
 	mux.HandleFunc("GET /api/streams/video/{video_id}/{quality}/buffer", s.handleVideoStreamBuffer)
 	mux.HandleFunc("PUT /api/streams/video/{video_id}/{quality}/keep-alive", s.handleVideoStreamKeepAlive)
+	mux.HandleFunc("GET /api/streams/video/{video_id}/{quality}/offline-stream", s.handleVideoStreamOffline)
 
 	// IPTV (M3U プレイリストの取り込みとストリームのプロキシ)
 	mux.HandleFunc("GET /api/iptv/channels", s.handleIPTVChannels)
