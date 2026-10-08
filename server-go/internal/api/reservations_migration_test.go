@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -84,6 +85,9 @@ func boolPointer(value bool) *bool    { return &value }
 // 呼び出されたメソッドを記録し、想定外の呼び出しを検出できるようにする。
 // 戻り値はフィールドで差し替えられる (既定値は「取得できなかった」)。
 type fakeEDCBClient struct {
+	// mu は並行リクエスト試験 (TestReservationRoutesConcurrentSafety) から
+	// 同時に呼ばれる record() の calls 追記を直列化する。
+	mu    sync.Mutex
 	calls []string
 
 	enumReserveData []reservations.ReserveData
@@ -96,7 +100,11 @@ type fakeEDCBClient struct {
 	fileCopy2OK    bool
 }
 
-func (f *fakeEDCBClient) record(name string) { f.calls = append(f.calls, name) }
+func (f *fakeEDCBClient) record(name string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls = append(f.calls, name)
+}
 
 func (f *fakeEDCBClient) EnumReserve() ([]reservations.ReserveData, bool) {
 	f.record("EnumReserve")

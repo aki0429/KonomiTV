@@ -178,19 +178,21 @@ func (s *LiveStream) SetStatus(status string, detail string, quiet bool) bool {
 	}
 
 	// ストリーム開始 (Offline or Restart → Standby) 時、started_at と stream_data_written_at を更新する。
+	// 同一呼出し内の時刻は一回だけ取得する。Standby 移行時に started_at と updated_at が
+	// 時計の分解能 (Windows は粗く Linux は ns) によって食い違わないようにする。
+	now := float64(time.Now().UnixNano()) / 1e9
 	if (s.status == "Offline" || s.status == "Restart") && status == "Standby" {
-		now := float64(time.Now().UnixNano()) / 1e9
 		s.startedAt = now
 		s.streamDataWrittenAt = now
 	}
 
 	// ストリーム起動完了時 (Standby → ONAir) 時のみ、ストリームの起動にかかった時間も出力する。
 	startupComplete := s.status == "Standby" && status == "ONAir"
-	startupElapsed := float64(time.Now().UnixNano())/1e9 - s.startedAt
+	startupElapsed := now - s.startedAt
 
 	s.status = status
 	s.detail = detail
-	s.updatedAt = float64(time.Now().UnixNano()) / 1e9
+	s.updatedAt = now
 	s.mu.Unlock()
 
 	if !quiet {

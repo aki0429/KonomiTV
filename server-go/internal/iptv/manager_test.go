@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/aki0429/KonomiTV/server-go/internal/config"
@@ -65,9 +66,13 @@ func newTestManager(t *testing.T, cfg *config.Config, handler http.HandlerFunc) 
 // TestRefresh はプレイリストの取得・重複排除・並べ替え・ソースのエラー記録を検証する。
 func TestRefresh(t *testing.T) {
 	cfg := testConfig()
+	// Refresh は複数ソースを並行取得するため、handler からの追記を直列化する。
+	var userAgentsMu sync.Mutex
 	var userAgents []string
 	manager, server := newTestManager(t, cfg, func(w http.ResponseWriter, r *http.Request) {
+		userAgentsMu.Lock()
 		userAgents = append(userAgents, r.Header.Get("User-Agent"))
+		userAgentsMu.Unlock()
 		switch r.URL.Path {
 		case "/api/countries.json":
 			_, _ = w.Write([]byte(testCountriesJSON))
@@ -142,6 +147,8 @@ func TestRefresh(t *testing.T) {
 	}
 
 	// すべてのリクエストに設定の User-Agent が送信される
+	userAgentsMu.Lock()
+	defer userAgentsMu.Unlock()
 	for _, userAgent := range userAgents {
 		if userAgent != "TestAgent/1.0" {
 			t.Errorf("user agent = %q", userAgent)
