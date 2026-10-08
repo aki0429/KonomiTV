@@ -7,6 +7,7 @@ import (
 	"image"
 	_ "image/jpeg" // image.Decode で JPEG を扱う
 	"image/png"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -50,10 +51,17 @@ type accountLinkCreateRequest struct {
 
 // decodeJSONBody はリクエストボディを JSON としてデコードする。
 func decodeJSONBody(r *http.Request, target any) bool {
-	if err := json.NewDecoder(r.Body).Decode(target); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	var raw json.RawMessage
+	if err := decoder.Decode(&raw); err != nil {
 		return false
 	}
-	return true
+	// 全 consumer で末尾の別 JSON / ごみとモデルの null root を拒否する。
+	var trailing json.RawMessage
+	if decoder.Decode(&trailing) != io.EOF || string(raw) == "null" {
+		return false
+	}
+	return json.Unmarshal(raw, target) == nil
 }
 
 // handleUserCreate は POST /api/users (アカウント作成 API) を処理する。

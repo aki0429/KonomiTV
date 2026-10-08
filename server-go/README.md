@@ -22,7 +22,7 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `GET /api/channels/{channel_id}/jikkyo` (ニコニコ実況 WebSocket URL) | ✅ Go 実装済み (ニコニコアカウント連携時のニコ生セッション取得・トークン更新含む) |
 | `GET /api/channels` (チャンネル一覧、現在/次の番組・IPTV 疑似チャンネル含む) | ✅ Go 実装済み |
 | `GET /api/programs/timetable` (番組表) | ✅ Go 実装済み (EDCB バックエンドの予約情報は未対応) |
-| `POST /api/programs/search` (番組検索) | ✅ Go 実装済み (EDCB 以外は 422 を返し、EDCB 時は Python 版へプロキシ) |
+| `POST /api/programs/search` (番組検索) | 🚧 Go native 完成候補 (EDCB 以外は 422。`-no-proxy` 時は SearchPg 1025、有効時は既存 Python 転送を維持。実機・親受入れ未実施) |
 | `GET /api/series`・`GET /api/series/search`・`GET /api/series/{series_id}` (シリーズ番組) | ✅ Go 実装済み (録画番組・録画ファイル・チャンネルまで展開) |
 | `GET /api/iptv/channels`・`/countries`・`/groups`・`/playlist.m3u` (IPTV チャンネル一覧・国・グループ・プレイリスト出力) | ✅ Go 実装済み (実データ 11152 チャンネルで Python 版と完全一致を検証済み) |
 | `GET`/`POST`/`DELETE /api/iptv/sources` (プレイリストソース管理) | ✅ Go 実装済み |
@@ -56,6 +56,18 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `/assets/*`・`/` (client/dist の静的配信、SPA フォールバック) | ✅ Go 実装済み |
 | CORS (Starlette 互換) | ✅ Go 実装済み |
 | その他の全 API | 🔁 Python 版へプロキシ |
+
+### EDCB 番組検索の完成候補 (PG3)
+
+- `-no-proxy` (`s.proxy == nil`) 時は通常の CtrlCmd `SearchPg` (1025) を Go から送信する。native 経路には Python / ariblib の実行時依存はない。
+- プロキシ有効時は検索条件の検証を含め既存 Python 転送を維持する。native を無条件に proxy へ戻す変更ではない。
+- `service_ranges` の省略・null は `ChSet5.txt` の三つ組を重複排除して対象にする。空配列は対象なしのまま送信する。
+- UTF-16LE の検索条件と EventInfo を送受信し、視聴可能チャンネルの ONID/TSID/SID、イベント共有副側、終了済み番組を絞り込む。
+- 検索失敗・不正 frame は Python 版と同じ `{"total":0,"programs":[]}`。ChSet5 取得失敗は従来の 500。
+- TCP native 検索専用 client は HTTP キャンセルと期限、既定 15 秒のタイムアウト、64 MiB の応答上限を ChSet5 を含め適用する。旧 URL client は既存サイズ範囲を維持し、SearchPg 1025 のみ 64 MiB に制限する。本文は申告長を先取り確保せず実受信に応じて増やす。
+- `TestPG3*` は実 TCP の合成 peer のみを使用する。本番 EDCB・予約サービス・SSH へは接続していない。
+- 既存 `TestProgramSearchProxiedForEDCB` は assertion 不変で通過。no-proxy native 正常系と旧 proxy 構成を併存させる。
+- 名前付きパイプの期限・部分 Read と実機互換性は未検証。不正 UTF-16、JSON null/必須子フィールド/Pydantic coercion、特殊な拡張見出しの完全互換性は未達 (follow-up 証跡の監査項目を参照)。
 
 ## 使い方
 

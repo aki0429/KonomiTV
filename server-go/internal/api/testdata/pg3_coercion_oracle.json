@@ -1,0 +1,1350 @@
+[
+  {
+    "text": "{\"is_enabled\": null}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_type",
+        "msg": "Input should be a valid boolean"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": true}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": false}",
+    "accepted": true,
+    "result": {
+      "is_enabled": false,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": 0}",
+    "accepted": true,
+    "result": {
+      "is_enabled": false,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": 1}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": 2}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_parsing",
+        "msg": "Input should be a valid boolean, unable to interpret input"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": -1}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_parsing",
+        "msg": "Input should be a valid boolean, unable to interpret input"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": 0.0}",
+    "accepted": true,
+    "result": {
+      "is_enabled": false,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": 1.0}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": 1.5}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_type",
+        "msg": "Input should be a valid boolean"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": \"true\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": \"TRUE\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": \"on\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": \"Off\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": false,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": \"yes\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": \"NO\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": false,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": \"t\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": \"f\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": false,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": \"y\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": \"n\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": false,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": \"0\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": false,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": \"1\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"is_enabled\": \"2\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_parsing",
+        "msg": "Input should be a valid boolean, unable to interpret input"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": \" 1 \"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_parsing",
+        "msg": "Input should be a valid boolean, unable to interpret input"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": \"+30\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_parsing",
+        "msg": "Input should be a valid boolean, unable to interpret input"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": \"30.0\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_parsing",
+        "msg": "Input should be a valid boolean, unable to interpret input"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": \"30.00\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_parsing",
+        "msg": "Input should be a valid boolean, unable to interpret input"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": \"3e1\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_parsing",
+        "msg": "Input should be a valid boolean, unable to interpret input"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": \"1_000\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_parsing",
+        "msg": "Input should be a valid boolean, unable to interpret input"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": \"-0\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_parsing",
+        "msg": "Input should be a valid boolean, unable to interpret input"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": \"٣٠\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_parsing",
+        "msg": "Input should be a valid boolean, unable to interpret input"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": []}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_type",
+        "msg": "Input should be a valid boolean"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": {}}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_type",
+        "msg": "Input should be a valid boolean"
+      }
+    ]
+  },
+  {
+    "text": "{\"is_enabled\": 9223372036854775808}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "is_enabled"
+        ],
+        "type": "bool_type",
+        "msg": "Input should be a valid boolean"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": null}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": null,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": true}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 1,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": false}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 0,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": 0}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 0,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": 1}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 1,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": 2}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 2,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": -1}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "greater_than_equal",
+        "msg": "Input should be greater than or equal to 0"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": 0.0}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 0,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": 1.0}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 1,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": 1.5}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_from_float",
+        "msg": "Input should be a valid integer, got a number with a fractional part"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": \"true\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_parsing",
+        "msg": "Input should be a valid integer, unable to parse string as an integer"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": \"TRUE\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_parsing",
+        "msg": "Input should be a valid integer, unable to parse string as an integer"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": \"on\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_parsing",
+        "msg": "Input should be a valid integer, unable to parse string as an integer"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": \"Off\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_parsing",
+        "msg": "Input should be a valid integer, unable to parse string as an integer"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": \"yes\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_parsing",
+        "msg": "Input should be a valid integer, unable to parse string as an integer"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": \"NO\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_parsing",
+        "msg": "Input should be a valid integer, unable to parse string as an integer"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": \"t\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_parsing",
+        "msg": "Input should be a valid integer, unable to parse string as an integer"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": \"f\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_parsing",
+        "msg": "Input should be a valid integer, unable to parse string as an integer"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": \"y\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_parsing",
+        "msg": "Input should be a valid integer, unable to parse string as an integer"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": \"n\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_parsing",
+        "msg": "Input should be a valid integer, unable to parse string as an integer"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": \"0\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 0,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": \"1\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 1,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": \"2\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 2,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": \" 1 \"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 1,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": \"+30\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 30,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": \"30.0\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 30,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": \"30.00\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 30,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": \"3e1\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_parsing",
+        "msg": "Input should be a valid integer, unable to parse string as an integer"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": \"1_000\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 1000,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": \"-0\"}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 0,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  },
+  {
+    "text": "{\"duration_range_min\": \"٣٠\"}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_parsing",
+        "msg": "Input should be a valid integer, unable to parse string as an integer"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": []}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_type",
+        "msg": "Input should be a valid integer"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": {}}",
+    "accepted": false,
+    "result": null,
+    "errors": [
+      {
+        "loc": [
+          "duration_range_min"
+        ],
+        "type": "int_type",
+        "msg": "Input should be a valid integer"
+      }
+    ]
+  },
+  {
+    "text": "{\"duration_range_min\": 9223372036854775808}",
+    "accepted": true,
+    "result": {
+      "is_enabled": true,
+      "keyword": "",
+      "exclude_keyword": "",
+      "note": "",
+      "is_title_only": false,
+      "is_case_sensitive": false,
+      "is_fuzzy_search_enabled": false,
+      "is_regex_search_enabled": false,
+      "service_ranges": null,
+      "genre_ranges": null,
+      "is_exclude_genre_ranges": false,
+      "date_ranges": null,
+      "is_exclude_date_ranges": false,
+      "duration_range_min": 9223372036854775808,
+      "duration_range_max": null,
+      "broadcast_type": "All",
+      "duplicate_title_check_scope": "None",
+      "duplicate_title_check_period_days": 6
+    },
+    "errors": []
+  }
+]

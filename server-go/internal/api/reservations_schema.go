@@ -457,9 +457,11 @@ type genreSchema struct {
 
 // programSearchConditionServiceSchema は schemas.ProgramSearchConditionService 互換。
 type programSearchConditionServiceSchema struct {
-	NetworkID         int `json:"network_id"`
-	TransportStreamID int `json:"transport_stream_id"`
-	ServiceID         int `json:"service_id"`
+	// int を超える Python 整数は正確な十進表現で保持する。通常値の比較は従来どおり。
+	largeNetworkID, largeTransportStreamID, largeServiceID string
+	NetworkID                                              int `json:"network_id"`
+	TransportStreamID                                      int `json:"transport_stream_id"`
+	ServiceID                                              int `json:"service_id"`
 }
 
 // programSearchConditionDateSchema は schemas.ProgramSearchConditionDate 互換。
@@ -474,6 +476,8 @@ type programSearchConditionDateSchema struct {
 
 // programSearchCondition は schemas.ProgramSearchCondition 互換 (リクエスト・レスポンス共通) 。
 type programSearchCondition struct {
+	// リクエストから渡された任意精度整数を JSON / wire 生成まで保持する。
+	largeIntegers                 map[string]string
 	IsEnabled                     bool                                  `json:"is_enabled"`
 	Keyword                       string                                `json:"keyword"`
 	ExcludeKeyword                string                                `json:"exclude_keyword"`
@@ -496,6 +500,7 @@ type programSearchCondition struct {
 
 // programSearchConditionRequest は schemas.ProgramSearchCondition を受けるリクエスト用の構造体。
 type programSearchConditionRequest struct {
+	largeIntegers                 map[string]string
 	IsEnabled                     *bool                                  `json:"is_enabled"`
 	Keyword                       *string                                `json:"keyword"`
 	ExcludeKeyword                *string                                `json:"exclude_keyword"`
@@ -526,7 +531,14 @@ var validDuplicateTitleCheckScopes = map[string]bool{
 
 // toProgramSearchCondition はリクエストに Pydantic と同じ既定値を適用して検証する。
 func (request programSearchConditionRequest) toProgramSearchCondition() (programSearchCondition, error) {
+	// 任意精度でも非負制約を適用する。上限を勝手に追加しない。
+	for _, text := range request.largeIntegers {
+		if len(text) > 0 && text[0] == '-' {
+			return programSearchCondition{}, fmt.Errorf("Input should be greater than or equal to 0")
+		}
+	}
 	condition := programSearchCondition{
+		largeIntegers:                 request.largeIntegers,
 		IsEnabled:                     true,
 		BroadcastType:                 "All",
 		DuplicateTitleCheckScope:      "None",

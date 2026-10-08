@@ -129,9 +129,24 @@ func (r *wireReader) readString(size int) string {
 
 // decodeUTF16LE は UTF-16LE のバイト列を文字列に変換する (Python の bytes.decode('utf_16_le') 相当) 。
 func decodeUTF16LE(buffer []byte) string {
+	// Python strict decoder と同じく、奇数長と孤立 surrogate を補完しない。
+	if len(buffer)%2 != 0 {
+		panic(readError{})
+	}
 	units := make([]uint16, 0, len(buffer)/2)
 	for index := 0; index+1 < len(buffer); index += 2 {
 		units = append(units, uint16(buffer[index])|uint16(buffer[index+1])<<8)
+	}
+	for index := 0; index < len(units); index++ {
+		unit := units[index]
+		if unit >= 0xD800 && unit <= 0xDBFF {
+			if index+1 >= len(units) || units[index+1] < 0xDC00 || units[index+1] > 0xDFFF {
+				panic(readError{})
+			}
+			index++
+		} else if unit >= 0xDC00 && unit <= 0xDFFF {
+			panic(readError{})
+		}
 	}
 	return string(utf16.Decode(units))
 }
@@ -715,7 +730,13 @@ func writeSearchDateInfo(w *wireWriter, value SearchDateInfo) {
 func writeSearchKeyInfo(w *wireWriter, value SearchKeyInfo, hasChkRecEnd bool) {
 	position := len(w.buf)
 	w.writeInt(0)
-	chkDuration := (value.ChkDurationMin*10000 + value.ChkDurationMax) % 100000000
+	// Python int の剰余は非負。乗算前に bounded 化して MaxInt64 も落とさない。
+	minimum := value.ChkDurationMin % 10000
+	maximum := value.ChkDurationMax % 100000000
+	chkDuration := (minimum*10000 + maximum) % 100000000
+	if chkDuration < 0 {
+		chkDuration += 100000000
+	}
 	andKey := ""
 	if value.KeyDisabled {
 		andKey += "^!{999}"

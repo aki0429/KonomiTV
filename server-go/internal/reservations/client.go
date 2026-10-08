@@ -1,8 +1,10 @@
 package reservations
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"os"
@@ -58,6 +60,11 @@ type Transport interface {
 type TCPTransport struct {
 	Address string
 	Timeout time.Duration
+	// Context は検索 HTTP リクエストの寿命。未指定なら既存コマンドの挙動を維持する。
+	Context context.Context
+	// legacyResponseSizes は旧 URL client の応答サイズ互換性を保持する。
+	// 検索専用 client と直接生成する transport は 64 MiB に制限する。
+	legacyResponseSizes bool
 }
 
 // SendAndReceive はリクエストを送信し、8 バイトのヘッダー (戻り値 + サイズ) と本体を読み取る。
@@ -66,12 +73,24 @@ func (t *TCPTransport) SendAndReceive(request []byte) (Response, error) {
 	if timeout <= 0 {
 		timeout = defaultConnectTimeout
 	}
-	connection, err := net.DialTimeout("tcp", t.Address, timeout)
+	ctx := t.Context
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	dialer := net.Dialer{Timeout: timeout}
+	connection, err := dialer.DialContext(ctx, "tcp", t.Address)
 	if err != nil {
 		return Response{}, err
 	}
 	defer func() { _ = connection.Close() }()
-	if err := connection.SetDeadline(time.Now().Add(timeout)); err != nil {
+	// キャンセル時は接続を閉じて、Read/Write 待ちも即座に解除する。
+	stop := context.AfterFunc(ctx, func() { _ = connection.Close() })
+	defer stop()
+	deadline := time.Now().Add(timeout)
+	if limit, ok := ctx.Deadline(); ok && limit.Before(deadline) {
+		deadline = limit
+	}
+	if err := connection.SetDeadline(deadline); err != nil {
 		return Response{}, err
 	}
 	if _, err := connection.Write(request); err != nil {
@@ -83,16 +102,35 @@ func (t *TCPTransport) SendAndReceive(request []byte) (Response, error) {
 	}
 	code := int(int32(binary.LittleEndian.Uint32(header[0:4])))
 	size := int(int32(binary.LittleEndian.Uint32(header[4:8])))
-	if size < 0 {
+	// 検索経路には有限上限を課し、旧 URL client の巨大 FileCopy 等には新上限を漏らさない。
+	isSearch := len(request) >= 4 && binary.LittleEndian.Uint32(request[:4]) == 1025
+	if size < 0 || ((!t.legacyResponseSizes || isSearch) && size > 64*1024*1024) {
 		return Response{}, fmt.Errorf("edcb: invalid response size %d", size)
 	}
-	payload := make([]byte, size)
-	if size > 0 {
-		if _, err := readFull(connection, payload); err != nil {
-			return Response{}, err
-		}
+	// ヘッダーの申告長だけで全領域を確保せず、実際に届いた本文に応じて増やす。
+	// 旧経路でも int32 長・接続期限で有限。巨大な正常本文を保持するメモリは従来同様に必要。
+	payload, err := io.ReadAll(io.LimitReader(connection, int64(size)))
+	if err != nil {
+		return Response{}, err
+	}
+	if len(payload) != size {
+		return Response{}, io.ErrUnexpectedEOF
 	}
 	return Response{Code: code, Data: payload}, nil
+}
+
+// NewClientFromURLContext は HTTP のキャンセル/期限を TCP 検索と ChSet5 転送に伝える。
+// 名前付きパイプは既存 transport の制約を維持する (実機検証は未実施)。
+func NewClientFromURLContext(ctx context.Context, edcbURL string) (*Client, error) {
+	client, err := NewClientFromURL(edcbURL)
+	if err != nil {
+		return nil, err
+	}
+	if transport, ok := client.transport.(*TCPTransport); ok {
+		transport.Context = ctx
+		transport.legacyResponseSizes = false
+	}
+	return client, nil
 }
 
 // readFull は conn から len(buffer) バイトを読み切る。
@@ -224,8 +262,9 @@ func NewClientFromURL(edcbURL string) (*Client, error) {
 		return nil, fmt.Errorf("edcb: edcb_url %q has no port", edcbURL)
 	}
 	return &Client{transport: &TCPTransport{
-		Address: net.JoinHostPort(host, port),
-		Timeout: defaultConnectTimeout,
+		Address:             net.JoinHostPort(host, port),
+		Timeout:             defaultConnectTimeout,
+		legacyResponseSizes: true,
 	}}, nil
 }
 

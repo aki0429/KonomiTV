@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 	"sort"
@@ -290,7 +291,11 @@ func (s *Server) encodeEDCBSearchKeyInfo(
 	}
 	serviceList := make([]int64, 0, len(serviceRanges))
 	for _, channel := range serviceRanges {
-		serviceList = append(serviceList, int64(channel.NetworkID)<<32|int64(channel.TransportStreamID)<<16|int64(channel.ServiceID))
+		service, err := channel.edcbServiceID()
+		if err != nil {
+			return reservations.SearchKeyInfo{}, err
+		}
+		serviceList = append(serviceList, service)
 	}
 
 	// 検索対象を絞り込むジャンル範囲のリスト (空リストを指定すると全てのジャンルが検索対象になる)
@@ -381,6 +386,20 @@ func (s *Server) encodeEDCBSearchKeyInfo(
 		ChkRecNoService: condition.DuplicateTitleCheckScope == "AllChannels",
 		ChkDurationMin:  durationRangeValue(condition.DurationRangeMin),
 		ChkDurationMax:  durationRangeValue(condition.DurationRangeMax),
+	}
+	// 任意精度の期間値は wire の modulo に必要な下位桁だけへ縮約する。
+	if text, exists := condition.largeIntegers["duration_range_min"]; exists {
+		searchInfo.ChkDurationMin = searchIntegerModulo(text, 10000)
+	}
+	if text, exists := condition.largeIntegers["duration_range_max"]; exists {
+		searchInfo.ChkDurationMax = searchIntegerModulo(text, 100000000)
+	}
+	if text, exists := condition.largeIntegers["duplicate_title_check_period_days"]; exists {
+		if searchInfo.ChkRecNoService {
+			searchInfo.ChkRecDay = searchIntegerModulo(text, 10000)
+		} else if searchInfo.ChkRecEnd {
+			return reservations.SearchKeyInfo{}, fmt.Errorf("edcb: value is out of range for the field")
+		}
 	}
 	return searchInfo, nil
 }

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"regexp"
 	"sort"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/aki0429/KonomiTV/server-go/internal/constants"
 	"github.com/aki0429/KonomiTV/server-go/internal/database"
+	"github.com/aki0429/KonomiTV/server-go/internal/reservations"
 	"github.com/aki0429/KonomiTV/server-go/internal/tsinfo"
 )
 
@@ -63,18 +66,183 @@ type timeTableResponse struct {
 
 // handleProgramSearch は POST /api/programs/search (番組検索 API) を処理する。
 // この API は EDCB バックエンド専用のため、それ以外のバックエンドでは 422 を返し、
-// EDCB バックエンドの場合は Go 側に EDCB クライアントの実装がないため Python 版へプロキシする。
+// EDCB バックエンドではプロキシ有効時の既存転送を維持し、無効時だけ SearchPg を直接送信する。
 func (s *Server) handleProgramSearch(w http.ResponseWriter, r *http.Request) {
 	if s.config.General.Backend != "EDCB" {
 		s.logger.Warn("[ReservationsRouter][GetCtrlCmdUtil] This API is only available when the backend is EDCB.")
 		writeError(w, http.StatusUnprocessableEntity, "This API is only available when the backend is EDCB")
 		return
 	}
-	if s.proxy == nil {
-		writeError(w, http.StatusBadGateway, "Bad Gateway")
+	// ストラングラー構成では body の検証も含め Python に委ね、既存の転送契約を変えない。
+	// -no-proxy (s.proxy == nil) の場合だけ下の Go native 経路へ進む。
+	if s.proxy != nil {
+		s.proxy.ServeHTTP(w, r)
 		return
 	}
-	s.proxy.ServeHTTP(w, r)
+	var request programSearchConditionRequest
+	if !decodeJSONBody(r, &request) {
+		writeError(w, http.StatusUnprocessableEntity, "Invalid request body")
+		return
+	}
+	condition, err := request.toProgramSearchCondition()
+	if err != nil {
+		writeError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+	client, err := reservations.NewClientFromURLContext(r.Context(), s.config.General.EDCBURL)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	key, err := s.encodeEDCBSearchKeyInfo(r.Context(), condition, client, nil)
+	if err != nil {
+		s.writeEDCBError(w, err)
+		return
+	}
+	// Python 版の検索失敗時はエラーではなく空の検索結果を返す。
+	events, _ := client.SearchPg([]reservations.SearchKeyInfo{key})
+	programs := []programResponse{}
+	if len(events) > 0 {
+		channels, err := database.ListWatchableChannels(r.Context(), s.db)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
+		// ONID/SID だけでは別 TS の番組を誤って参照するため、必ず三つ組で照合する。
+		channelIDs := map[[3]int]string{}
+		for _, channel := range channels {
+			if channel.TransportStreamID != nil {
+				channelIDs[[3]int{channel.NetworkID, *channel.TransportStreamID, channel.ServiceID}] = channel.ID
+			}
+		}
+		now := time.Now()
+		for _, event := range events {
+			channelID, exists := channelIDs[[3]int{event.Onid, event.Tsid, event.Sid}]
+			if !exists {
+				continue
+			}
+			// イベント共有の副側は Python 版同様に結果から除く。
+			if group := event.EventGroupInfo; group != nil && len(group.EventDataList) == 1 {
+				primary := group.EventDataList[0]
+				if primary.Onid != event.Onid || primary.Tsid != event.Tsid || primary.Sid != event.Sid || primary.Eid != event.Eid {
+					continue
+				}
+			}
+			program := decodeSearchEvent(event)
+			end, _ := time.Parse(time.RFC3339, program.EndTime)
+			if !end.After(now) {
+				continue
+			}
+			program.ChannelID = channelID
+			programs = append(programs, program)
+		}
+	}
+	writeJSON(w, http.StatusOK, struct {
+		Total    int               `json:"total"`
+		Programs []programResponse `json:"programs"`
+	}{Total: len(programs), Programs: programs})
+}
+
+// decodeSearchEvent は ProgramsRouter.DecodeEDCBEventInfo の Program 表現を作る。
+func decodeSearchEvent(event reservations.EventInfo) programResponse {
+	start := time.Date(1970, 1, 1, 9, 0, 0, 0, constants.JST)
+	if event.StartTime != nil {
+		start = event.StartTime.In(constants.JST)
+	}
+	duration := 300
+	if event.DurationSec != nil {
+		duration = *event.DurationSec
+	}
+	p := programResponse{ID: fmt.Sprintf("NID%d-SID%03d-EID%d", event.Onid, event.Sid, event.Eid), ChannelID: fmt.Sprintf("NID%d-SID%03d", event.Onid, event.Sid), NetworkID: event.Onid, ServiceID: event.Sid, EventID: event.Eid, StartTime: database.FormatJSONTime(start), EndTime: database.FormatJSONTime(start.Add(time.Duration(duration) * time.Second)), Duration: pydanticFloat64(duration), IsFree: event.FreeCaFlag == 0, Genres: json.RawMessage("[]")}
+	if event.ShortInfo != nil {
+		p.Title = strings.TrimSpace(reservations.FormatString(event.ShortInfo.EventName))
+		p.Description = strings.TrimSpace(reservations.FormatString(event.ShortInfo.TextChar))
+	}
+	// 見出し重複はタブを足して保持し、概要が空の時だけ最初の本文で補う。
+	var detail orderedProgramDetail
+	if event.ExtInfo != nil {
+		detail.parse(event.ExtInfo.TextChar)
+		detail = detail.normalized()
+		for _, entry := range detail.entries {
+			if strings.TrimSpace(p.Description) == "" {
+				p.Description = entry.body
+			}
+		}
+	}
+	// 空テキストは Python 版でも項目を作らない。明示的な空見出しは保持する。
+	p.Detail, _ = json.Marshal(detail)
+	genres := []genreSchema{}
+	if event.ContentInfo != nil {
+		for _, content := range event.ContentInfo.NibbleList {
+			major, ok := reservations.FindGenreMajor(content.ContentNibble >> 8)
+			if !ok {
+				continue
+			}
+			genre := genreSchema{Major: strings.ReplaceAll(major.Major, "／", "・"), Middle: "未定義"}
+			for _, middle := range major.Middle {
+				if middle.Key == content.ContentNibble&0xf {
+					genre.Middle = strings.ReplaceAll(middle.Name, "／", "・")
+					break
+				}
+			}
+			if genre.Major == "拡張" {
+				if genre.Middle != "BS/地上デジタル放送用番組付属情報" {
+					continue
+				}
+				genre.Middle = "未定義"
+				user := content.UserNibble>>8<<4 | content.UserNibble&0xf
+				for _, entry := range reservations.UserTypes() {
+					if entry.Key == user {
+						genre.Middle = entry.Name
+						break
+					}
+				}
+			}
+			genres = append(genres, genre)
+		}
+	}
+	p.Genres, _ = json.Marshal(genres)
+	if video := event.ComponentInfo; video != nil {
+		if value, ok := reservations.ComponentTypes[video.StreamContent][video.ComponentType]; ok {
+			p.VideoType = &value
+		}
+		if value, ok := reservations.VideoCodecs[video.StreamContent]; ok {
+			p.VideoCodec = &value
+		}
+		if value, ok := reservations.VideoResolutions[video.ComponentType]; ok {
+			p.VideoResolution = &value
+		}
+	}
+	if audio := event.AudioInfo; audio != nil {
+		for index, item := range audio.ComponentList {
+			if index > 1 {
+				break
+			}
+			typeName := reservations.ComponentTypes[2][item.ComponentType]
+			rate := reservations.SamplingRates[item.SamplingRate]
+			language := "日本語"
+			if index == 1 {
+				language = "副音声"
+			}
+			if typeName == "1/0+1/0モード(デュアルモノ)" {
+				if item.EsMultiLingualFlag != 0 {
+					language += "+英語"
+				} else {
+					language += "+副音声"
+				}
+			}
+			if index == 0 {
+				p.PrimaryAudioType = typeName
+				p.PrimaryAudioLanguage = language
+				p.PrimaryAudioSamplingRate = rate
+			} else {
+				p.SecondaryAudioType = &typeName
+				p.SecondaryAudioLanguage = &language
+				p.SecondaryAudioSamplingRate = &rate
+			}
+		}
+	}
+	return p
 }
 
 // handleProgramTimeTable は GET /api/programs/timetable (番組表 API) を処理する。

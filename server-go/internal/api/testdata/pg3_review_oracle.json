@@ -1,0 +1,380 @@
+{
+  "schema": [
+    {
+      "text": "{}",
+      "accepted": true,
+      "errors": []
+    },
+    {
+      "text": "null",
+      "accepted": false,
+      "errors": [
+        {
+          "loc": [],
+          "type": "model_type"
+        }
+      ]
+    },
+    {
+      "text": "{\"keyword\":null}",
+      "accepted": false,
+      "errors": [
+        {
+          "loc": [
+            "keyword"
+          ],
+          "type": "string_type"
+        }
+      ]
+    },
+    {
+      "text": "{\"is_enabled\":null}",
+      "accepted": false,
+      "errors": [
+        {
+          "loc": [
+            "is_enabled"
+          ],
+          "type": "bool_type"
+        }
+      ]
+    },
+    {
+      "text": "{\"broadcast_type\":null}",
+      "accepted": false,
+      "errors": [
+        {
+          "loc": [
+            "broadcast_type"
+          ],
+          "type": "literal_error"
+        }
+      ]
+    },
+    {
+      "text": "{\"duplicate_title_check_period_days\":null}",
+      "accepted": false,
+      "errors": [
+        {
+          "loc": [
+            "duplicate_title_check_period_days"
+          ],
+          "type": "int_type"
+        }
+      ]
+    },
+    {
+      "text": "{\"date_ranges\":[{}]}",
+      "accepted": false,
+      "errors": [
+        {
+          "loc": [
+            "date_ranges",
+            0,
+            "start_day_of_week"
+          ],
+          "type": "missing"
+        },
+        {
+          "loc": [
+            "date_ranges",
+            0,
+            "start_hour"
+          ],
+          "type": "missing"
+        },
+        {
+          "loc": [
+            "date_ranges",
+            0,
+            "start_minute"
+          ],
+          "type": "missing"
+        },
+        {
+          "loc": [
+            "date_ranges",
+            0,
+            "end_day_of_week"
+          ],
+          "type": "missing"
+        },
+        {
+          "loc": [
+            "date_ranges",
+            0,
+            "end_hour"
+          ],
+          "type": "missing"
+        },
+        {
+          "loc": [
+            "date_ranges",
+            0,
+            "end_minute"
+          ],
+          "type": "missing"
+        }
+      ]
+    },
+    {
+      "text": "{\"service_ranges\":[{}]}",
+      "accepted": false,
+      "errors": [
+        {
+          "loc": [
+            "service_ranges",
+            0,
+            "network_id"
+          ],
+          "type": "missing"
+        },
+        {
+          "loc": [
+            "service_ranges",
+            0,
+            "transport_stream_id"
+          ],
+          "type": "missing"
+        },
+        {
+          "loc": [
+            "service_ranges",
+            0,
+            "service_id"
+          ],
+          "type": "missing"
+        }
+      ]
+    },
+    {
+      "text": "{\"genre_ranges\":[{}]}",
+      "accepted": false,
+      "errors": [
+        {
+          "loc": [
+            "genre_ranges",
+            0,
+            "major"
+          ],
+          "type": "missing"
+        },
+        {
+          "loc": [
+            "genre_ranges",
+            0,
+            "middle"
+          ],
+          "type": "missing"
+        }
+      ]
+    },
+    {
+      "text": "{\"service_ranges\":[null]}",
+      "accepted": false,
+      "errors": [
+        {
+          "loc": [
+            "service_ranges",
+            0
+          ],
+          "type": "model_type"
+        }
+      ]
+    },
+    {
+      "text": "{\"date_ranges\":[null]}",
+      "accepted": false,
+      "errors": [
+        {
+          "loc": [
+            "date_ranges",
+            0
+          ],
+          "type": "model_type"
+        }
+      ]
+    },
+    {
+      "text": "{\"keyword\":3}",
+      "accepted": false,
+      "errors": [
+        {
+          "loc": [
+            "keyword"
+          ],
+          "type": "string_type"
+        }
+      ]
+    },
+    {
+      "text": "{\"is_enabled\":1}",
+      "accepted": true,
+      "errors": []
+    },
+    {
+      "text": "{\"is_title_only\":\"true\"}",
+      "accepted": true,
+      "errors": []
+    },
+    {
+      "text": "{\"duration_range_min\":\"30\"}",
+      "accepted": true,
+      "errors": []
+    },
+    {
+      "text": "{\"duration_range_min\":30.0}",
+      "accepted": true,
+      "errors": []
+    },
+    {
+      "text": "{\"duration_range_min\":true}",
+      "accepted": true,
+      "errors": []
+    },
+    {
+      "text": "{\"duration_range_min\":-1}",
+      "accepted": false,
+      "errors": [
+        {
+          "loc": [
+            "duration_range_min"
+          ],
+          "type": "greater_than_equal"
+        }
+      ]
+    },
+    {
+      "text": "{\"duration_range_min\":9223372036854775808}",
+      "accepted": true,
+      "errors": []
+    },
+    {
+      "text": "{\"service_ranges\":[{\"network_id\":9223372036854775808,\"transport_stream_id\":1,\"service_id\":1}]}",
+      "accepted": true,
+      "errors": []
+    },
+    {
+      "text": "{\"service_ranges\":null,\"date_ranges\":null,\"genre_ranges\":null}",
+      "accepted": true,
+      "errors": []
+    },
+    {
+      "text": "{} garbage",
+      "accepted": false,
+      "errors": [
+        {
+          "loc": [],
+          "type": "json_invalid"
+        }
+      ]
+    },
+    {
+      "text": "{} {}",
+      "accepted": false,
+      "errors": [
+        {
+          "loc": [],
+          "type": "json_invalid"
+        }
+      ]
+    }
+  ],
+  "detail": [
+    {
+      "text": "",
+      "detail": {},
+      "description": ""
+    },
+    {
+      "text": "- ",
+      "detail": {
+        "番組内容": ""
+      },
+      "description": ""
+    },
+    {
+      "text": "- \n",
+      "detail": {
+        "番組内容": ""
+      },
+      "description": ""
+    },
+    {
+      "text": "- A\none\n- Ａ\ntwo\n- A\t\nthree",
+      "detail": {
+        "A": "one",
+        "A\t": "two",
+        "A\t\t": "three"
+      },
+      "description": "one"
+    },
+    {
+      "text": "- A\none\n- A\ntwo\n- A\t\nthree",
+      "detail": {
+        "A": "one",
+        "A\t": "two",
+        "A\t\t": "three"
+      },
+      "description": "one"
+    },
+    {
+      "text": "- ◇\none\n- 番組内容\ntwo",
+      "detail": {
+        "番組内容": "one",
+        "番組内容\t": "two"
+      },
+      "description": "one"
+    },
+    {
+      "text": "preamble\n- B\nx\n- A\ny",
+      "detail": {
+        "番組内容": "preamble",
+        "B": "x",
+        "A": "y"
+      },
+      "description": "preamble"
+    },
+    {
+      "text": "- \u001c\none\n- \ntwo",
+      "detail": {
+        "\u001c": "one",
+        "番組内容": "two"
+      },
+      "description": "one"
+    }
+  ],
+  "utf16": [
+    {
+      "hex": "00d8",
+      "accepted": false,
+      "text": null
+    },
+    {
+      "hex": "00dc",
+      "accepted": false,
+      "text": null
+    },
+    {
+      "hex": "41",
+      "accepted": false,
+      "text": null
+    },
+    {
+      "hex": "41d8",
+      "accepted": false,
+      "text": null
+    },
+    {
+      "hex": "3cd821de",
+      "accepted": true,
+      "text": "🈡"
+    }
+  ],
+  "provenance": {
+    "J:\\github\\KonomiTV\\.hermes-development\\worktrees\\KonomiTV-pg3\\server\\app\\schemas.py": "66625ddaf3797b55dedcd8e40a22aee286d199fa9d46c04895de7a13506a1e7d",
+    "J:\\github\\KonomiTV\\.hermes-development\\worktrees\\KonomiTV-pg3\\server\\app\\utils\\TSInformation.py": "905a620a9f691438ccdb5d5ca8a0dbae6bcf02a493678e7cb40b7150ae1f6cf4",
+    "J:\\github\\KonomiTV\\.hermes-development\\worktrees\\KonomiTV-pg3\\server\\app\\utils\\edcb\\EDCBUtil.py": "f2473a456461e866cbf78b9f456d4f2b54b5349ba888b5352871f58bff063515",
+    "J:\\github\\KonomiTV\\.hermes-development\\worktrees\\KonomiTV-pg3\\server\\app\\utils\\edcb\\CtrlCmdUtil.py": "5f8fd30e076ade35d3f894897c410aa33a9b462b05bd152a7729221dcb6f9880"
+  }
+}
