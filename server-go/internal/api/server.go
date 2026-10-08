@@ -15,6 +15,7 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/auth"
 	"github.com/aki0429/KonomiTV/server-go/internal/config"
 	"github.com/aki0429/KonomiTV/server-go/internal/constants"
+	"github.com/aki0429/KonomiTV/server-go/internal/epgupdate"
 	"github.com/aki0429/KonomiTV/server-go/internal/iptv"
 	"github.com/aki0429/KonomiTV/server-go/internal/jikkyo"
 	"github.com/aki0429/KonomiTV/server-go/internal/stream"
@@ -46,6 +47,14 @@ type Server struct {
 	// jikkyoChannels は実況チャンネルの対応表 (初回アクセス時に読み込む) 。
 	jikkyoChannels     *jikkyo.ChannelMap
 	jikkyoChannelsOnce sync.Once
+	// updateDatabaseMu は update-database の EDCB 更新を直列化する (SQLite の書き込み競合を避ける) 。
+	updateDatabaseMu sync.Mutex
+	// jikkyoStatuses は実況チャンネルごとの最新の実況勢い (Python: JikkyoClient のクラス変数) 。
+	jikkyoStatuses epgupdate.JikkyoStatuses
+	// edcbUpdateSource はテスト用に差し替える EDCB クライアント (nil なら config の edcb_url に接続する) 。
+	edcbUpdateSource epgupdate.EDCBSource
+	// jikkyoStatusFetch はテスト用に差し替える NX-Jikkyo のチャンネル情報取得 (nil なら HTTP で取得する) 。
+	jikkyoStatusFetch epgupdate.FetchJikkyoChannels
 }
 
 // Options は Server の生成に必要な依存関係。

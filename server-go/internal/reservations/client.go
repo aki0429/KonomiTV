@@ -26,6 +26,7 @@ const (
 	cmdAddReserve2  = 2013
 	cmdChgReserve2  = 2015
 	cmdDelReserve   = 1014
+	cmdEnumService  = 1021
 	cmdEnumPgInfoEx = 1029
 	cmdFileCopy     = 1060
 	cmdFileCopy2    = 2060
@@ -373,6 +374,25 @@ func (c *Client) DelReserve(reserveIDList []int) bool {
 		})
 	})
 	return ok && response.Code == cmdSuccess
+}
+
+// EnumService はサービス一覧を取得する (CMD_EPG_SRV_ENUM_SERVICE) 。
+func (c *Client) EnumService() ([]ServiceInfo, bool) {
+	response, ok := c.sendCmd(cmdEnumService, nil)
+	if !ok || response.Code != cmdSuccess {
+		return nil, false
+	}
+	return decodeResponse(func() []ServiceInfo {
+		reader := &wireReader{buf: response.Data}
+		return readVector(reader, len(response.Data), readServiceInfo)
+	})
+}
+
+// SetTimeout は TCP 接続の送受信期限を設定する (Python: setConnectTimeOutSec) 。
+func (c *Client) SetTimeout(timeout time.Duration) {
+	if transport, ok := c.transport.(*TCPTransport); ok {
+		transport.Timeout = timeout
+	}
 }
 
 // EnumPgInfoEx はサービス指定と時間指定で番組情報一覧を取得する (CMD_EPG_SRV_ENUM_PG_INFO_EX) 。

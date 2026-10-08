@@ -63,6 +63,12 @@ var nicoChannelIDs = map[string]*string{
 	"jk333": nil,
 }
 
+// IsKnownJikkyoID は実況チャンネル ID が対照表に存在するかを返す (Python: jikkyo_id in JIKKYO_CHANNEL_ID_MAP) 。
+func IsKnownJikkyoID(jikkyoID string) bool {
+	_, exists := nicoChannelIDs[jikkyoID]
+	return exists
+}
+
 // stringPointer は文字列のポインタを返すヘルパー。
 func stringPointer(value string) *string {
 	return &value

@@ -152,3 +152,9 @@ func detailJSON(detail []DetailEntry) string {
 	}
 	return "{" + strings.Join(parts, ", ") + "}"
 }
+
+// DetailJSON は detail カラム (Python の json.dumps(dict, ensure_ascii=False)) の JSON 文字列を返す。
+func DetailJSON(detail []DetailEntry) string { return detailJSON(detail) }
+
+// GenresJSON は genres カラムの JSON 文字列を返す。
+func GenresJSON(genres []Genre) string { return genresJSON(genres) }

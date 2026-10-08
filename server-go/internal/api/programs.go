@@ -159,13 +159,12 @@ func decodeSearchEvent(event reservations.EventInfo) programResponse {
 		p.Description = strings.TrimSpace(reservations.FormatString(event.ShortInfo.TextChar))
 	}
 	// 見出し重複はタブを足して保持し、概要が空の時だけ最初の本文で補う。
-	var detail orderedProgramDetail
+	var detail reservations.ProgramDetail
 	if event.ExtInfo != nil {
-		detail.parse(event.ExtInfo.TextChar)
-		detail = detail.normalized()
-		for _, entry := range detail.entries {
+		detail = reservations.ParseProgramExtendedText(event.ExtInfo.TextChar).Normalized()
+		for _, entry := range detail.Entries() {
 			if strings.TrimSpace(p.Description) == "" {
-				p.Description = entry.body
+				p.Description = entry.Body
 			}
 		}
 	}

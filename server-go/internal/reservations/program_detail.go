@@ -1,42 +1,54 @@
-package api
+package reservations
 
 import (
 	"encoding/json"
 	"strings"
-
-	"github.com/aki0429/KonomiTV/server-go/internal/reservations"
 )
 
-// orderedProgramDetail は Python dict の挿入順・同名上書き・JSON object 出力を保持する。
-// programResponse は既存の RawMessage のままなので DB / 番組表 consumer を変更しない。
-type orderedProgramDetail struct {
-	entries   []programDetailEntry
+// ProgramDetailEntry は番組詳細の見出しと本文。
+type ProgramDetailEntry struct {
+	Heading string
+	Body    string
+}
+
+// ProgramDetail は Python dict の挿入順・同名上書きを保持する番組詳細。
+type ProgramDetail struct {
+	entries   []ProgramDetailEntry
 	positions map[string]int
 }
 
-// programDetailEntry は順序つき詳細の見出しと本文。
-type programDetailEntry struct{ heading, body string }
+// Entries は挿入順の見出しと本文を返す。
+func (detail ProgramDetail) Entries() []ProgramDetailEntry {
+	return detail.entries
+}
 
-func (detail *orderedProgramDetail) contains(heading string) bool {
+// Len は見出しの数 (Python の len(dict)) を返す。
+func (detail ProgramDetail) Len() int {
+	return len(detail.entries)
+}
+
+func (detail *ProgramDetail) contains(heading string) bool {
 	_, exists := detail.positions[heading]
 	return exists
 }
 
 // set は同名キーの上書きでも元の挿入位置を維持する。
-func (detail *orderedProgramDetail) set(heading, body string) {
+func (detail *ProgramDetail) set(heading, body string) {
 	if detail.positions == nil {
 		detail.positions = make(map[string]int)
 	}
 	if index, exists := detail.positions[heading]; exists {
-		detail.entries[index].body = body
+		detail.entries[index].Body = body
 		return
 	}
 	detail.positions[heading] = len(detail.entries)
-	detail.entries = append(detail.entries, programDetailEntry{heading, body})
+	detail.entries = append(detail.entries, ProgramDetailEntry{heading, body})
 }
 
-// parse は EDCBUtil.parseProgramExtendedText の raw 見出し重複も正確に保存する。
-func (detail *orderedProgramDetail) parse(text string) {
+// ParseProgramExtendedText は EDCBUtil.parseProgramExtendedText と同じく、
+// 生の拡張テキストを見出しと本文に分ける (見出しの重複はタブを付けて保持する) 。
+func ParseProgramExtendedText(text string) ProgramDetail {
+	var detail ProgramDetail
 	text = strings.ReplaceAll(text, "\r", "")
 	head := ""
 	i := 0
@@ -82,13 +94,15 @@ func (detail *orderedProgramDetail) parse(text string) {
 		i = j + offset
 		head = text[j:i]
 	}
+	return detail
 }
 
-// normalized は ProgramsRouter の整形と二段階目の重複処理を適用する。
-func (detail orderedProgramDetail) normalized() orderedProgramDetail {
-	var result orderedProgramDetail
+// Normalized は Program.updateFromEDCB / DecodeEDCBEventInfo の見出し・本文整形と、
+// 二段階目の重複処理を適用する。
+func (detail ProgramDetail) Normalized() ProgramDetail {
+	var result ProgramDetail
 	for _, entry := range detail.entries {
-		head := strings.Trim(strings.ReplaceAll(reservations.FormatString(entry.heading), "◇", ""), " \r\n")
+		head := strings.Trim(strings.ReplaceAll(FormatString(entry.Heading), "◇", ""), " \r\n")
 		for result.contains(head) {
 			head += "\t"
 		}
@@ -96,23 +110,23 @@ func (detail orderedProgramDetail) normalized() orderedProgramDetail {
 		if head == "" {
 			head = "番組内容"
 		}
-		result.set(head, strings.TrimSpace(reservations.FormatString(entry.body)))
+		result.set(head, strings.TrimSpace(FormatString(entry.Body)))
 	}
 	return result
 }
 
 // MarshalJSON はソートせず挿入順に JSON object を生成する。
-func (detail orderedProgramDetail) MarshalJSON() ([]byte, error) {
+func (detail ProgramDetail) MarshalJSON() ([]byte, error) {
 	buffer := []byte{'{'}
 	for index, entry := range detail.entries {
 		if index != 0 {
 			buffer = append(buffer, ',')
 		}
-		key, err := json.Marshal(entry.heading)
+		key, err := json.Marshal(entry.Heading)
 		if err != nil {
 			return nil, err
 		}
-		body, err := json.Marshal(entry.body)
+		body, err := json.Marshal(entry.Body)
 		if err != nil {
 			return nil, err
 		}

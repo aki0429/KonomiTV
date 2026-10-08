@@ -56,6 +56,8 @@ type ServerConfig struct {
 
 // TVConfig は tv セクションの設定。
 type TVConfig struct {
+	// PreferredTerrestrialRegion は地デジのチャンネル番号 (枝番) を優先して割り当てる地域 (未設定なら null) 。
+	PreferredTerrestrialRegion *string `yaml:"preferred_terrestrial_region"`
 	// MaxAliveTime は誰も見ていないチャンネルのエンコードタスクを維持する時間 (秒) 。
 	MaxAliveTime float64 `yaml:"max_alive_time"`
 	// DebugModeTSPath はデバッグ用に再生する TS ファイルの絶対パス (未設定なら null) 。
