@@ -225,9 +225,11 @@ type Session struct {
 	mp4Loaded          bool
 	destroyed          bool
 	destroyTimer       *time.Timer
-	currentTask        *encodingTask
-	collectedKeyFrames []KeyFrame
-	lastFlushedCount   int
+	// destroyTimerGeneration は mu で保護する生存期限の世代。発火済みの旧 callback を無効化する。
+	destroyTimerGeneration uint64
+	currentTask            *encodingTask
+	collectedKeyFrames     []KeyFrame
+	lastFlushedCount       int
 
 	// sourceMu は入力ソース位置解決を直列化する (Python: _source_position_lock) 。
 	sourceMu sync.Mutex
@@ -303,8 +305,11 @@ func (s *Session) armDestroyTimerLocked() {
 	if s.destroyTimer != nil {
 		s.destroyTimer.Stop()
 	}
+	// Stop は発火済み callback の終了を待たない。更新前の世代は破棄権限を失わせる。
+	s.destroyTimerGeneration++
+	generation := s.destroyTimerGeneration
 	timeout := s.manager.sessionTimeout()
-	s.destroyTimer = time.AfterFunc(timeout, func() { s.Destroy() })
+	s.destroyTimer = time.AfterFunc(timeout, func() { s.destroy(generation, true) })
 }
 
 // GetBufferRange はエンコード完了済みセグメントのバッファ範囲 (秒) を返す。無ければ (0, 0) 。
@@ -360,8 +365,15 @@ func (s *Session) GetVirtualPlaylist(cacheKey string, audio string) string {
 
 // Destroy は実行中のエンコードを終了し、セッションを破棄する (Python: destroy) 。
 func (s *Session) Destroy() {
+	s.destroy(0, false)
+}
+
+// destroy はタイマー世代の検証と破棄開始を同じ mu 内で確定する。
+// 検証後にロックを離して Destroy を呼ぶと、その間の KeepAlive を誤って取り消してしまう。
+// 明示的な Destroy は生存期限の世代に関係なく、従来どおり即座に破棄を開始する。
+func (s *Session) destroy(generation uint64, fromTimer bool) {
 	s.mu.Lock()
-	if s.destroyed {
+	if s.destroyed || (fromTimer && generation != s.destroyTimerGeneration) {
 		s.mu.Unlock()
 		return
 	}

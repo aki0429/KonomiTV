@@ -11,6 +11,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -92,29 +93,42 @@ func TestManagerSingletonAndErrors(t *testing.T) {
 }
 
 func TestSessionAutoDestroyAndKeepAlive(t *testing.T) {
-	manager := NewManager(testLogger())
-	manager.SessionTimeout = 120 * time.Millisecond
-	session, err := manager.Get(SessionParams{SessionID: "s", Program: testProgram(60, "MPEG-TS"), Quality: "1080p"}, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// KeepAlive で期限を延ばし続ける間は破棄されない
-	for range 4 {
-		time.Sleep(60 * time.Millisecond)
+	synctest.Test(t, func(t *testing.T) {
+		manager := NewManager(testLogger())
+		manager.SessionTimeout = 120 * time.Millisecond
+		session := newTestSession(t, manager, "s", testProgram(60, "MPEG-TS"), "FFmpeg", nil)
+		// 実時間の Sleep は期限前の再開を保証しないため、仮想時計で元の 60ms 間隔を保つ。
+		// Wait は同時刻に動くタイマー処理が完了してから登録状態を観測するために必要。
+		for range 4 {
+			time.Sleep(60 * time.Millisecond)
+			synctest.Wait()
+			session.KeepAlive()
+			if manager.Count() != 1 || session.IsDestroyed() || manager.Lookup("s") != session {
+				t.Fatal("KeepAlive 中に破棄されました")
+			}
+		}
+		// 最終 KeepAlive の期限直前までは生存し、ちょうど期限に自動破棄する。
+		time.Sleep(manager.SessionTimeout - time.Nanosecond)
+		synctest.Wait()
+		if manager.Count() != 1 || session.IsDestroyed() {
+			t.Fatal("KeepAlive で延長した期限より前に破棄されました")
+		}
+		time.Sleep(time.Nanosecond)
+		synctest.Wait()
+		if manager.Count() != 0 || !session.IsDestroyed() || manager.Lookup("s") != nil {
+			t.Fatal("タイムアウト後に破棄されていません")
+		}
+		// 破棄後の KeepAlive は復活させず、新たなタイマーも作らない。
 		session.KeepAlive()
-	}
-	if manager.Count() != 1 || session.IsDestroyed() {
-		t.Fatal("KeepAlive 中に破棄されました")
-	}
-	time.Sleep(400 * time.Millisecond)
-	if manager.Count() != 0 || !session.IsDestroyed() {
-		t.Fatal("タイムアウト後に破棄されていません")
-	}
-	// 破棄後の KeepAlive は復活させない
-	session.KeepAlive()
-	if _, err := manager.Get(SessionParams{SessionID: "s", Program: testProgram(60, "MPEG-TS"), Quality: "1080p"}, false); !errors.Is(err, ErrSessionNotExist) {
-		t.Errorf("破棄後に取得できました: %v", err)
-	}
+		time.Sleep(manager.SessionTimeout)
+		synctest.Wait()
+		if manager.Count() != 0 || !session.IsDestroyed() {
+			t.Fatal("破棄後の KeepAlive で復活しました")
+		}
+		if _, err := manager.Get(SessionParams{SessionID: "s", Program: testProgram(60, "MPEG-TS"), Quality: "1080p"}, false); !errors.Is(err, ErrSessionNotExist) {
+			t.Errorf("破棄後に取得できました: %v", err)
+		}
+	})
 }
 
 func TestVirtualPlaylistAndBufferRange(t *testing.T) {
