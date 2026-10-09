@@ -764,8 +764,18 @@ func containsString(values []string, target string) bool {
 // ----------------------------------------------------------------------------
 
 // validationContext は Pydantic の ctx フィールド。
+//
+// Pydantic は制約の種類ごとに ctx の中身を変えるため、想定される鍵を全て持たせ、
+// 値が入っていない鍵は JSON から落とす (renderer 側で組み替えない)。
+// - literal_error: {"expected": "..."}
+// - greater_than_equal: {"ge": 1}
+// - less_than_equal: {"le": 500}
+// - 日付パース失敗: {"error": "..."}
 type validationContext struct {
-	Expected string `json:"expected"`
+	Expected string `json:"expected,omitempty"`
+	Ge       *int   `json:"ge,omitempty"`
+	Le       *int   `json:"le,omitempty"`
+	Error    string `json:"error,omitempty"`
 }
 
 // validationDetail は Pydantic のエラー 1 件分 (フィールド順は FastAPI の出力と同じ) 。

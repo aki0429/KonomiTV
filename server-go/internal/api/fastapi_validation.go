@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
 	"net/url"
@@ -108,6 +109,63 @@ func (v *fastapiValidation) queryIntValue(name string) (int64, bool) {
 		return math.MaxInt64, true
 	}
 	return parsed.Int64(), true
+}
+
+// greaterThanEqualDetail は Pydantic の greater_than_equal エラーを生成する。
+//
+// Python 側の Query(ge=...) 違反は ctx に下限値を持つため、ctx.ge まで一致させる。
+// input は解析前の生文字列 (Pydantic は変換前の値をそのまま載せる) 。
+func greaterThanEqualDetail(loc []any, input string, ge int) validationDetail {
+	lowerBound := ge
+	return validationDetail{
+		Type:  "greater_than_equal",
+		Loc:   loc,
+		Msg:   fmt.Sprintf("Input should be greater than or equal to %d", ge),
+		Input: input,
+		Ctx:   &validationContext{Ge: &lowerBound},
+	}
+}
+
+// lessThanEqualDetail は Pydantic の less_than_equal エラーを生成する。
+func lessThanEqualDetail(loc []any, input string, le int) validationDetail {
+	upperBound := le
+	return validationDetail{
+		Type:  "less_than_equal",
+		Loc:   loc,
+		Msg:   fmt.Sprintf("Input should be less than or equal to %d", le),
+		Input: input,
+		Ctx:   &validationContext{Le: &upperBound},
+	}
+}
+
+// queryIntRange は既定値つき int クエリを範囲制約つきで検証する。
+//
+// Python 側の `Query(ge=..., le=...) = 既定値` に対応する。欠落はエラーにせず既定値を返し、
+// 解析不能は int_parsing、範囲外は greater_than_equal / less_than_equal を積む。
+// ge / le に nil を渡した側の制約は無効になる。違反時は既定値を返し、
+// 呼び出し側の後続処理 (ページング等) が破綻しないようにする。
+func (v *fastapiValidation) queryIntRange(name string, defaultValue int64, ge *int, le *int) int64 {
+	values, present := v.query[name]
+	if !present {
+		return defaultValue
+	}
+	// 範囲判定に使う input は解析前の生文字列 (Pydantic は変換前の値をそのまま載せる)
+	raw := lastQueryValue(values)
+	before := len(v.details)
+	value := v.queryIntDefault(name, defaultValue)
+	if len(v.details) > before {
+		// int_parsing を積んだ。範囲判定は行わず既定値で継続する。
+		return defaultValue
+	}
+	if ge != nil && value < int64(*ge) {
+		v.details = append(v.details, greaterThanEqualDetail([]any{"query", name}, raw, *ge))
+		return defaultValue
+	}
+	if le != nil && value > int64(*le) {
+		v.details = append(v.details, lessThanEqualDetail([]any{"query", name}, raw, *le))
+		return defaultValue
+	}
+	return value
 }
 
 // queryLiteral は既定値つきの Literal クエリパラメータを返す。

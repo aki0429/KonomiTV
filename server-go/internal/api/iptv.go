@@ -92,39 +92,19 @@ func iptvValidationDetail(detailType string, message string, name string, input 
 // 欠落はエラーにせず既定値を返す。値がある場合は int への強制 (int_parsing) と
 // 範囲制約 (greater_than_equal / less_than_equal) を検証し、失敗を v に積む。
 //
-// 注: Pydantic の範囲制約エラーは ctx ({"ge": 1} / {"le": 500}) を持つが、共有の
-// validationDetail は ctx を独自に持てないため、type / msg / input のみ一致させる。
-func iptvQueryInt(v *fastapiValidation, name string, defaultValue int, ge int, le int) int {
-	if _, present := v.query[name]; !present {
-		return defaultValue
+// minimum / maximum に 0 以下を渡した側は制約なしとして扱う (IPTVRouter の page は
+// le を持たないため、呼び出し側が 0 を渡して無効化している) 。
+func iptvQueryInt(v *fastapiValidation, name string, defaultValue int, minimum int, maximum int) int {
+	var ge *int
+	var le *int
+	// 0 以下は「制約なし」の意味なのでポインタを作らない
+	if minimum > 0 {
+		ge = &minimum
 	}
-	before := len(v.details)
-	// queryInt は欠落時に missing を積むが、上の存在チェックで欠落は除外済み。
-	// 解析できない場合は int_parsing を積んで 0 を返す。
-	value := v.queryInt(name)
-	if len(v.details) > before {
-		// int_parsing を積んだ。後続の検証は既定値で継続する。
-		return defaultValue
+	if maximum > 0 {
+		le = &maximum
 	}
-	// 範囲制約の input は生の文字列を使う (Pydantic は解析前の値をそのまま載せる)
-	raw := lastQueryValue(v.query[name])
-	if int(value) < ge {
-		v.details = append(v.details, iptvValidationDetail(
-			"greater_than_equal",
-			fmt.Sprintf("Input should be greater than or equal to %d", ge),
-			name, raw,
-		))
-		return defaultValue
-	}
-	if le > 0 && int(value) > le {
-		v.details = append(v.details, iptvValidationDetail(
-			"less_than_equal",
-			fmt.Sprintf("Input should be less than or equal to %d", le),
-			name, raw,
-		))
-		return defaultValue
-	}
-	return int(value)
+	return int(v.queryIntRange(name, int64(defaultValue), ge, le))
 }
 
 // iptvQueryBool は既定値つきの bool クエリパラメータを FastAPI/Pydantic 互換に検証して返す。

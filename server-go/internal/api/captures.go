@@ -617,17 +617,18 @@ func paginateCaptures(files []captures.File, page int) []captures.File {
 
 // parsePositiveQueryInt はクエリパラメーターから 1 以上の整数を取得する。
 // 指定されていない場合は default_ を返す。
+//
+// Python 側の CapturesRouter は `page: Query(ge=1)` の既定値つきパラメータなので、
+// 解析不能は int_parsing、1 未満は greater_than_equal (ctx.ge つき) の検証エラー配列にする
+// (クライアントは detail の型で表示を分岐するため、文字列 detail を返してはならない) 。
 func parsePositiveQueryInt(w http.ResponseWriter, r *http.Request, name string, default_ int) (int, bool) {
-	value := r.URL.Query().Get(name)
-	if value == "" {
-		return default_, true
-	}
-	parsed, err := strconv.Atoi(value)
-	if err != nil || parsed < 1 {
-		writeError(w, http.StatusUnprocessableEntity, "Input should be greater than or equal to 1")
+	v := newFastAPIValidation(r)
+	lowerBound := 1
+	value := v.queryIntRange(name, int64(default_), &lowerBound, nil)
+	if v.writeIfInvalid(w) {
 		return 0, false
 	}
-	return parsed, true
+	return int(value), true
 }
 
 // parsePathInt はパスパラメーターから整数を取得する。

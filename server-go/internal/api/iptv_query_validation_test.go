@@ -55,8 +55,8 @@ func TestIPTVChannelsQueryValidation(t *testing.T) {
 			"?page=abc&per_page=0&refresh=abc&with_quality=abc",
 			`{"detail":[` +
 				`{"type":"int_parsing","loc":["query","page"],"msg":"Input should be a valid integer, unable to parse string as an integer","input":"abc"},` +
-				// ge/le の ctx は共有の validationDetail が持てないため type/msg/input のみ一致させる
-				`{"type":"greater_than_equal","loc":["query","per_page"],"msg":"Input should be greater than or equal to 1","input":"0"},` +
+				// ge/le の ctx (実測値) まで一致させる
+				`{"type":"greater_than_equal","loc":["query","per_page"],"msg":"Input should be greater than or equal to 1","input":"0","ctx":{"ge":1}},` +
 				`{"type":"bool_parsing","loc":["query","refresh"],"msg":"Input should be a valid boolean, unable to interpret input","input":"abc"},` +
 				`{"type":"bool_parsing","loc":["query","with_quality"],"msg":"Input should be a valid boolean, unable to interpret input","input":"abc"}` +
 				`]}`,
@@ -68,13 +68,13 @@ func TestIPTVChannelsQueryValidation(t *testing.T) {
 		})
 	}
 
-	// 範囲制約は 422 を維持する (既存挙動の回帰防止)
+	// 範囲制約の 422 を実機 Python の本文 (ctx つき) で固定する
 	for _, testCase := range []struct {
 		query    string
 		expected string
 	}{
-		{"?page=0", `{"detail":[{"type":"greater_than_equal","loc":["query","page"],"msg":"Input should be greater than or equal to 1","input":"0"}]}`},
-		{"?per_page=501", `{"detail":[{"type":"less_than_equal","loc":["query","per_page"],"msg":"Input should be less than or equal to 500","input":"501"}]}`},
+		{"?page=0", `{"detail":[{"type":"greater_than_equal","loc":["query","page"],"msg":"Input should be greater than or equal to 1","input":"0","ctx":{"ge":1}}]}`},
+		{"?per_page=501", `{"detail":[{"type":"less_than_equal","loc":["query","per_page"],"msg":"Input should be less than or equal to 500","input":"501","ctx":{"le":500}}]}`},
 	} {
 		recorder := doJSONRequest(t, handler, http.MethodGet, "/api/iptv/channels"+testCase.query, "", "", "")
 		assertIPTVValidationBody(t, recorder, testCase.expected)
