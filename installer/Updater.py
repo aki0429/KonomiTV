@@ -15,6 +15,13 @@ import ruamel.yaml
 from rich import print
 from rich.padding import Padding
 
+from Constants import (
+    BuildGitRepositoryURL,
+    BuildSourceCodeZipURL,
+    GetSourceBranch,
+    GetSourceCodeArchiveDirectoryName,
+    GetThirdpartyArchive,
+)
 from Utils import (
     CreateBasicInfiniteProgress,
     CreateDownloadInfiniteProgress,
@@ -223,6 +230,27 @@ def Updater(version: str) -> None:
             ])
             return  # 処理中断
 
+        # リモート (origin) がこのフォークのリポジトリ以外を指している場合は、このフォークのリポジトリに差し替える
+        ## 本家のインストーラーでインストールした KonomiTV をこのフォークのインストーラーでアップデートする場合、
+        ## origin が本家 (tsukumijima/KonomiTV) を指したままなので、フォークのブランチを取得できない
+        current_origin_url = subprocess.run(
+            args = ['git', 'remote', 'get-url', 'origin'],
+            cwd = update_path,  # カレントディレクトリを KonomiTV のインストールフォルダに設定
+            stdout = subprocess.PIPE,  # 標準出力をキャプチャする
+            stderr = subprocess.DEVNULL,  # 標準エラー出力を表示しない
+            text = True,  # 出力をテキストとして取得する
+        ).stdout.strip()
+        if current_origin_url != BuildGitRepositoryURL():
+            result = RunSubprocess(
+                'KonomiTV のソースコードの取得元をこのフォークに切り替えています…',
+                ['git', 'remote', 'set-url', 'origin', BuildGitRepositoryURL()],
+                cwd = update_path,  # カレントディレクトリを KonomiTV のインストールフォルダに設定
+                error_message = 'KonomiTV のソースコードの取得元の切り替え中に予期しないエラーが発生しました。',
+                error_log_name = 'Git のエラーログ',
+            )
+            if result is False:
+                return  # 処理中断
+
         # リモートの変更内容とタグを取得
         result = RunSubprocess(
             'KonomiTV のソースコードを Git でダウンロードしています…',
@@ -235,15 +263,13 @@ def Updater(version: str) -> None:
             return  # 処理中断
 
         # 新しいバージョンのコードをチェックアウト
-        ## latest の場合は master ブランチを、それ以外は指定されたバージョンのタグをチェックアウト
-        ## git fetch はローカルの master ブランチを更新しないため、latest の場合は -B でローカルの master ブランチを
-        ## リモートの最新 (origin/master) に合わせて作り直してからチェックアウトする
-        ## 単に master をチェックアウトすると、初回インストール時点などの古いローカルの master ブランチのままになってしまう
-        checkout_args: list[str | Path]
-        if version == 'latest':
-            checkout_args = ['git', 'checkout', '--force', '-B', 'master', 'origin/master']
-        else:
-            checkout_args = ['git', 'checkout', '--force', f'v{version}']
+        ## git fetch はローカルのブランチを更新しないため、-B でローカルのブランチをリモートの最新 (origin/<ブランチ>) に
+        ## 合わせて作り直してからチェックアウトする
+        ## 単にブランチをチェックアウトすると、初回インストール時点などの古いローカルのブランチのままになってしまう
+        ## 本家のインストーラーはバージョンタグをチェックアウトしていたが、このフォークはバージョンタグを切らずに
+        ## ブランチ単位で配布しているため、取得するブランチを Constants.py の定義から引く
+        source_branch = GetSourceBranch(version)
+        checkout_args: list[str | Path] = ['git', 'checkout', '--force', '-B', source_branch, f'origin/{source_branch}']
         result = RunSubprocess(
             'KonomiTV のソースコードを更新しています…',
             checkout_args,
@@ -292,11 +318,8 @@ def Updater(version: str) -> None:
         progress = CreateDownloadInfiniteProgress()
 
         # GitHub からソースコードをダウンロード
-        ## latest の場合は master ブランチを、それ以外は指定されたバージョンのタグをダウンロード
-        if version == 'latest':
-            source_code_response = requests.get('https://codeload.github.com/tsukumijima/KonomiTV/zip/refs/heads/master')
-        else:
-            source_code_response = requests.get(f'https://codeload.github.com/tsukumijima/KonomiTV/zip/refs/tags/v{version}')
+        ## latest の場合は開発版のブランチを、それ以外は安定版のブランチをダウンロードする
+        source_code_response = requests.get(BuildSourceCodeZipURL(version))
         task_id = progress.add_task('', total=None)
 
         # ダウンロードしたデータを随時一時ファイルに書き込む
@@ -310,13 +333,12 @@ def Updater(version: str) -> None:
         source_code_file.close()  # 解凍する前に close() してすべて書き込ませておくのが重要
 
         # ソースコードを解凍して展開
+        ## zip アーカイブにはリポジトリ名とブランチ名を連結したフォルダ (例: KonomiTV-iptv-master) に
+        ## すべてのファイルが格納されているため、そのフォルダの中身を既存のファイルに上書きコピーしてから削除する
+        source_code_archive_directory_name = GetSourceCodeArchiveDirectoryName(version)
         shutil.unpack_archive(source_code_file.name, update_path.parent, format='zip')
-        if version == 'latest':
-            shutil.copytree(update_path.parent / 'KonomiTV-master/', update_path, dirs_exist_ok=True)
-            shutil.rmtree(update_path.parent / 'KonomiTV-master/', ignore_errors=True)
-        else:
-            shutil.copytree(update_path.parent / f'KonomiTV-{version}/', update_path, dirs_exist_ok=True)
-            shutil.rmtree(update_path.parent / f'KonomiTV-{version}/', ignore_errors=True)
+        shutil.copytree(update_path.parent / source_code_archive_directory_name, update_path, dirs_exist_ok=True)
+        shutil.rmtree(update_path.parent / source_code_archive_directory_name, ignore_errors=True)
         Path(source_code_file.name).unlink()
 
     # ***** サーバー設定ファイル (config.yaml) の更新 *****
@@ -359,20 +381,12 @@ def Updater(version: str) -> None:
         print(Padding('サードパーティーライブラリをダウンロードしています…', (1, 2, 0, 2)))
         progress = CreateDownloadProgress()
 
-        # GitHub からサードパーティーライブラリをダウンロード
-        if version == 'latest':
-            thirdparty_base_url = 'https://nightly.link/tsukumijima/KonomiTV/workflows/build_thirdparty.yaml/master/'
-        else:
-            thirdparty_base_url = f'https://github.com/tsukumijima/KonomiTV/releases/download/v{version}/'
-        thirdparty_compressed_file_name = 'thirdparty-windows.7z'
-        if platform_type == 'Linux' and is_arm_device is False:
-            thirdparty_compressed_file_name = 'thirdparty-linux.tar.xz'
-        elif platform_type == 'Linux' and is_arm_device is True:
-            thirdparty_compressed_file_name = 'thirdparty-linux-arm.tar.xz'
-        thirdparty_url = thirdparty_base_url + thirdparty_compressed_file_name
-        if version == 'latest':
-            thirdparty_url = thirdparty_url + '.zip'
-        thirdparty_response = requests.get(thirdparty_url, stream=True)
+        # 本家 (tsukumijima/KonomiTV) の master 向けにビルドされたサードパーティーライブラリをダウンロードする
+        ## このフォークのソースコードは本家 master をベースにしており Python 3.13 と uv を必要とするため、
+        ## 本家のリリース版 (v0.14.1) 向けのサードパーティーライブラリ (Python 3.11 + Poetry 構成) は使えない
+        ## 配布元の定義は Constants.py に集約している
+        thirdparty_archive = GetThirdpartyArchive(platform_type, is_arm_device)
+        thirdparty_response = requests.get(thirdparty_archive.url, stream=True)
         task_id = progress.add_task('', total=float(thirdparty_response.headers['Content-length']))
 
         # ダウンロードしたデータを随時一時ファイルに書き込む
@@ -392,12 +406,12 @@ def Updater(version: str) -> None:
             # 更新前に、前バージョンの古いサードパーティーライブラリを削除
             shutil.rmtree(update_path / 'server/thirdparty/', ignore_errors=True)
 
-            # latest のみ、圧縮ファイルがさらに zip で包まれているので、それを解凍
+            # アーカイブがさらに zip で包まれている場合 (nightly.link のアーティファクト) は、先にそれを解凍しておく
             thirdparty_compressed_file_path = thirdparty_compressed_file.name
-            if version == 'latest':
+            if thirdparty_archive.is_zip_wrapped is True:
                 with zipfile.ZipFile(thirdparty_compressed_file.name, mode='r') as zip_file:
                     zip_file.extractall(update_path / 'server/')
-                thirdparty_compressed_file_path = update_path / 'server' / thirdparty_compressed_file_name
+                thirdparty_compressed_file_path = update_path / 'server' / thirdparty_archive.file_name
                 Path(thirdparty_compressed_file.name).unlink()
 
             if platform_type == 'Windows':

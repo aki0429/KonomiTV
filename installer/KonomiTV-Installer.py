@@ -16,18 +16,25 @@ from rich.prompt import Prompt
 from rich.rule import Rule
 from rich.style import Style
 
+from Constants import (
+    INSTALLER_EDITION,
+    SOURCE_DEVELOPMENT_BRANCH,
+    SOURCE_REPOSITORY,
+    SOURCE_STABLE_BRANCH,
+)
 from Installer import Installer
 from Uninstaller import Uninstaller
 from Updater import Updater
 from Utils import CreateTable, CustomPrompt, GetNetworkDriveList, ShowPanel
 
 
-# インストール or アップデート対象の KonomiTV バージョン
+# インストール or アップデート対象の KonomiTV バージョン (本家のバージョンに追従している)
+## このフォークは本家のバージョンタグを切らずにブランチ単位で配布しているため、インストールするブランチは Constants.py 側で定義する
 TARGET_VERSION = '0.14.1'
 
 def ShowHeader():
     print(Padding(Rule(
-        title = f'KonomiTV version {TARGET_VERSION} Installer',
+        title = f'KonomiTV version {TARGET_VERSION} {INSTALLER_EDITION} Installer',
         characters='─',
         style = Style(color='#E33157'),
         align = 'center',
@@ -40,7 +47,7 @@ def main():
     ## 基本的には UAC で昇格した時点で conhost.exe が起動されるため、タイトルが設定されていないとみすぼらしい
     # ref: https://stackoverflow.com/a/20864842/17124142
     if os.name == 'nt':
-        ctypes.windll.kernel32.SetConsoleTitleW(f'KonomiTV version {TARGET_VERSION} Installer')
+        ctypes.windll.kernel32.SetConsoleTitleW(f'KonomiTV version {TARGET_VERSION} {INSTALLER_EDITION} Installer')
 
     # Windows のみ、ログオン中ユーザーのすべてのネットワークドライブのマウントを試みる
     ## UAC で昇格した環境では、ログオン中ユーザーのネットワークドライブはマウントされていない (Windows の制限)
@@ -77,6 +84,10 @@ def main():
     ShowHeader()
 
     print(Padding('KonomiTV のインストール/アップデート/アンインストールを行うインストーラーです。', (1, 2, 0, 2)))
+    print(Padding(
+        f'このインストーラーは [bold]{SOURCE_REPOSITORY}[/bold] の [bold]{SOURCE_STABLE_BRANCH}[/bold] ブランチをインストールします。',
+        (0, 2, 1, 2),
+    ))
 
     # サポートされているアーキテクチャ
     ## AMD64 : Windows (x64)
@@ -114,18 +125,26 @@ def main():
         print(Padding(table, (1, 2, 0, 2)))
 
     ShowPanel([
-        f'01. この PC 上に KonomiTV (version {TARGET_VERSION}) を[bold]新規インストール[/bold]するには [bold cyan]1[/bold cyan] を、',
-        f'    この PC 上の KonomiTV を version {TARGET_VERSION} へ[bold]アップデート[/bold]するには [bold cyan]2[/bold cyan] を、',
+        f'01. この PC 上に KonomiTV ({SOURCE_REPOSITORY} の {SOURCE_STABLE_BRANCH} ブランチ) を[bold]新規インストール[/bold]するには [bold cyan]1[/bold cyan] を、',
+        f'    この PC 上の KonomiTV を {SOURCE_STABLE_BRANCH} ブランチの最新へ[bold]アップデート[/bold]するには [bold cyan]2[/bold cyan] を、',
         '    この PC 上の KonomiTV を[bold]アンインストール[/bold]するには [bold cyan]3[/bold cyan] を入力してください。',
         '',
-        '    master ブランチの最新コミットが反映されている[bold]開発版をインストール[/bold]するには [bold cyan]4[/bold cyan] を、',
+        f'    {SOURCE_DEVELOPMENT_BRANCH} ブランチの最新コミットが反映されている[bold]開発版をインストール[/bold]するには [bold cyan]4[/bold cyan] を、',
         '    [bold]開発版へアップデート[/bold]するには [bold cyan]5[/bold cyan] を入力してください。',
         '    なお、開発版の安定動作は保証されていないため、予めご了承の上ご利用ください。',
+        # 安定版と開発版が同じブランチを指している場合は、その旨を明示する (ブランチを分けたら自動的に表示されなくなる)
+        *([f'    ※ このフォークでは安定版も開発版も {SOURCE_STABLE_BRANCH} ブランチを指しています。']
+          if SOURCE_STABLE_BRANCH == SOURCE_DEVELOPMENT_BRANCH else []),
     ], padding=(1, 2, 1, 2))
 
     # 実行タイプ (インストール or アップデート or アンインストール)
     ## choices を指定することで、自動的にバリデーションが行われる（超便利）
-    run_type = int(CustomPrompt.ask(f'v{TARGET_VERSION} をインストール (1) / v{TARGET_VERSION} へアップデート (2) / アンインストール (3)\n  開発版をインストール (4) / 開発版へアップデート (5)', default='1', choices=['1', '2', '3', '4', '5']))
+    run_type = int(CustomPrompt.ask(
+        f'{SOURCE_STABLE_BRANCH} ブランチをインストール (1) / {SOURCE_STABLE_BRANCH} ブランチの最新へアップデート (2) / アンインストール (3)\n'
+        f'  開発版 ({SOURCE_DEVELOPMENT_BRANCH}) をインストール (4) / 開発版へアップデート (5)',
+        default = '1',
+        choices = ['1', '2', '3', '4', '5'],
+    ))
 
     # Windows: コンソール出力前のおまじないとして、適当な PowerShell コマンドを実行する
     ## なぜ直るのかは全くもって謎だが、一度 PowerShell コマンドを実行しておくことで、print(Padding('Test', (1, 2, 0, 2)) のように

@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - master
+      - iptv-master
     paths:
       - 'installer/**'
       - '.github/workflows/build_installer.yaml'

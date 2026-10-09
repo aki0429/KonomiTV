@@ -39,6 +39,7 @@
     - [Linux - VCEEncC](#linux---vceencc)
     - [Linux - rkmppenc](#linux---rkmppenc)
   - [Tailscale の導入](#tailscale-の導入)
+- [このフォークのインストーラー](#このフォークのインストーラー)
 - [サーバーのインストール/アップデート](#サーバーのインストールアップデート)
   - [安定版と開発版について](#安定版と開発版について)
   - [Windows](#windows-1)
@@ -435,6 +436,38 @@ KonomiTV を共有したい家族や親戚に Tailscale アカウントを作成
 100台までは無料ですし (逸般の誤家庭でなければ十分すぎる)、この機会にぜひ導入をおすすめします。
 
 <img width="100%" src="https://github.com/user-attachments/assets/8e91d6db-1988-4da1-bd10-3c11870fa3c8"><br>
+
+## このフォークのインストーラー
+
+**このリポジトリは [tsukumijima/KonomiTV](https://github.com/tsukumijima/KonomiTV) のフォークで、IPTV (M3U プレイリスト) 視聴とキャプチャギャラリーを追加した版です。**  
+そのため、以降で説明している本家のインストーラー (本家 Releases の `KonomiTV-Installer.exe` / `KonomiTV-Installer.elf`) を使うと、本家版の KonomiTV がインストールされます。  
+**このフォーク版をインストールする場合は、下記のフォーク専用インストーラーを使ってください。**
+
+フォーク専用インストーラーは、本家のインストーラーをベースに、ソースコードとサードパーティーライブラリの取得元をこのフォーク向けに差し替えたものです。  
+メニューの `1` / `2` (安定版) と `4` / `5` (開発版) は、どちらも `iptv-master` ブランチ (IPTV 対応 + キャプチャギャラリー) の最新コミットをインストールします。
+
+- **ソースコード**: このフォーク (`aki0429/KonomiTV`) の `iptv-master` ブランチ
+- **サードパーティーライブラリ (FFmpeg・QSVEncC・NVEncC・Akebi など)**: 本家 master ブランチ向けにビルドされた GitHub Actions のアーティファクト ([nightly.link](https://nightly.link/) 経由で取得)
+  - このフォークのソースコードは本家 master をベースにしており Python 3.13 + uv を必要とするため、本家のリリース版 (v0.14.1) 向けのサードパーティーライブラリ (Python 3.11 + Poetry 構成) は利用できません
+
+取得元の定義は [installer/Constants.py](installer/Constants.py) にまとまっているので、ブランチや配布元を変えたい場合はこのファイルを編集してください。
+
+**入手方法は次の2通りです。**
+
+1. **このフォークの Releases からダウンロードする**  
+   GitHub Actions の `Publish Release` ワークフローを手動実行すると、インストーラーがビルドされて [Releases](https://github.com/aki0429/KonomiTV/releases) に公開されます。
+2. **ローカルでビルドする**  
+   `installer/` ディレクトリで下記のコマンドを実行すると、`installer/dist/` に実行ファイルが生成されます (Windows では `KonomiTV-Installer.exe`、Linux では `KonomiTV-Installer.elf`) 。
+
+   ```bash
+   cd installer/
+   uv sync --frozen
+   uv run --frozen pyinstaller --clean KonomiTV-Installer.spec
+   ```
+
+> [!NOTE]  
+> 本家版でインストールした KonomiTV をこのフォークのインストーラーでアップデートすると、アップデーターがソースコードの取得元 (Git の `origin`) をこのフォークに差し替えます。  
+> 本家版に戻したい場合は、アンインストールしてから本家のインストーラーで入れ直してください。
 
 ## サーバーのインストール/アップデート
 

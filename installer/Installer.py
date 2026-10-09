@@ -19,6 +19,14 @@ import ruamel.yaml
 from rich import print
 from rich.padding import Padding
 
+from Constants import (
+    SOURCE_REPOSITORY,
+    BuildGitRepositoryURL,
+    BuildSourceCodeZipURL,
+    GetSourceBranch,
+    GetSourceCodeArchiveDirectoryName,
+    GetThirdpartyArchive,
+)
 from Utils import (
     CreateBasicInfiniteProgress,
     CreateDownloadInfiniteProgress,
@@ -195,7 +203,7 @@ def Installer(version: str) -> None:
     table_03.add_row('EDCB は、220122 以降のバージョンの xtne6f / tkntrec 版の EDCB にのみ対応しています。')
     table_03.add_row('「人柱版10.66」などの古いバージョンをお使いの場合は、EDCB のアップグレードが必要です。')
     table_03.add_row('KonomiTV と連携するには、さらに EDCB に事前の設定が必要になります。')
-    table_03.add_row('詳しくは [bright_blue]https://github.com/tsukumijima/KonomiTV[/bright_blue] をご覧ください。')
+    table_03.add_row(f'詳しくは [bright_blue]https://github.com/{SOURCE_REPOSITORY}[/bright_blue] をご覧ください。')
     table_03.add_row(CreateRule())
     table_03.add_row('Mirakurun は、3.9.0 以降のバージョンを推奨します。')
     table_03.add_row('3.8.0 以下のバージョンでも動作しますが、諸問題で推奨しません。')
@@ -528,11 +536,13 @@ def Installer(version: str) -> None:
     if is_git_installed is True:
 
         # git clone でソースコードをダウンロード
-        ## latest の場合は master ブランチを、それ以外は指定されたバージョンのタグをチェックアウト
-        revision = 'master' if version == 'latest' else f'v{version}'
+        ## latest の場合は開発版のブランチを、それ以外は安定版のブランチをチェックアウトする
+        ## 本家のインストーラーはバージョンタグをチェックアウトしていたが、このフォークはバージョンタグを切らずに
+        ## ブランチ単位で配布しているため、取得するブランチを Constants.py の定義から引く
+        revision = GetSourceBranch(version)
         result = RunSubprocess(
             'KonomiTV のソースコードを Git でダウンロードしています…',
-            ['git', 'clone', '-b', revision, 'https://github.com/tsukumijima/KonomiTV.git', install_path.name],
+            ['git', 'clone', '-b', revision, BuildGitRepositoryURL(), install_path.name],
             cwd = install_path.parent,
             error_message = 'KonomiTV のソースコードのダウンロード中に予期しないエラーが発生しました。',
             error_log_name = 'Git のエラーログ',
@@ -549,11 +559,8 @@ def Installer(version: str) -> None:
         progress = CreateDownloadInfiniteProgress()
 
         # GitHub からソースコードをダウンロード
-        ## latest の場合は master ブランチを、それ以外は指定されたバージョンのタグをダウンロード
-        if version == 'latest':
-            source_code_response = requests.get('https://codeload.github.com/tsukumijima/KonomiTV/zip/refs/heads/master')
-        else:
-            source_code_response = requests.get(f'https://codeload.github.com/tsukumijima/KonomiTV/zip/refs/tags/v{version}')
+        ## latest の場合は開発版のブランチを、それ以外は安定版のブランチをダウンロードする
+        source_code_response = requests.get(BuildSourceCodeZipURL(version))
         task_id = progress.add_task('', total=None)
 
         # ダウンロードしたデータを随時一時ファイルに書き込む
@@ -567,11 +574,10 @@ def Installer(version: str) -> None:
         source_code_file.close()  # 解凍する前に close() してすべて書き込ませておくのが重要
 
         # ソースコードを解凍して展開
+        ## zip アーカイブにはリポジトリ名とブランチ名を連結したフォルダ (例: KonomiTV-iptv-master) に
+        ## すべてのファイルが格納されているため、そのフォルダをインストール先のフォルダへ移動させる
         shutil.unpack_archive(source_code_file.name, install_path.parent, format='zip')
-        if version == 'latest':
-            shutil.move(install_path.parent / 'KonomiTV-master/', install_path)
-        else:
-            shutil.move(install_path.parent / f'KonomiTV-{version}/', install_path)
+        shutil.move(install_path.parent / GetSourceCodeArchiveDirectoryName(version), install_path)
         Path(source_code_file.name).unlink()
 
     # ***** リッスンポートの重複チェック *****
@@ -644,20 +650,12 @@ def Installer(version: str) -> None:
         print(Padding('サードパーティーライブラリをダウンロードしています…', (1, 2, 0, 2)))
         progress = CreateDownloadProgress()
 
-        # GitHub からサードパーティーライブラリをダウンロード
-        if version == 'latest':
-            thirdparty_base_url = 'https://nightly.link/tsukumijima/KonomiTV/workflows/build_thirdparty.yaml/master/'
-        else:
-            thirdparty_base_url = f'https://github.com/tsukumijima/KonomiTV/releases/download/v{version}/'
-        thirdparty_compressed_file_name = 'thirdparty-windows.7z'
-        if platform_type == 'Linux' and is_arm_device is False:
-            thirdparty_compressed_file_name = 'thirdparty-linux.tar.xz'
-        elif platform_type == 'Linux' and is_arm_device is True:
-            thirdparty_compressed_file_name = 'thirdparty-linux-arm.tar.xz'
-        thirdparty_url = thirdparty_base_url + thirdparty_compressed_file_name
-        if version == 'latest':
-            thirdparty_url = thirdparty_url + '.zip'
-        thirdparty_response = requests.get(thirdparty_url, stream=True)
+        # 本家 (tsukumijima/KonomiTV) の master 向けにビルドされたサードパーティーライブラリをダウンロードする
+        ## このフォークのソースコードは本家 master をベースにしており Python 3.13 と uv を必要とするため、
+        ## 本家のリリース版 (v0.14.1) 向けのサードパーティーライブラリ (Python 3.11 + Poetry 構成) は使えない
+        ## 配布元の定義は Constants.py に集約している
+        thirdparty_archive = GetThirdpartyArchive(platform_type, is_arm_device)
+        thirdparty_response = requests.get(thirdparty_archive.url, stream=True)
         task_id = progress.add_task('', total=float(thirdparty_response.headers['Content-length']))
 
         # ダウンロードしたデータを随時一時ファイルに書き込む
@@ -674,12 +672,12 @@ def Installer(version: str) -> None:
         progress.add_task('', total=None)
         with progress:
 
-            # latest のみ、圧縮ファイルがさらに zip で包まれているので、それを解凍
+            # アーカイブがさらに zip で包まれている場合 (nightly.link のアーティファクト) は、先にそれを解凍しておく
             thirdparty_compressed_file_path = thirdparty_compressed_file.name
-            if version == 'latest':
+            if thirdparty_archive.is_zip_wrapped is True:
                 with zipfile.ZipFile(thirdparty_compressed_file.name, mode='r') as zip_file:
                     zip_file.extractall(install_path / 'server/')
-                thirdparty_compressed_file_path = install_path / 'server' / thirdparty_compressed_file_name
+                thirdparty_compressed_file_path = install_path / 'server' / thirdparty_archive.file_name
                 Path(thirdparty_compressed_file.name).unlink()
 
             if platform_type == 'Windows':

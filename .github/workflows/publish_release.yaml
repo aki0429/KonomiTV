@@ -1,39 +1,40 @@
 
 name: Publish Release
 
-# release ブランチに変更があったとき or 手動実行
+# 手動実行 or release ブランチへのリリースコミットの push で実行する
 on:
   push:
     branches:
       - release
   workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        description: 'リリースするバージョン (例: 0.14.1-iptv.1, v はつけない)'
+        required: true
+        default: ''
 
 # ジョブの定義
 jobs:
 
   # インストーラーのビルド
-  ## リリースコミットでのみ実行する
+  ## このリポジトリ (フォーク) の build_installer.yaml を再利用する
+  ## 本家 (tsukumijima/KonomiTV) のワークフローを参照すると本家のソースコードがビルドされてしまうため、必ず自前のものを参照する
   build_installer:
-    if: contains(github.event.head_commit.message, 'Release:')
-    uses: tsukumijima/KonomiTV/.github/workflows/build_installer.yaml@master
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'Release:')
+    uses: ./.github/workflows/build_installer.yaml
 
-  # サードパーティーライブラリのビルド
-  ## リリースコミットでのみ実行する
-  build_thirdparty:
-    if: contains(github.event.head_commit.message, 'Release:')
-    uses: tsukumijima/KonomiTV/.github/workflows/build_thirdparty.yaml@master
-
-  # 両方のビルドが終わったら、タグ付けしてリリースを公開
-  ## リリースコミットでのみ実行する
+  # ビルドが終わったら、タグ付けしてリリースを公開
+  ## サードパーティーライブラリはこのフォークではビルドせず、インストール時に本家 master のビルド済みアーカイブを
+  ## 取得する構成のため、リリースには添付しない (installer/Constants.py の定義を参照)
   publish_release:
     runs-on: ubuntu-22.04
-    if: contains(github.event.head_commit.message, 'Release:')
     needs:
       - build_installer
-      - build_thirdparty
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'Release:')
     steps:
 
-      # ビルド済みのインストーラーとサードパーティーライブラリをダウンロード
+      # ビルド済みのインストーラーをダウンロード
       - name: Download Installer (for Windows)
         uses: actions/download-artifact@v4
         with:
@@ -49,56 +50,34 @@ jobs:
         with:
           name: KonomiTV-Installer-ARM.elf
           path: ${{ github.workspace }}/
-      - name: Download Thirdparty Library (for Windows)
-        uses: actions/download-artifact@v4
-        with:
-          name: thirdparty-windows.7z
-          path: ${{ github.workspace }}/
-      - name: Download Thirdparty Library (for Linux)
-        uses: actions/download-artifact@v4
-        with:
-          name: thirdparty-linux.tar.xz
-          path: ${{ github.workspace }}/
-      - name: Download Thirdparty Library (for Linux ARM)
-        uses: actions/download-artifact@v4
-        with:
-          name: thirdparty-linux-arm.tar.xz
-          path: ${{ github.workspace }}/
+
+      # リリースするバージョンを決定
+      ## 手動実行時は入力値から、release ブランチへの push 時はリリースコミットのメッセージから取得する
+      - name: Resolve Version
+        id: resolve_version
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then
+            echo version="$INPUT_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo version="$(echo "$COMMIT_MESSAGE" | sed -e 's/Release: version //')" >> $GITHUB_OUTPUT
+          fi
 
       # KonomiTV のソースコードをチェックアウト
+      ## リリースのタグを対応するコミット (iptv-master ブランチ) に付けるために必要
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          path: KonomiTV
-          token: ${{ secrets.GIT_PUSH_TOKEN }}
-
-      # KonomiTV のバージョン番号をリリースコミットのコミットメッセージから取得
-      - name: Get Version
-        id: get_version
-        env:
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-        run: |
-          echo version=$(echo "$COMMIT_MESSAGE" | sed -e 's/Release: version //') >> $GITHUB_OUTPUT
-
-      # リリースコミットに対応する新バージョンのタグを release ブランチで作成
-      ## この git push origin --tags をトリガーに Docker イメージを公開するワークフローが実行される
-      ## Docker イメージのビルドには新バージョンのサードパーティーライブラリが必要なため、リリースを作成する直前に行う必要がある
-      ## Docker イメージを公開するワークフロー側でも、サードパーティーライブラリが確実にアップロードされるまで1分ほど待つようにしている
-      - name: Create New Version Tag
-        working-directory: KonomiTV
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git switch release
-          git tag v${{ steps.get_version.outputs.version }} release
-          git push origin --tags
 
       # リリースを作成
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
-          artifacts: 'KonomiTV-Installer.exe,KonomiTV-Installer.elf,KonomiTV-Installer-ARM.elf,thirdparty-windows.7z,thirdparty-linux.tar.xz,thirdparty-linux-arm.tar.xz'
+          artifacts: 'KonomiTV-Installer.exe,KonomiTV-Installer.elf,KonomiTV-Installer-ARM.elf'
           generateReleaseNotes: true
-          name: KonomiTV (β) ${{ steps.get_version.outputs.version }}
-          tag: v${{ steps.get_version.outputs.version }}
+          name: KonomiTV IPTV Edition ${{ steps.resolve_version.outputs.version }}
+          tag: v${{ steps.resolve_version.outputs.version }}
+          commit: iptv-master
