@@ -485,3 +485,101 @@ func TestCaptureThumbnailMaxSize(t *testing.T) {
 		t.Errorf("PageSize = %d, want 36", captures.PageSize)
 	}
 }
+
+// captureThumbnailBoolParsingDetail は bool_parsing の 1 件分の期待値を作る。
+func captureThumbnailBoolParsingDetail(input any) map[string]any {
+	return map[string]any{
+		"type":  "bool_parsing",
+		"loc":   []any{"query", "thumbnail"},
+		"msg":   "Input should be a valid boolean, unable to interpret input",
+		"input": input,
+	}
+}
+
+// assertCaptureThumbnailBoolParsing は thumbnail の検証エラー配列を比較する。
+func assertCaptureThumbnailBoolParsing(t *testing.T, recorder *httptest.ResponseRecorder, input any) {
+	t.Helper()
+	if recorder.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want 422 (body: %s)", recorder.Code, recorder.Body.String())
+	}
+	expected := map[string]any{"detail": []any{captureThumbnailBoolParsingDetail(input)}}
+	var actual any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &actual); err != nil {
+		t.Fatal(err)
+	}
+	if !deepEqualJSONAny(expected, actual) {
+		t.Errorf("body mismatch\n got: %s", recorder.Body.String())
+	}
+}
+
+// TestCaptureImageThumbnailBoolValidation は thumbnail が bool として解釈できないときに
+// ファイル存在確認 (404) より先に 422 検証エラー配列を返すことを検証する。
+//
+// 実機 Python の実測:
+//
+//	GET /api/captures/sample?thumbnail=abc → 422 {"detail": [{"type": "bool_parsing", ...}]}
+//
+// FastAPI はクエリパラメータをハンドラ本体より先に検証するため、
+// ファイルが存在しない場合でもファイル未存在の 404 ではなく検証エラーが優先される。
+func TestCaptureImageThumbnailBoolValidation(t *testing.T) {
+	server, _ := setupCapturesTestServer(t)
+	handler := server.Handler()
+
+	// ファイルが存在しない状態でも検証エラーが優先される
+	assertCaptureThumbnailBoolParsing(t, doJSONRequest(t, handler, http.MethodGet, "/api/captures/not-found.jpg?thumbnail=abc", "", "", ""), "abc")
+	// 空文字も bool として解釈できない
+	assertCaptureThumbnailBoolParsing(t, doJSONRequest(t, handler, http.MethodGet, "/api/captures/not-found.jpg?thumbnail=", "", "", ""), "")
+
+	// 負対照: thumbnail が妥当な bool (false) なら検証を通過し、ファイル未存在の 404 になる
+	response := doJSONRequest(t, handler, http.MethodGet, "/api/captures/not-found.jpg?thumbnail=false", "", "", "")
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("thumbnail=false status = %d, want 404 (body: %s)", response.Code, response.Body.String())
+	}
+	var body errorResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Detail != "Capture file not found" {
+		t.Errorf("detail = %q, want %q", body.Detail, "Capture file not found")
+	}
+}
+
+// TestCaptureImageThumbnailBoolAccepted は thumbnail が受理する bool 値
+// (真偽各 6 種・大文字小文字を無視) が FastAPI/Pydantic と同じように解釈されることを検証する。
+func TestCaptureImageThumbnailBoolAccepted(t *testing.T) {
+	server, uploadFolder := setupCapturesTestServer(t)
+	copyCaptureFixture(t, uploadFolder, "capture.jpg")
+	handler := server.Handler()
+
+	// true に解釈される値はサムネイル JPEG (長辺 400) を返す
+	trueValues := []string{"true", "1", "yes", "on", "t", "y", "TRUE", "Yes", "ON"}
+	for _, value := range trueValues {
+		response := doJSONRequest(t, handler, http.MethodGet, "/api/captures/capture.jpg?thumbnail="+value, "", "", "")
+		if response.Code != http.StatusOK {
+			t.Fatalf("thumbnail=%s status = %d (body: %s)", value, response.Code, response.Body.String())
+		}
+		config, format, err := decodeImageConfig(response.Body.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if format != "jpeg" || config.Width != 267 || config.Height != 400 {
+			t.Errorf("thumbnail=%s = %s %dx%d, want jpeg 267x400", value, format, config.Width, config.Height)
+		}
+	}
+
+	// false に解釈される値は元の画像 (1200x800) をそのまま返す
+	falseValues := []string{"false", "0", "no", "off", "f", "n", "FALSE", "Off"}
+	for _, value := range falseValues {
+		response := doJSONRequest(t, handler, http.MethodGet, "/api/captures/capture.jpg?thumbnail="+value, "", "", "")
+		if response.Code != http.StatusOK {
+			t.Fatalf("thumbnail=%s status = %d (body: %s)", value, response.Code, response.Body.String())
+		}
+		config, format, err := decodeImageConfig(response.Body.Bytes())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if format != "jpeg" || config.Width != 1200 || config.Height != 800 {
+			t.Errorf("thumbnail=%s = %s %dx%d, want original jpeg 1200x800", value, format, config.Width, config.Height)
+		}
+	}
+}

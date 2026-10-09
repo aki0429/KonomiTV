@@ -3,8 +3,8 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/aki0429/KonomiTV/server-go/internal/database"
@@ -51,31 +51,34 @@ func (s *Server) handleSeriesSearch(w http.ResponseWriter, r *http.Request) {
 
 // serveSeriesList はシリーズ番組の一覧・検索 API の共通処理。
 func (s *Server) serveSeriesList(w http.ResponseWriter, r *http.Request, searchQuery string) {
-	query := r.URL.Query()
+	v := newFastAPIValidation(r)
 
-	// order は "desc" か "asc" (Python 版は Literal 型でバリデーションされる)
-	order := query.Get("order")
-	if order == "" {
-		order = "desc"
+	// order は Literal['desc', 'asc'] で、宣言順に従って page より先に検証する。
+	// 欠落時は既定値 'desc' を使う (missing にはしない) 。
+	order := v.queryLiteral("order", []string{"desc", "asc"}, "desc", "'desc' or 'asc'")
+
+	// page は int 型で既定値 1。指定があるときだけ int_parsing を検証し、
+	// 欠落時は既定値 1 を使う (missing にはしない) 。
+	page := 1
+	if _, exists := r.URL.Query()["page"]; exists {
+		page = int(v.queryInt("page"))
 	}
-	if order != "desc" && order != "asc" {
-		writeError(w, http.StatusUnprocessableEntity, "Invalid order")
+
+	// 検証エラー (literal_error / int_parsing) があれば宣言順の配列で 422 を返す
+	if v.writeIfInvalid(w) {
 		return
 	}
 
-	page := 1
-	if value := query.Get("page"); value != "" {
-		parsed, err := strconv.Atoi(value)
-		if err != nil {
-			writeError(w, http.StatusUnprocessableEntity, "Invalid page")
-			return
-		}
-		page = parsed
+	// ページ番号から OFFSET を求める。Python の int は上限がないため、
+	// int 演算がオーバーフローするほど大きいページでも結果が空になる値へ寄せる
+	offset := (page - 1) * seriesPageSize
+	if page > 1 && page > math.MaxInt/seriesPageSize {
+		offset = math.MaxInt
 	}
 
 	// シリーズ番組の一覧を取得する
 	seriesList, total, err := database.ListSeries(
-		r.Context(), s.db, searchQuery, order == "desc", (page-1)*seriesPageSize, seriesPageSize,
+		r.Context(), s.db, searchQuery, order == "desc", offset, seriesPageSize,
 	)
 	if err != nil {
 		s.logger.Error("failed to list series", "error", err)
@@ -95,9 +98,12 @@ func (s *Server) serveSeriesList(w http.ResponseWriter, r *http.Request, searchQ
 
 // handleSeries は GET /api/series/{series_id} (シリーズ番組 API) を処理する。
 func (s *Server) handleSeries(w http.ResponseWriter, r *http.Request) {
-	seriesID, err := strconv.ParseInt(r.PathValue("series_id"), 10, 64)
-	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, "Invalid series_id")
+	// series_id は必須の int パスパラメータ。解析できない場合は Pydantic と同じ
+	// int_parsing (loc: ["path", "series_id"]) を 422 で返す
+	v := newFastAPIValidation(r)
+	seriesID, ok := v.pathInt(r, "series_id")
+	if !ok {
+		v.writeIfInvalid(w)
 		return
 	}
 

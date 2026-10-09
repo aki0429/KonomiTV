@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -76,24 +77,78 @@ type iptvTVUIChannelsResponse struct {
 	Channels []iptvTVUIChannelResponse `json:"channels"`
 }
 
-// parseIPTVIntQuery は整数のクエリパラメーターを検証して返す。
-// 検証に失敗した場合は FastAPI 互換のエラーメッセージを返す。
-func parseIPTVIntQuery(query url.Values, name string, defaultValue int, minValue int, maxValue int) (int, string) {
-	raw := strings.TrimSpace(query.Get(name))
-	if raw == "" {
-		return defaultValue, ""
+// iptvValidationDetail は IPTV のクエリ検証エラーを 1 件組み立てる。
+// 並行変更で validationDetail.Loc の要素型 ([]string / []any) が揺れても壊れないよう、
+// スライスリテラルではなく append で loc を組み立てる。
+func iptvValidationDetail(detailType string, message string, name string, input any) validationDetail {
+	detail := validationDetail{Type: detailType, Msg: message, Input: input}
+	detail.Loc = append(detail.Loc, "query", name)
+	return detail
+}
+
+// iptvQueryInt は既定値つきの int クエリパラメータを FastAPI/Pydantic 互換に検証して返す。
+//
+// Python 側の page / per_page は `Query(ge=..., le=...)` の既定値つきパラメータなので、
+// 欠落はエラーにせず既定値を返す。値がある場合は int への強制 (int_parsing) と
+// 範囲制約 (greater_than_equal / less_than_equal) を検証し、失敗を v に積む。
+//
+// 注: Pydantic の範囲制約エラーは ctx ({"ge": 1} / {"le": 500}) を持つが、共有の
+// validationDetail は ctx を独自に持てないため、type / msg / input のみ一致させる。
+func iptvQueryInt(v *fastapiValidation, name string, defaultValue int, ge int, le int) int {
+	if _, present := v.query[name]; !present {
+		return defaultValue
 	}
-	value, err := strconv.Atoi(raw)
+	before := len(v.details)
+	// queryInt は欠落時に missing を積むが、上の存在チェックで欠落は除外済み。
+	// 解析できない場合は int_parsing を積んで 0 を返す。
+	value := v.queryInt(name)
+	if len(v.details) > before {
+		// int_parsing を積んだ。後続の検証は既定値で継続する。
+		return defaultValue
+	}
+	// 範囲制約の input は生の文字列を使う (Pydantic は解析前の値をそのまま載せる)
+	raw := lastQueryValue(v.query[name])
+	if int(value) < ge {
+		v.details = append(v.details, iptvValidationDetail(
+			"greater_than_equal",
+			fmt.Sprintf("Input should be greater than or equal to %d", ge),
+			name, raw,
+		))
+		return defaultValue
+	}
+	if le > 0 && int(value) > le {
+		v.details = append(v.details, iptvValidationDetail(
+			"less_than_equal",
+			fmt.Sprintf("Input should be less than or equal to %d", le),
+			name, raw,
+		))
+		return defaultValue
+	}
+	return int(value)
+}
+
+// iptvQueryBool は既定値つきの bool クエリパラメータを FastAPI/Pydantic 互換に検証して返す。
+//
+// Pydantic の bool 強制は "true" / "false" / "1" / "0" / "yes" / "no" / "on" / "off" /
+// "t" / "f" / "y" / "n" (大文字小文字を問わない) を受け付け、それ以外 (空文字を含む) は
+// bool_parsing になる。前後の空白は除去しないため " true " も bool_parsing になる。
+func iptvQueryBool(v *fastapiValidation, name string) bool {
+	values, present := v.query[name]
+	if !present {
+		return false
+	}
+	raw := lastQueryValue(values)
+	// 既存の Pydantic bool 変換 (searchJSONBool) を文字列に適用して使い回す
+	parsed, err := searchJSONBool(json.RawMessage(strconv.Quote(raw)))
 	if err != nil {
-		return 0, "Input should be a valid integer, unable to parse string as an integer"
+		v.details = append(v.details, iptvValidationDetail(
+			"bool_parsing",
+			"Input should be a valid boolean, unable to interpret input",
+			name, raw,
+		))
+		return false
 	}
-	if value < minValue {
-		return 0, fmt.Sprintf("Input should be greater than or equal to %d", minValue)
-	}
-	if maxValue > 0 && value > maxValue {
-		return 0, fmt.Sprintf("Input should be less than or equal to %d", maxValue)
-	}
-	return value, ""
+	return parsed
 }
 
 // optionalQuery はクエリパラメーターを取得し、指定されていない場合は nil を返す。
@@ -116,18 +171,15 @@ func updatedAtPointer(updatedAt float64) *float64 {
 // handleIPTVChannels は GET /api/iptv/channels を処理する。
 func (s *Server) handleIPTVChannels(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
-	page, message := parseIPTVIntQuery(query, "page", 1, 1, 0)
-	if message != "" {
-		writeError(w, http.StatusUnprocessableEntity, message)
+	// FastAPI と同じ宣言順 (page, per_page, refresh, with_quality) で全件の検証エラーを集める
+	v := newFastAPIValidation(r)
+	page := iptvQueryInt(v, "page", 1, 1, 0)
+	perPage := iptvQueryInt(v, "per_page", iptvDefaultPerPage, 1, iptvMaxPerPage)
+	refresh := iptvQueryBool(v, "refresh")
+	withQuality := iptvQueryBool(v, "with_quality")
+	if v.writeIfInvalid(w) {
 		return
 	}
-	perPage, message := parseIPTVIntQuery(query, "per_page", iptvDefaultPerPage, 1, iptvMaxPerPage)
-	if message != "" {
-		writeError(w, http.StatusUnprocessableEntity, message)
-		return
-	}
-	refresh := parseBoolQuery(query.Get("refresh"))
-	withQuality := parseBoolQuery(query.Get("with_quality"))
 
 	// IPTV 機能が無効の場合は空の一覧を返す
 	if !s.config.IPTV.Enabled {
@@ -200,6 +252,13 @@ func (s *Server) handleIPTVChannels(w http.ResponseWriter, r *http.Request) {
 
 // handleIPTVCountries は GET /api/iptv/countries を処理する。
 func (s *Server) handleIPTVCountries(w http.ResponseWriter, r *http.Request) {
+	// 宣言順 (refresh) に検証する (IPTV 機能有効・無効に関わらず検証を先に行う)
+	v := newFastAPIValidation(r)
+	refresh := iptvQueryBool(v, "refresh")
+	if v.writeIfInvalid(w) {
+		return
+	}
+
 	// IPTV 機能が無効の場合は空の一覧を返す
 	if !s.config.IPTV.Enabled {
 		writeJSON(w, http.StatusOK, &iptvCountriesResponse{
@@ -208,7 +267,7 @@ func (s *Server) handleIPTVCountries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.iptv.Refresh(r.Context(), parseBoolQuery(r.URL.Query().Get("refresh")))
+	s.iptv.Refresh(r.Context(), refresh)
 	countries := s.iptv.Countries(nil)
 	writeJSON(w, http.StatusOK, &iptvCountriesResponse{
 		Total:     len(countries),
@@ -220,14 +279,21 @@ func (s *Server) handleIPTVCountries(w http.ResponseWriter, r *http.Request) {
 
 // handleIPTVGroups は GET /api/iptv/groups を処理する。
 func (s *Server) handleIPTVGroups(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	// 宣言順 (country は str|None で検証対象外、refresh) に検証する
+	v := newFastAPIValidation(r)
+	refresh := iptvQueryBool(v, "refresh")
+	if v.writeIfInvalid(w) {
+		return
+	}
+
 	// IPTV 機能が無効の場合は空の一覧を返す
 	if !s.config.IPTV.Enabled {
 		writeJSON(w, http.StatusOK, &iptvGroupsResponse{Total: 0, Groups: []iptv.Group{}})
 		return
 	}
 
-	query := r.URL.Query()
-	s.iptv.Refresh(r.Context(), parseBoolQuery(query.Get("refresh")))
+	s.iptv.Refresh(r.Context(), refresh)
 	filtered := s.iptv.FilterChannels(optionalQuery(query, "country"), nil, nil)
 	groups := s.iptv.Groups(filtered)
 	writeJSON(w, http.StatusOK, &iptvGroupsResponse{Total: len(groups), Groups: groups})
@@ -426,7 +492,12 @@ func fetchIPTVStreamError(err error) string {
 
 // handleIPTVProxy は GET /api/iptv/proxy を処理する。
 func (s *Server) handleIPTVProxy(w http.ResponseWriter, r *http.Request) {
-	target := r.URL.Query().Get("url")
+	// 必須の url (str) を検証する。値が空文字でも str として有効なので missing にはしない
+	v := newFastAPIValidation(r)
+	target := v.queryString("url")
+	if v.writeIfInvalid(w) {
+		return
+	}
 	if err := validateProxyURL(target); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -522,7 +593,12 @@ func (s *Server) iptvHTTPClient() *http.Client {
 
 // handleIPTVLogo は GET /api/iptv/logo を処理する。
 func (s *Server) handleIPTVLogo(w http.ResponseWriter, r *http.Request) {
-	target := r.URL.Query().Get("url")
+	// 必須の url (str) を検証する。値が空文字でも str として有効なので missing にはしない
+	v := newFastAPIValidation(r)
+	target := v.queryString("url")
+	if v.writeIfInvalid(w) {
+		return
+	}
 	if err := validateProxyURL(target); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return

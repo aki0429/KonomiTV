@@ -531,27 +531,25 @@ func (s *Server) handleTwitterFavoriteCancel(w http.ResponseWriter, r *http.Requ
 
 // handleTwitterTimeline は GET /api/twitter/accounts/{screen_name}/timeline を処理する。
 func (s *Server) handleTwitterTimeline(w http.ResponseWriter, r *http.Request) {
-	// クエリパラメーターのバリデーションを先に行う (FastAPI の動作に合わせる)
-	query := r.URL.Query()
-	cursorType := query.Get("cursor_type")
-	if cursorType == "" {
-		cursorType = "Top"
-	}
-	if !isValidCursorType(cursorType) {
-		writeValidationDetails(w, []validationDetail{
-			literalDetail([]any{"query", "cursor_type"}, cursorType, "'Top', 'Bottom', 'Gap' or 'ShowMore'"),
-		})
-		return
-	}
-
+	// FastAPI はエンドポイント自身のクエリ検証より先に依存 (GetCurrentTwitterAccount) を解決する。
+	// 依存が 401 / 422 を返した場合はその応答が確定し、クエリ検証エラーは出力されない
+	// (実機 Python でも未認証時は 401 Not authenticated になり、cursor_type の検証エラーは出ない) 。
 	record, ok := s.requireCurrentTwitterAccount(w, r, r.PathValue("screen_name"))
 	if !ok {
 		return
 	}
 
+	// 依存を通過した場合のみクエリパラメータを検証する
+	v := newFastAPIValidation(r)
+	cursorType := v.queryLiteral("cursor_type",
+		[]string{"Top", "Bottom", "Gap", "ShowMore"}, "Top", "'Top', 'Bottom', 'Gap' or 'ShowMore'")
+	if v.writeIfInvalid(w) {
+		return
+	}
+
 	cursorID := optionalQueryValue(r, "cursor_id")
 	seenTweetIDs := []string{}
-	if raw := query.Get("seen_tweet_ids"); raw != "" {
+	if raw := r.URL.Query().Get("seen_tweet_ids"); raw != "" {
 		for _, value := range strings.Split(raw, ",") {
 			if value != "" {
 				seenTweetIDs = append(seenTweetIDs, value)
@@ -565,43 +563,25 @@ func (s *Server) handleTwitterTimeline(w http.ResponseWriter, r *http.Request) {
 
 // handleTwitterSearch は GET /api/twitter/accounts/{screen_name}/search を処理する。
 func (s *Server) handleTwitterSearch(w http.ResponseWriter, r *http.Request) {
-	// クエリパラメーターのバリデーションを先に行う (FastAPI の動作に合わせる)
-	query := r.URL.Query()
-	rawQuery, hasQuery := query["query"]
-	if !hasQuery || len(rawQuery) == 0 || rawQuery[0] == "" {
-		writeValidationDetails(w, []validationDetail{
-			missingDetail([]any{"query", "query"}, nil),
-		})
-		return
-	}
-	searchType := query.Get("search_type")
-	if searchType == "" {
-		searchType = "Latest"
-	}
-	if searchType != "Top" && searchType != "Latest" {
-		writeValidationDetails(w, []validationDetail{
-			literalDetail([]any{"query", "search_type"}, searchType, "'Top' or 'Latest'"),
-		})
-		return
-	}
-	cursorType := query.Get("cursor_type")
-	if cursorType == "" {
-		cursorType = "Top"
-	}
-	if !isValidCursorType(cursorType) {
-		writeValidationDetails(w, []validationDetail{
-			literalDetail([]any{"query", "cursor_type"}, cursorType, "'Top', 'Bottom', 'Gap' or 'ShowMore'"),
-		})
-		return
-	}
-
+	// timeline と同じく、依存 (GetCurrentTwitterAccount) をクエリ検証より先に解決する
 	record, ok := s.requireCurrentTwitterAccount(w, r, r.PathValue("screen_name"))
 	if !ok {
 		return
 	}
 
+	// Python 側の宣言順 (query → search_type → cursor_id → cursor_type) で検証する。
+	// cursor_id は str | None のため検証エラーになり得ず、ここでは扱わない
+	v := newFastAPIValidation(r)
+	searchQuery := v.queryString("query")
+	searchType := v.queryLiteral("search_type", []string{"Top", "Latest"}, "Latest", "'Top' or 'Latest'")
+	cursorType := v.queryLiteral("cursor_type",
+		[]string{"Top", "Bottom", "Gap", "ShowMore"}, "Top", "'Top', 'Bottom', 'Gap' or 'ShowMore'")
+	if v.writeIfInvalid(w) {
+		return
+	}
+
 	result := s.getTwitterGraphQLClient(record).SearchTimeline(
-		r.Context(), searchType, rawQuery[0], optionalQueryValue(r, "cursor_id"), cursorType)
+		r.Context(), searchType, searchQuery, optionalQueryValue(r, "cursor_id"), cursorType)
 	writeJSON(w, http.StatusOK, result)
 }
 
@@ -609,13 +589,15 @@ func (s *Server) handleTwitterSearch(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleTwitterVideoProxy(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 	targets, hasURL := query["url"]
-	if !hasURL || len(targets) == 0 || targets[0] == "" {
+	// url は str 必須パラメータで空文字も有効値のため、未指定のときだけ missing を返す。
+	// 空文字は下の scheme 検証に回し、Python と同じく 422 "URL scheme must be https." にする
+	if !hasURL || len(targets) == 0 {
 		writeValidationDetails(w, []validationDetail{
 			missingDetail([]any{"query", "url"}, nil),
 		})
 		return
 	}
-	target := targets[0]
+	target := lastQueryValue(targets)
 
 	parsedURL, err := url.Parse(target)
 	if err != nil || parsedURL.Scheme != "https" {
@@ -765,15 +747,6 @@ func parseTwitterCookieAuthRequest(r *http.Request) (string, *browserEnvironment
 		return "", nil, []validationDetail{missingDetail([]any{"body", "browser_info"}, browserObject)}
 	}
 	return cookiesTxt, &browserInfo, nil
-}
-
-// isValidCursorType は cursor_type が許容値かどうかを返す。
-func isValidCursorType(cursorType string) bool {
-	switch cursorType {
-	case "Top", "Bottom", "Gap", "ShowMore":
-		return true
-	}
-	return false
 }
 
 // containsString は文字列スライスに値が含まれるかを返す。

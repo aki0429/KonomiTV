@@ -248,6 +248,7 @@ func decodeSearchEvent(event reservations.EventInfo) programResponse {
 func (s *Server) handleProgramTimeTable(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().In(constants.JST)
 	query := r.URL.Query()
+	v := newFastAPIValidation(r)
 
 	// 開始時刻のデフォルト値: 現在時刻
 	startTime := now
@@ -260,11 +261,20 @@ func (s *Server) handleProgramTimeTable(w http.ResponseWriter, r *http.Request) 
 		startTime = parsed
 	}
 
-	// チャンネル種別とピン留めチャンネル ID をパースする
+	// チャンネル種別は Literal['GR', 'BS', 'CS', 'CATV', 'SKY', 'BS4K'] で、無効値は literal_error にする。
+	// 空文字も「未指定」ではなく許容外の入力として扱う (Python の str は空文字も有効値のため欠落と区別される) 。
+	channelTypeValue := v.queryLiteral(
+		"channel_type",
+		[]string{"GR", "BS", "CS", "CATV", "SKY", "BS4K"},
+		"",
+		"'GR', 'BS', 'CS', 'CATV', 'SKY' or 'BS4K'",
+	)
 	var channelType *string
-	if value := query.Get("channel_type"); value != "" {
-		channelType = &value
+	if channelTypeValue != "" {
+		channelType = &channelTypeValue
 	}
+
+	// ピン留めチャンネル ID をパースする
 	var pinnedChannelIDs []string
 	if value := query.Get("pinned_channel_ids"); value != "" && strings.TrimSpace(value) != "" {
 		for _, channelID := range strings.Split(value, ",") {
@@ -272,6 +282,12 @@ func (s *Server) handleProgramTimeTable(w http.ResponseWriter, r *http.Request) 
 				pinnedChannelIDs = append(pinnedChannelIDs, trimmed)
 			}
 		}
+	}
+
+	// クエリパラメータの検証エラー (channel_type の literal_error など) があれば
+	// FastAPI 互換の 422 を返し、DB アクセスへは進まない
+	if v.writeIfInvalid(w) {
+		return
 	}
 
 	// 番組データの日付範囲を取得 (日付セレクター用)

@@ -174,7 +174,13 @@ func TestTwitterValidationErrors(t *testing.T) {
 	for _, testCase := range cases {
 		testCase := testCase
 		t.Run(testCase.Name, func(t *testing.T) {
-			_, handler, token := newTwitterTestServer(t)
+			server, handler, token := newTwitterTestServer(t)
+			// Python の期待値ジェネレーター (generate_validation_expected.py) は
+			// GetCurrentTwitterAccount 依存を必ず成功するフェイクに差し替えて検証エラーを採取している。
+			// Go では認証済み + 有効な TwitterAccount が存在する状態がこれに相当するため、
+			// screen_name "dummy" の NETSCAPE_COOKIE_FILE レコードを用意して依存を通過させる。
+			userID := currentUserID(t, server, "twitter-user")
+			insertTwitterAccount(t, server.db, userID, "dummy", "NETSCAPE_COOKIE_FILE", "enc:dummy")
 			body := ""
 			if len(testCase.Body) > 0 && string(testCase.Body) != "null" {
 				body = string(testCase.Body)
@@ -600,4 +606,122 @@ func (s *Server) decryptTwitterCookieForTest(encrypted string) (string, error) {
 		return "", err
 	}
 	return string(plain), nil
+}
+
+// ----------------------------------------------------------------------------
+// 認証依存とクエリ検証の評価順序 (FastAPI 互換)
+// ----------------------------------------------------------------------------
+
+// TestTwitterAuthCheckedBeforeQueryValidation は未認証時にクエリ検証エラー (422 配列) より
+// 先に 401 "Not authenticated" が返ることを検証する。
+//
+// 実機 Python の実測:
+//
+//	GET /api/twitter/accounts/sample/search            → 401 {"detail": "Not authenticated"}
+//	GET /api/twitter/accounts/sample/search?search_type=__invalid__ → 401 {"detail": "Not authenticated"}
+//	GET /api/twitter/accounts/sample/timeline?cursor_type=__invalid__ → 401 {"detail": "Not authenticated"}
+//
+// FastAPI はエンドポイント自身のクエリ検証より先に依存 (GetCurrentTwitterAccount → GetCurrentUser) を
+// 解決するため、未認証なら依存の 401 が確定しクエリ検証エラーは出力されない。
+func TestTwitterAuthCheckedBeforeQueryValidation(t *testing.T) {
+	_, handler, _ := newTwitterTestServer(t)
+	paths := []string{
+		"/api/twitter/accounts/sample/search",
+		"/api/twitter/accounts/sample/search?search_type=__invalid__",
+		"/api/twitter/accounts/sample/timeline?cursor_type=__invalid__",
+	}
+	for _, path := range paths {
+		recorder := doJSONRequest(t, handler, http.MethodGet, path, "", "", "")
+		if recorder.Code != http.StatusUnauthorized {
+			t.Fatalf("%s status = %d, want 401 (body: %s)", path, recorder.Code, recorder.Body.String())
+		}
+		var body errorResponse
+		if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+			t.Fatalf("%s failed to parse body: %v", path, err)
+		}
+		if body.Detail != "Not authenticated" {
+			t.Errorf("%s detail = %q, want %q", path, body.Detail, "Not authenticated")
+		}
+	}
+}
+
+// TestTwitterTimelineValidationAfterAuth は認証済み (かつ有効なアカウントがある) 場合に
+// クエリ検証エラー配列が返ることを検証する (認証を先に評価しても検証自体は生きていることの確認) 。
+func TestTwitterTimelineValidationAfterAuth(t *testing.T) {
+	server, handler, token := newTwitterTestServer(t)
+	userID := currentUserID(t, server, "twitter-user")
+	insertTwitterAccount(t, server.db, userID, "dummy", "NETSCAPE_COOKIE_FILE", "enc:dummy")
+
+	recorder := doJSONRequest(t, handler, http.MethodGet, "/api/twitter/accounts/dummy/timeline?cursor_type=Bad", "", token, "")
+	if recorder.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want 422 (body: %s)", recorder.Code, recorder.Body.String())
+	}
+	expected := map[string]any{
+		"detail": []any{
+			map[string]any{
+				"type":  "literal_error",
+				"loc":   []any{"query", "cursor_type"},
+				"msg":   "Input should be 'Top', 'Bottom', 'Gap' or 'ShowMore'",
+				"input": "Bad",
+				"ctx":   map[string]any{"expected": "'Top', 'Bottom', 'Gap' or 'ShowMore'"},
+			},
+		},
+	}
+	var actual any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &actual); err != nil {
+		t.Fatal(err)
+	}
+	if !deepEqualJSONAny(expected, actual) {
+		t.Errorf("body mismatch: %s", recorder.Body.String())
+	}
+}
+
+// ----------------------------------------------------------------------------
+// video-proxy の url パラメータ
+// ----------------------------------------------------------------------------
+
+// TestTwitterVideoProxyEmptyURL は url が空文字でも「指定あり」として受理され、
+// ハンドラの scheme 検証で 422 "URL scheme must be https." になることを検証する。
+//
+// 実機 Python の実測: GET /api/twitter/video-proxy?url= → 422 {"detail": "URL scheme must be https."}
+// (url は str 必須パラメータで、空文字も有効な値として受理される)
+func TestTwitterVideoProxyEmptyURL(t *testing.T) {
+	_, handler, _ := newTwitterTestServer(t)
+	recorder := doJSONRequest(t, handler, http.MethodGet, "/api/twitter/video-proxy?url=", "", "", "")
+	if recorder.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want 422 (body: %s)", recorder.Code, recorder.Body.String())
+	}
+	var body errorResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Detail != "URL scheme must be https." {
+		t.Errorf("detail = %q, want %q", body.Detail, "URL scheme must be https.")
+	}
+}
+
+// TestTwitterVideoProxyMissingURL は url 未指定時に missing の検証エラー配列を返す (負対照) 。
+func TestTwitterVideoProxyMissingURL(t *testing.T) {
+	_, handler, _ := newTwitterTestServer(t)
+	recorder := doJSONRequest(t, handler, http.MethodGet, "/api/twitter/video-proxy", "", "", "")
+	if recorder.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want 422 (body: %s)", recorder.Code, recorder.Body.String())
+	}
+	expected := map[string]any{
+		"detail": []any{
+			map[string]any{
+				"type":  "missing",
+				"loc":   []any{"query", "url"},
+				"msg":   "Field required",
+				"input": nil,
+			},
+		},
+	}
+	var actual any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &actual); err != nil {
+		t.Fatal(err)
+	}
+	if !deepEqualJSONAny(expected, actual) {
+		t.Errorf("body mismatch: %s", recorder.Body.String())
+	}
 }

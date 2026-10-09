@@ -3,14 +3,13 @@ package api
 import (
 	"context"
 	"crypto/tls"
+	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"os/exec"
-	"regexp"
-	"runtime"
-	"strconv"
+	"os"
 	"strings"
 	"time"
 
@@ -50,10 +49,6 @@ type dataBroadcastingInternetStatus struct {
 	IPAddress                *string `json:"ip_address"`
 	ResponseTimeMilliseconds *int64  `json:"response_time_milliseconds"`
 }
-
-// pingResponseTimePattern は ping コマンドの出力から応答時間 (ms) を抽出する正規表現。
-// 日本語環境の "時間=12ms" と英語環境の "time=12.3ms" の両方にマッチする。
-var pingResponseTimePattern = regexp.MustCompile(`[=<]([0-9]+(?:\.[0-9]+)?)\s*ms`)
 
 // handleDataBroadcastingProxy は /api/data-broadcasting/request/ 以下のプロキシ API を直接処理する。
 // server/app/routers/DataBroadcastingRouter.py の BMLBrowserRequestGETProxyAPI / POSTProxyAPI 相当。
@@ -151,33 +146,66 @@ func (s *Server) forwardDataBroadcastingRequest(w http.ResponseWriter, r *http.R
 }
 
 // handleDataBroadcastingInternetStatus は GET /api/data-broadcasting/internet-status を処理する。
+// server/app/routers/DataBroadcastingRouter.py の BMLBrowserInternetStatusAPI 相当。
 func (s *Server) handleDataBroadcastingInternetStatus(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	destination := query.Get("destination")
-	if destination == "" {
-		writeError(w, http.StatusUnprocessableEntity, "destination is required")
+	// Python のシグネチャは destination (必須 str) / is_icmp (bool, 既定 false) /
+	// timeout_milliseconds (int, 既定 3000) の宣言順で、FastAPI はこの順に検証して
+	// 最初の失敗で打ち切らず全エラーを 1 つの配列 ({"detail": [...]}) にまとめて 422 で返す。
+	// Go 版も同じ順序・同じエラー型で再現する。
+	v := newFastAPIValidation(r)
+
+	// destination は Python 側の型が str なので空文字も有効値。欠落と空文字を区別する
+	destination := v.queryString("destination")
+
+	// is_icmp は既定値つき。値がある場合のみ Pydantic と同じ受理規則 (searchJSONBool) で
+	// 解析し、解析できない場合は bool_parsing エラーを積む。queryString と同じく
+	// 同名パラメータが複数ある場合は最後の値を採用する。
+	isICMP := false
+	if values, ok := v.query["is_icmp"]; ok {
+		raw := lastQueryValue(values)
+		quoted, _ := json.Marshal(raw) // Pydantic と同じく文字列として解釈させる
+		parsed, err := searchJSONBool(quoted)
+		if err != nil {
+			v.details = append(v.details, validationDetail{
+				Type:  "bool_parsing",
+				Loc:   []any{"query", "is_icmp"},
+				Msg:   "Input should be a valid boolean, unable to interpret input",
+				Input: raw,
+			})
+		} else {
+			isICMP = parsed
+		}
+	}
+
+	// timeout_milliseconds は既定値つき。値がある場合のみ queryInt で検証する
+	// (queryInt は int64 を超える値でも MaxInt64 へ寄せて受理する)
+	timeoutMilliseconds := int64(3000)
+	if _, ok := v.query["timeout_milliseconds"]; ok {
+		timeoutMilliseconds = v.queryInt("timeout_milliseconds")
+	}
+
+	// 検証エラーがあれば FastAPI 互換の 422 を返す
+	if v.writeIfInvalid(w) {
 		return
 	}
-	isICMP := parseBoolQuery(query.Get("is_icmp"))
-	timeoutMilliseconds := int64(3000)
-	if value := query.Get("timeout_milliseconds"); value != "" {
-		parsed, err := strconv.ParseInt(value, 10, 64)
-		if err != nil || parsed <= 0 {
-			writeError(w, http.StatusUnprocessableEntity, "timeout_milliseconds must be a positive integer")
-			return
-		}
-		timeoutMilliseconds = parsed
-	}
-	timeout := time.Duration(timeoutMilliseconds) * time.Millisecond
+
+	// timeout_milliseconds を time.Duration へ変換する (0 以下・超過値でも panic しない)
+	timeout := dataBroadcastingTimeout(timeoutMilliseconds)
 
 	// 応答時間を計測する
 	var (
 		responseTime time.Duration
 		success      bool
 	)
-	if isICMP {
+	switch {
+	case timeout <= 0:
+		// timeout_milliseconds <= 0 のとき、Python の asyncio.wait_for は接続を待たずに
+		// 即座にタイムアウトさせ success=false を返す (ping3 も応答なし扱い) 。
+		// Go の 0 は「タイムアウト無し」を意味するため、接続自体を行わず失敗として扱う。
+		success = false
+	case isICMP:
 		responseTime, success = pingHost(r.Context(), destination, timeout)
-	} else {
+	default:
 		responseTime, success = dialHost(destination, timeout)
 	}
 
@@ -202,6 +230,21 @@ func (s *Server) handleDataBroadcastingInternetStatus(w http.ResponseWriter, r *
 	})
 }
 
+// dataBroadcastingTimeout は timeout_milliseconds (ミリ秒) を time.Duration へ変換する。
+// 0 以下は 0 (即時タイムアウト扱い) 、過大な値は 24 時間へ丸める。これにより
+// time.Duration の乗算オーバーフローや、それを用いたコンテキストの意図しない即時期限切れを防ぐ。
+func dataBroadcastingTimeout(milliseconds int64) time.Duration {
+	// 24 時間をミリ秒に換算した上限。Python の int は任意精度だが実用上この上限で十分
+	const maximumMilliseconds = int64(24 * 60 * 60 * 1000)
+	if milliseconds <= 0 {
+		return 0
+	}
+	if milliseconds > maximumMilliseconds {
+		return 24 * time.Hour
+	}
+	return time.Duration(milliseconds) * time.Millisecond
+}
+
 // dialHost は destination:80 への TCP 接続にかかった時間を計測する。
 // Python 版の asyncio.open_connection(destination, 80) 相当。
 func dialHost(destination string, timeout time.Duration) (time.Duration, bool) {
@@ -214,40 +257,106 @@ func dialHost(destination string, timeout time.Duration) (time.Duration, bool) {
 	return time.Since(start), true
 }
 
-// pingHost はシステムの ping コマンドで応答時間を計測する。
-// Python 版は ping3 ライブラリを使うが、Go で raw socket を扱うには権限が必要なため、
-// 権限不要で動作するシステムの ping コマンドを利用する。
+// pingHost は ICMP Echo Request を送信して応答時間を計測する。
+//
+// Python 版は ping3 ライブラリで ICMP パケットを送る。Go の標準ライブラリには非特権 ICMP
+// (Linux の ping socket = SOCK_DGRAM/IPPROTO_ICMP) をそのまま扱う API が無いため、ここでは
+// raw socket (net.DialIP) を使う。raw socket の作成には root 権限 (Linux の CAP_NET_RAW /
+// Windows の管理者権限) が必要で、非特権 ICMP を利用できない環境では作成が権限エラーで失敗する。
+// その場合は ping コマンドなどの特権ヘルパーへフォールバックせず success=false を返す。
+// 成功していないのに success=true を返すとデータ放送ブラウザの接続判定を誤らせるため、
+// 可用性より判定の正しさを優先する。
 func pingHost(ctx context.Context, destination string, timeout time.Duration) (time.Duration, bool) {
-	var args []string
-	switch runtime.GOOS {
-	case "windows":
-		args = []string{"-n", "1", "-w", strconv.FormatInt(timeout.Milliseconds(), 10), destination}
-	case "darwin":
-		args = []string{"-c", "1", "-W", strconv.FormatInt(timeout.Milliseconds(), 10), destination}
-	default:
-		// Linux (iputils / busybox) の -W は秒単位
-		seconds := int(timeout.Seconds())
-		if seconds < 1 {
-			seconds = 1
-		}
-		args = []string{"-c", "1", "-W", strconv.Itoa(seconds), destination}
+	// raw socket の宛先となる IPv4 アドレスを解決する。net.DialIP は IP アドレスしか
+	// 受け付けないため、ホスト名はここで解決する。解決できなければ成功にはできない。
+	ip := net.ParseIP(resolveIPv4(ctx, destination))
+	if ip == nil || ip.To4() == nil {
+		return 0, false
 	}
 
-	commandContext, cancel := context.WithTimeout(ctx, timeout+2*time.Second)
-	defer cancel()
-	output, err := exec.CommandContext(commandContext, "ping", args...).CombinedOutput()
+	// raw ICMP socket を作成する。権限が無い環境ではここでエラーになり success=false となる
+	connection, err := net.DialIP("ip4:icmp", nil, &net.IPAddr{IP: ip.To4()})
 	if err != nil {
 		return 0, false
 	}
-	matches := pingResponseTimePattern.FindSubmatch(output)
-	if matches == nil {
+	defer func() { _ = connection.Close() }()
+
+	// Python 版は ping3 に秒単位の整数 (int(timeout_milliseconds / 1000)) を渡すため、
+	// 1 秒未満は 0 に切り捨てられ、待たずに失敗する。同じ挙動に合わせて秒へ切り捨てる。
+	seconds := int64(timeout / time.Second)
+	if seconds < 1 {
 		return 0, false
 	}
-	milliseconds, err := strconv.ParseFloat(string(matches[1]), 64)
-	if err != nil {
+	// タイムアウトを過ぎると読み取りがエラーになり success=false となる
+	if err := connection.SetDeadline(time.Now().Add(time.Duration(seconds) * time.Second)); err != nil {
 		return 0, false
 	}
-	return time.Duration(milliseconds * float64(time.Millisecond)), true
+
+	// 識別子はプロセス ID から作り、応答の照合に使う (ping3 と同様)
+	identifier := uint16(os.Getpid() & 0xffff)
+	start := time.Now()
+	if _, err := connection.Write(buildICMPEchoRequest(identifier, 1)); err != nil {
+		return 0, false
+	}
+
+	// Echo Reply が届くまで読み続ける。deadline を過ぎると Read がエラーになる
+	buffer := make([]byte, 1500)
+	for {
+		n, err := connection.Read(buffer)
+		if err != nil {
+			return 0, false
+		}
+		reply := buffer[:n]
+		// raw socket の読み取りには IPv4 ヘッダが含まれるため、ICMP ヘッダの位置を求める
+		if offset := icmpHeaderOffset(reply); offset > 0 {
+			reply = reply[offset:]
+		}
+		// Echo Reply (type 0, code 0) かつ識別子が一致するものだけを応答とみなす
+		if len(reply) >= 8 && reply[0] == 0 && reply[1] == 0 && binary.BigEndian.Uint16(reply[4:6]) == identifier {
+			return time.Since(start), true
+		}
+		// 無関係なパケットは読み飛ばして deadline まで待つ
+	}
+}
+
+// buildICMPEchoRequest は ICMPv4 Echo Request パケットを組み立てる。
+// ヘッダのチェックサムを計算して埋め、ペイロードは 0 埋めのままとする。
+func buildICMPEchoRequest(identifier uint16, sequence uint16) []byte {
+	packet := make([]byte, 8+16) // 8 バイトの ICMP ヘッダ + 16 バイトのペイロード
+	packet[0] = 8                // type = Echo Request
+	packet[1] = 0                // code = 0
+	binary.BigEndian.PutUint16(packet[4:6], identifier)
+	binary.BigEndian.PutUint16(packet[6:8], sequence)
+	binary.BigEndian.PutUint16(packet[2:4], icmpChecksum(packet))
+	return packet
+}
+
+// icmpChecksum は RFC 1071 の 1 の補数チェックサムを計算する。
+func icmpChecksum(packet []byte) uint16 {
+	var sum uint32
+	for index := 0; index+1 < len(packet); index += 2 {
+		sum += uint32(packet[index])<<8 | uint32(packet[index+1])
+	}
+	if len(packet)%2 == 1 {
+		sum += uint32(packet[len(packet)-1]) << 8
+	}
+	for sum>>16 != 0 {
+		sum = (sum & 0xffff) + (sum >> 16)
+	}
+	return ^uint16(sum)
+}
+
+// icmpHeaderOffset は raw socket が返したパケットから ICMP ヘッダの開始位置を求める。
+// IPv4 ヘッダ (バージョン 4 かつプロトコル ICMP) が付いている場合はその長さを返し、
+// 付いていない場合は 0 を返す。
+func icmpHeaderOffset(packet []byte) int {
+	if len(packet) >= 20 && packet[0]>>4 == 4 && packet[9] == 1 {
+		headerLength := int(packet[0]&0x0f) * 4
+		if headerLength >= 20 && headerLength <= len(packet) {
+			return headerLength
+		}
+	}
+	return 0
 }
 
 // resolveIPv4 はホスト名を IPv4 アドレスに解決する。
@@ -260,6 +369,7 @@ func resolveIPv4(ctx context.Context, destination string) string {
 }
 
 // parseBoolQuery は FastAPI の bool クエリパラメーターと同じ値を受け付ける。
+// IPTV ルーター (iptv.go) からも利用される共通ヘルパー。
 func parseBoolQuery(value string) bool {
 	switch strings.ToLower(value) {
 	case "1", "true", "on", "yes":

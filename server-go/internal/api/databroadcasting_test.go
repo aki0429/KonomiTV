@@ -131,3 +131,127 @@ func TestDataBroadcastingInternetStatus(t *testing.T) {
 		t.Errorf("body = %q", body)
 	}
 }
+
+// TestDataBroadcastingInternetStatusValidation は internet-status API のクエリ検証が
+// Python 版 (FastAPI / Pydantic) と一致することを検証する。
+// Python のシグネチャ宣言順は destination (必須 str) → is_icmp (bool, 既定 false)
+// → timeout_milliseconds (int, 既定 3000) で、検証エラーは最初の失敗で打ち切らず
+// 全件を 1 つの配列にまとめて 422 で返す。
+func TestDataBroadcastingInternetStatusValidation(t *testing.T) {
+	// 接続先が空文字の場合、接続は失敗し success=false の結果が 200 で返る
+	const emptyResult = "{\"success\":false,\"ip_address\":null,\"response_time_milliseconds\":null}\n"
+	testCases := []struct {
+		name   string
+		query  string
+		status int
+		body   string
+	}{
+		{
+			// destination 未指定: 文字列 detail ではなく検証エラー配列を返す
+			name:   "missing destination",
+			query:  "",
+			status: http.StatusUnprocessableEntity,
+			body: "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"query\",\"destination\"]," +
+				"\"msg\":\"Field required\",\"input\":null}]}\n",
+		},
+		{
+			// is_icmp の型不正: 宣言順どおり destination の missing を先に積む
+			name:   "invalid is_icmp",
+			query:  "?is_icmp=abc",
+			status: http.StatusUnprocessableEntity,
+			body: "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"query\",\"destination\"]," +
+				"\"msg\":\"Field required\",\"input\":null}," +
+				"{\"type\":\"bool_parsing\",\"loc\":[\"query\",\"is_icmp\"]," +
+				"\"msg\":\"Input should be a valid boolean, unable to interpret input\",\"input\":\"abc\"}]}\n",
+		},
+		{
+			// timeout_milliseconds の型不正: 宣言順どおり destination の missing を先に積む
+			name:   "invalid timeout_milliseconds",
+			query:  "?timeout_milliseconds=abc",
+			status: http.StatusUnprocessableEntity,
+			body: "{\"detail\":[{\"type\":\"missing\",\"loc\":[\"query\",\"destination\"]," +
+				"\"msg\":\"Field required\",\"input\":null}," +
+				"{\"type\":\"int_parsing\",\"loc\":[\"query\",\"timeout_milliseconds\"]," +
+				"\"msg\":\"Input should be a valid integer, unable to parse string as an integer\",\"input\":\"abc\"}]}\n",
+		},
+		{
+			// destination が空文字でも str として有効値。欠落扱いせず、接続失敗の success=false を 200 で返す
+			name:   "empty destination is valid",
+			query:  "?destination=",
+			status: http.StatusOK,
+			body:   emptyResult,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			server, _ := newTestServer(t, "")
+			request := httptest.NewRequest(http.MethodGet, "/api/data-broadcasting/internet-status"+testCase.query, nil)
+			recorder := httptest.NewRecorder()
+			server.Handler().ServeHTTP(recorder, request)
+
+			if recorder.Code != testCase.status {
+				t.Fatalf("status = %d, want %d (body: %s)", recorder.Code, testCase.status, recorder.Body.String())
+			}
+			if body := recorder.Body.String(); body != testCase.body {
+				t.Errorf("body = %q, want %q", body, testCase.body)
+			}
+		})
+	}
+}
+
+// TestDataBroadcastingInternetStatusEmptyBool は is_icmp に空文字を渡した場合に
+// Pydantic と同じく bool_parsing エラー (422) になることを検証する。
+func TestDataBroadcastingInternetStatusEmptyBool(t *testing.T) {
+	server, _ := newTestServer(t, "")
+	request := httptest.NewRequest(http.MethodGet, "/api/data-broadcasting/internet-status?destination=example.com&is_icmp=", nil)
+	recorder := httptest.NewRecorder()
+	server.Handler().ServeHTTP(recorder, request)
+
+	want := "{\"detail\":[{\"type\":\"bool_parsing\",\"loc\":[\"query\",\"is_icmp\"]," +
+		"\"msg\":\"Input should be a valid boolean, unable to interpret input\",\"input\":\"\"}]}\n"
+	if recorder.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d, want 422 (body: %s)", recorder.Code, recorder.Body.String())
+	}
+	if body := recorder.Body.String(); body != want {
+		t.Errorf("body = %q, want %q", body, want)
+	}
+}
+
+// TestDataBroadcastingInternetStatusTimeoutEdgeCases は 0 以下や int64 を超える
+// timeout_milliseconds でも panic せず、Python と同じく 200 / success=false を返すことを検証する。
+func TestDataBroadcastingInternetStatusTimeoutEdgeCases(t *testing.T) {
+	const emptyResult = "{\"success\":false,\"ip_address\":null,\"response_time_milliseconds\":null}\n"
+	// Python の int は任意精度なので、int64 を超える値や負値も検証を通過する
+	for _, value := range []string{"0", "-1", "-100000", "9999999999999999999999"} {
+		t.Run(value, func(t *testing.T) {
+			server, _ := newTestServer(t, "")
+			request := httptest.NewRequest(http.MethodGet, "/api/data-broadcasting/internet-status?destination=konomitv.invalid&timeout_milliseconds="+value, nil)
+			recorder := httptest.NewRecorder()
+			server.Handler().ServeHTTP(recorder, request)
+
+			if recorder.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200 (body: %s)", recorder.Code, recorder.Body.String())
+			}
+			if body := recorder.Body.String(); body != emptyResult {
+				t.Errorf("body = %q, want %q", body, emptyResult)
+			}
+		})
+	}
+}
+
+// TestDataBroadcastingInternetStatusICMPInvalidDestination は is_icmp=true で
+// 名前解決できない接続先を指定した場合に、成功扱いせず success=false を返すことを検証する。
+// raw socket (非特権 ICMP) を使えない環境でも同じく success=false になる。
+func TestDataBroadcastingInternetStatusICMPInvalidDestination(t *testing.T) {
+	server, _ := newTestServer(t, "")
+	request := httptest.NewRequest(http.MethodGet, "/api/data-broadcasting/internet-status?destination=konomitv.invalid&is_icmp=true", nil)
+	recorder := httptest.NewRecorder()
+	server.Handler().ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body: %s)", recorder.Code, recorder.Body.String())
+	}
+	if body := recorder.Body.String(); body != "{\"success\":false,\"ip_address\":null,\"response_time_milliseconds\":null}\n" {
+		t.Errorf("body = %q", body)
+	}
+}

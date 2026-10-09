@@ -408,6 +408,22 @@ func (s *Server) handleCaptureFolderCaptureRemove(w http.ResponseWriter, r *http
 // handleCaptureImage はキャプチャ画像取得 API (GET /api/captures/{filename}) を処理する。
 // thumbnail=true が指定された場合は、サムネイル用に縮小した JPEG 画像を返す。
 func (s *Server) handleCaptureImage(w http.ResponseWriter, r *http.Request) {
+	// FastAPI はハンドラ本体より先にクエリパラメータを検証するため、ファイル存在確認 (404) より前に
+	// thumbnail の bool 検証を行い、解釈できない値なら検証エラー配列を返す
+	// (実機 Python でも GET /api/captures/sample?thumbnail=abc は 404 ではなく 422 になる) 。
+	thumbnail := false
+	if values, present := r.URL.Query()["thumbnail"]; present {
+		raw := lastQueryValue(values)
+		parsed, ok := parseFastAPIBool(raw)
+		if !ok {
+			writeValidationDetails(w, []validationDetail{
+				boolParsingDetail([]any{"query", "thumbnail"}, raw),
+			})
+			return
+		}
+		thumbnail = parsed
+	}
+
 	filename := r.PathValue("filename")
 	folders := captures.UploadFolders(s.config.Capture.UploadFolders)
 	path := captures.FindFile(folders, filename)
@@ -418,7 +434,7 @@ func (s *Server) handleCaptureImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// サムネイル画像が要求された場合は、リサイズして返す
-	if r.URL.Query().Get("thumbnail") == "true" || r.URL.Query().Get("thumbnail") == "True" {
+	if thumbnail {
 		data, err := captures.GenerateThumbnail(path)
 		if err != nil {
 			s.logger.Error("[CapturesRouter][CaptureImageAPI] Failed to generate the thumbnail.", "filename", filename, "error", err)
@@ -623,6 +639,34 @@ func parsePathInt(w http.ResponseWriter, r *http.Request, name string) (int64, b
 		return 0, false
 	}
 	return parsed, true
+}
+
+// parseFastAPIBool は FastAPI/Pydantic v2 の bool 解釈規則でクエリ文字列を真偽値へ変換する。
+// 受理する値は true/false を表す次の表現で、大文字小文字は区別しない。
+//
+//	true:  "true", "1", "yes", "on", "t", "y"
+//	false: "false", "0", "no", "off", "f", "n"
+//
+// それ以外 (空文字を含む) は bool として解釈できないため ok=false を返す。
+func parseFastAPIBool(value string) (bool, bool) {
+	switch strings.ToLower(value) {
+	case "true", "1", "yes", "on", "t", "y":
+		return true, true
+	case "false", "0", "no", "off", "f", "n":
+		return false, true
+	}
+	return false, false
+}
+
+// boolParsingDetail は Pydantic の "bool_parsing" エラーを生成する
+// (twitter.go の missingDetail / literalDetail / stringTypeDetail と同じ検証エラー群) 。
+func boolParsingDetail(loc []any, input string) validationDetail {
+	return validationDetail{
+		Type:  "bool_parsing",
+		Loc:   loc,
+		Msg:   "Input should be a valid boolean, unable to interpret input",
+		Input: input,
+	}
 }
 
 // captureBookmarkRequest はキャプチャブックマーク操作のリクエスト (server/app/schemas.py の CaptureBookmarkRequest 相当) 。
