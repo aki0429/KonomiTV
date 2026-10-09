@@ -204,8 +204,10 @@ func TestCollectCaptureFiles(t *testing.T) {
 		t.Fatalf("len(files) = %d, want 3: %+v", len(files), files)
 	}
 	// 同じファイル名は最初に見つかったフォルダを優先する
-	if files[0].Filename != "a.jpg" || filepath.Dir(files[0].Path) != first {
-		t.Errorf("files[0] = %+v", files[0])
+	// 注: TMPDIR の区切り文字の表記 (forward slash) と filepath.Dir が返す表記 (backslash) は
+	// 環境によって揺れるため、Clean してから同一ディレクトリか比較する。
+	if files[0].Filename != "a.jpg" || filepath.Clean(filepath.Dir(files[0].Path)) != filepath.Clean(first) {
+		t.Errorf("files[0] = %+v (want a.jpg in %q)", files[0], first)
 	}
 	names := map[string]bool{}
 	for _, file := range files {
