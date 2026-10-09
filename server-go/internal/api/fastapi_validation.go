@@ -33,7 +33,7 @@ func newFastAPIValidation(r *http.Request) *fastapiValidation {
 
 // appendIntParsing は Pydantic の int_parsing エラーを積む。
 // Pydantic は小数表記 (1.5) や指数表記 (1e2) も int_parsing として扱う。
-func (v *fastapiValidation) appendIntParsing(loc []string, input string) {
+func (v *fastapiValidation) appendIntParsing(loc []any, input string) {
 	v.details = append(v.details, validationDetail{
 		Type:  "int_parsing",
 		Loc:   loc,
@@ -47,7 +47,7 @@ func (v *fastapiValidation) pathInt(r *http.Request, name string) (int64, bool) 
 	value := r.PathValue(name)
 	parsed, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
-		v.appendIntParsing([]string{"path", name}, value)
+		v.appendIntParsing([]any{"path", name}, value)
 		return 0, false
 	}
 	return parsed, true
@@ -58,7 +58,7 @@ func (v *fastapiValidation) pathInt(r *http.Request, name string) (int64, bool) 
 func (v *fastapiValidation) queryString(name string) string {
 	values, ok := v.query[name]
 	if !ok {
-		v.details = append(v.details, missingDetail([]string{"query", name}, nil))
+		v.details = append(v.details, missingDetail([]any{"query", name}, nil))
 		return ""
 	}
 	// FastAPI (Starlette) は同名パラメータが複数ある場合に最後の値を採用する
@@ -66,28 +66,48 @@ func (v *fastapiValidation) queryString(name string) string {
 }
 
 // queryInt は必須のクエリ整数を返す。欠落は missing、解析不能は int_parsing を積む。
+func (v *fastapiValidation) queryInt(name string) int64 {
+	value, present := v.queryIntValue(name)
+	if !present {
+		v.details = append(v.details, missingDetail([]any{"query", name}, nil))
+		return 0
+	}
+	return value
+}
+
+// queryIntDefault は既定値つきのクエリ整数を返す。
+// Python 側が既定値を持つパラメータ (page など) は欠落しても検証エラーにならないため、
+// missing を積まずに既定値を返す。
+func (v *fastapiValidation) queryIntDefault(name string, defaultValue int64) int64 {
+	value, present := v.queryIntValue(name)
+	if !present {
+		return defaultValue
+	}
+	return value
+}
+
+// queryIntValue はクエリ整数を解析する。戻り値の 2 番目は指定の有無。
 //
 // Pydantic の文字列 → int 変換は前後の空白・符号・アンダースコア区切り・
 // ゼロ小数部 (1.0) を許容する。同じ文法を番組検索の検証 (searchJSONInteger) が
 // 実装済みなので、そこへ文字列を 1 つ渡して再利用する。
-func (v *fastapiValidation) queryInt(name string) int64 {
+func (v *fastapiValidation) queryIntValue(name string) (int64, bool) {
 	values, ok := v.query[name]
 	if !ok {
-		v.details = append(v.details, missingDetail([]string{"query", name}, nil))
-		return 0
+		return 0, false
 	}
 	raw := lastQueryValue(values)
 	parsed, err := searchJSONInteger(json.RawMessage(strconv.Quote(strings.TrimSpace(raw))))
 	if err != nil {
-		v.appendIntParsing([]string{"query", name}, raw)
-		return 0
+		v.appendIntParsing([]any{"query", name}, raw)
+		return 0, true
 	}
 	if !parsed.IsInt64() {
 		// Python の int は上限が無く、int64 を超える値でも受け付けて後段の
 		// 「該当する位置が無い」判定に落ちる。同じ結果になる最大値へ寄せる。
-		return math.MaxInt64
+		return math.MaxInt64, true
 	}
-	return parsed.Int64()
+	return parsed.Int64(), true
 }
 
 // queryLiteral は既定値つきの Literal クエリパラメータを返す。
@@ -103,8 +123,42 @@ func (v *fastapiValidation) queryLiteral(name string, allowed []string, defaultV
 			return raw
 		}
 	}
-	v.details = append(v.details, literalDetail([]string{"query", name}, raw, expected))
+	v.details = append(v.details, literalDetail([]any{"query", name}, raw, expected))
 	return ""
+}
+
+// queryIntList は list[int] | None のクエリパラメータを解析する。
+//
+// FastAPI は list[int] を同名パラメータの繰り返し (ids=1&ids=2) として受け取り、
+// カンマ区切りは受け付けない ("1,2" は int_parsing になる) 。
+// 解析できない要素は loc に要素インデックスを足した int_parsing を積む
+// (例: {"loc": ["query", "ids", 1]}) 。全要素を検査するため、複数の不正要素はすべて報告される。
+//
+// 戻り値の 2 番目は全要素が解析できたかどうか。
+func (v *fastapiValidation) queryIntList(name string) ([]int64, bool) {
+	values, ok := v.query[name]
+	if !ok {
+		// 省略時の既定値は None (Go 側では nil) 。検証エラーにはしない。
+		return nil, true
+	}
+	parsed := make([]int64, 0, len(values))
+	valid := true
+	for index, raw := range values {
+		number, err := searchJSONInteger(json.RawMessage(strconv.Quote(strings.TrimSpace(raw))))
+		if err != nil || !number.IsInt64() {
+			// Python の int は上限が無いため、int64 を超える値は最大値に寄せる
+			// (後段の ID 一致判定では該当なしになるため HTTP 上の結果は変わらない) 。
+			if err == nil {
+				parsed = append(parsed, math.MaxInt64)
+				continue
+			}
+			v.appendIntParsing([]any{"query", name, index}, raw)
+			valid = false
+			continue
+		}
+		parsed = append(parsed, number.Int64())
+	}
+	return parsed, valid
 }
 
 // writeIfInvalid は検証エラーがあれば FastAPI 互換の 422 を書き出して true を返す。

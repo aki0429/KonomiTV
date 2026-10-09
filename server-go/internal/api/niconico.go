@@ -21,14 +21,6 @@ type thirdpartyAuthURLResponse struct {
 	AuthorizationURL string `json:"authorization_url"`
 }
 
-// validationErrorItem は FastAPI (Pydantic) のバリデーションエラー項目。
-type validationErrorItem struct {
-	Type  string `json:"type"`
-	Loc   []any  `json:"loc"`
-	Msg   string `json:"msg"`
-	Input any    `json:"input"`
-}
-
 // registerNiconicoRoutes はニコニコ関連 API (3 EP) を mux に登録する。
 // ルート登録は registerNiconicoRoutes() で行う (server.go の Handler() から呼び出す) 。
 // 移植元: server/app/routers/NiconicoRouter.py
@@ -301,18 +293,11 @@ func writeOAuthCallbackResponse(w http.ResponseWriter, statusCode int, detail st
 
 // writeMissingQueryParamError は FastAPI が必須クエリパラメータ欠落時に返す 422 レスポンスを再現する。
 func writeMissingQueryParamError(w http.ResponseWriter, names []string) {
-	items := make([]validationErrorItem, 0, len(names))
+	details := make([]validationDetail, 0, len(names))
 	for _, name := range names {
-		items = append(items, validationErrorItem{
-			Type:  "missing",
-			Loc:   []any{"query", name},
-			Msg:   "Field required",
-			Input: nil,
-		})
+		details = append(details, missingDetail([]any{"query", name}, nil))
 	}
-	writeJSON(w, http.StatusUnprocessableEntity, struct {
-		Detail []validationErrorItem `json:"detail"`
-	}{Detail: items})
+	writeValidationDetails(w, details)
 }
 
 // lastQueryValue はクエリパラメータの値を 1 つ返す。

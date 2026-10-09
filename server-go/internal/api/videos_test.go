@@ -168,11 +168,21 @@ func TestVideosList(t *testing.T) {
 		t.Errorf("response = %+v", response.RecordedPrograms)
 	}
 
-	// 不正なパラメータは 422
-	for _, path := range []string{"/api/videos?order=invalid", "/api/videos?page=0", "/api/videos?ids=abc"} {
+	// 不正なパラメータは 422 (検証エラー配列の内容は videos_validation_parity_test.go で固定)
+	//
+	// page=0 は Python 版では 422 にはならない。Python の page は制約のない int で、
+	// 0 以下を渡すと SQL の OFFSET が負になり先頭ページと同じ応答 (200) が返る
+	// (実機 127.0.0.77:7010 で page=0 / page=-1 が page=1 と同一応答であることを確認済み) 。
+	for _, path := range []string{"/api/videos?order=invalid", "/api/videos?ids=abc"} {
 		recorder = doJSONRequest(t, handler, http.MethodGet, path, "", "", "")
 		if recorder.Code != http.StatusUnprocessableEntity {
 			t.Errorf("%s: status = %d, want 422", path, recorder.Code)
+		}
+	}
+	for _, path := range []string{"/api/videos?page=0", "/api/videos?page=-1"} {
+		recorder = doJSONRequest(t, handler, http.MethodGet, path, "", "", "")
+		if recorder.Code != http.StatusOK {
+			t.Errorf("%s: status = %d, want 200 (Python と同じく先頭ページ)", path, recorder.Code)
 		}
 	}
 }

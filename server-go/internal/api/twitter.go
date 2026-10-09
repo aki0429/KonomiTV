@@ -539,7 +539,7 @@ func (s *Server) handleTwitterTimeline(w http.ResponseWriter, r *http.Request) {
 	}
 	if !isValidCursorType(cursorType) {
 		writeValidationDetails(w, []validationDetail{
-			literalDetail([]string{"query", "cursor_type"}, cursorType, "'Top', 'Bottom', 'Gap' or 'ShowMore'"),
+			literalDetail([]any{"query", "cursor_type"}, cursorType, "'Top', 'Bottom', 'Gap' or 'ShowMore'"),
 		})
 		return
 	}
@@ -570,7 +570,7 @@ func (s *Server) handleTwitterSearch(w http.ResponseWriter, r *http.Request) {
 	rawQuery, hasQuery := query["query"]
 	if !hasQuery || len(rawQuery) == 0 || rawQuery[0] == "" {
 		writeValidationDetails(w, []validationDetail{
-			missingDetail([]string{"query", "query"}, nil),
+			missingDetail([]any{"query", "query"}, nil),
 		})
 		return
 	}
@@ -580,7 +580,7 @@ func (s *Server) handleTwitterSearch(w http.ResponseWriter, r *http.Request) {
 	}
 	if searchType != "Top" && searchType != "Latest" {
 		writeValidationDetails(w, []validationDetail{
-			literalDetail([]string{"query", "search_type"}, searchType, "'Top' or 'Latest'"),
+			literalDetail([]any{"query", "search_type"}, searchType, "'Top' or 'Latest'"),
 		})
 		return
 	}
@@ -590,7 +590,7 @@ func (s *Server) handleTwitterSearch(w http.ResponseWriter, r *http.Request) {
 	}
 	if !isValidCursorType(cursorType) {
 		writeValidationDetails(w, []validationDetail{
-			literalDetail([]string{"query", "cursor_type"}, cursorType, "'Top', 'Bottom', 'Gap' or 'ShowMore'"),
+			literalDetail([]any{"query", "cursor_type"}, cursorType, "'Top', 'Bottom', 'Gap' or 'ShowMore'"),
 		})
 		return
 	}
@@ -611,7 +611,7 @@ func (s *Server) handleTwitterVideoProxy(w http.ResponseWriter, r *http.Request)
 	targets, hasURL := query["url"]
 	if !hasURL || len(targets) == 0 || targets[0] == "" {
 		writeValidationDetails(w, []validationDetail{
-			missingDetail([]string{"query", "url"}, nil),
+			missingDetail([]any{"query", "url"}, nil),
 		})
 		return
 	}
@@ -711,28 +711,28 @@ func parseTwitterCookieAuthRequest(r *http.Request) (string, *browserEnvironment
 		body = nil
 	}
 	if len(body) == 0 {
-		return "", nil, []validationDetail{missingDetail([]string{"body", "cookies_txt"}, map[string]any{})}
+		return "", nil, []validationDetail{missingDetail([]any{"body", "cookies_txt"}, map[string]any{})}
 	}
 
 	decoder := json.NewDecoder(strings.NewReader(string(body)))
 	decoder.UseNumber()
 	var decoded any
 	if err := decoder.Decode(&decoded); err != nil {
-		return "", nil, []validationDetail{missingDetail([]string{"body", "cookies_txt"}, map[string]any{})}
+		return "", nil, []validationDetail{missingDetail([]any{"body", "cookies_txt"}, map[string]any{})}
 	}
 	bodyObject, isObject := decoded.(map[string]any)
 	if !isObject {
-		return "", nil, []validationDetail{missingDetail([]string{"body", "cookies_txt"}, decoded)}
+		return "", nil, []validationDetail{missingDetail([]any{"body", "cookies_txt"}, decoded)}
 	}
 
 	// cookies_txt: 欠落は missing、null / 非文字列は string_type
 	rawCookies, hasCookies := bodyObject["cookies_txt"]
 	if !hasCookies {
-		return "", nil, []validationDetail{missingDetail([]string{"body", "cookies_txt"}, bodyObject)}
+		return "", nil, []validationDetail{missingDetail([]any{"body", "cookies_txt"}, bodyObject)}
 	}
 	cookiesTxt, isString := rawCookies.(string)
 	if !isString {
-		return "", nil, []validationDetail{stringTypeDetail([]string{"body", "cookies_txt"}, rawCookies)}
+		return "", nil, []validationDetail{stringTypeDetail([]any{"body", "cookies_txt"}, rawCookies)}
 	}
 
 	// browser_info: 省略 / null は許容。存在する場合は必須フィールドを検証する
@@ -742,13 +742,13 @@ func parseTwitterCookieAuthRequest(r *http.Request) (string, *browserEnvironment
 	}
 	browserObject, isBrowserObject := rawBrowserInfo.(map[string]any)
 	if !isBrowserObject {
-		return "", nil, []validationDetail{missingDetail([]string{"body", "browser_info"}, rawBrowserInfo)}
+		return "", nil, []validationDetail{missingDetail([]any{"body", "browser_info"}, rawBrowserInfo)}
 	}
 
 	details := []validationDetail{}
 	for _, field := range []string{"user_agent_data", "navigator_platform", "locale", "timezone"} {
 		if _, exists := browserObject[field]; !exists {
-			details = append(details, missingDetail([]string{"body", "browser_info", field}, browserObject))
+			details = append(details, missingDetail([]any{"body", "browser_info", field}, browserObject))
 		}
 	}
 	if len(details) > 0 {
@@ -758,11 +758,11 @@ func parseTwitterCookieAuthRequest(r *http.Request) (string, *browserEnvironment
 	// 必須フィールドが揃っている場合は browserEnvironmentInfoRequest に変換する
 	marshaled, err := json.Marshal(browserObject)
 	if err != nil {
-		return "", nil, []validationDetail{missingDetail([]string{"body", "browser_info"}, browserObject)}
+		return "", nil, []validationDetail{missingDetail([]any{"body", "browser_info"}, browserObject)}
 	}
 	var browserInfo browserEnvironmentInfoRequest
 	if err := json.Unmarshal(marshaled, &browserInfo); err != nil {
-		return "", nil, []validationDetail{missingDetail([]string{"body", "browser_info"}, browserObject)}
+		return "", nil, []validationDetail{missingDetail([]any{"body", "browser_info"}, browserObject)}
 	}
 	return cookiesTxt, &browserInfo, nil
 }
@@ -798,7 +798,7 @@ type validationContext struct {
 // validationDetail は Pydantic のエラー 1 件分 (フィールド順は FastAPI の出力と同じ) 。
 type validationDetail struct {
 	Type  string             `json:"type"`
-	Loc   []string           `json:"loc"`
+	Loc   []any              `json:"loc"`
 	Msg   string             `json:"msg"`
 	Input any                `json:"input"`
 	Ctx   *validationContext `json:"ctx,omitempty"`
@@ -816,12 +816,12 @@ func writeValidationDetails(w http.ResponseWriter, details []validationDetail) {
 }
 
 // missingDetail は Pydantic の "missing" エラーを生成する。
-func missingDetail(loc []string, input any) validationDetail {
+func missingDetail(loc []any, input any) validationDetail {
 	return validationDetail{Type: "missing", Loc: loc, Msg: "Field required", Input: input}
 }
 
 // literalDetail は Pydantic の "literal_error" エラーを生成する。
-func literalDetail(loc []string, input string, expected string) validationDetail {
+func literalDetail(loc []any, input string, expected string) validationDetail {
 	return validationDetail{
 		Type:  "literal_error",
 		Loc:   loc,
@@ -832,7 +832,7 @@ func literalDetail(loc []string, input string, expected string) validationDetail
 }
 
 // stringTypeDetail は Pydantic の "string_type" エラーを生成する。
-func stringTypeDetail(loc []string, input any) validationDetail {
+func stringTypeDetail(loc []any, input any) validationDetail {
 	return validationDetail{Type: "string_type", Loc: loc, Msg: "Input should be a valid string", Input: input}
 }
 

@@ -27,24 +27,21 @@ type recordedProgramsResponse struct {
 }
 
 // handleVideos は録画番組一覧 API (GET /api/videos) を処理する。
+//
+// 移植元: server/app/routers/VideosRouter.py の GetRecordedProgramsAPI()
+// パラメータは order (Literal) → page (int) → ids (list[int] | None) の順に宣言されており、
+// FastAPI はその順で全エラーを 1 つの配列にまとめて 422 で返す。
 func (s *Server) handleVideos(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	order := query.Get("order")
-	if order == "" {
-		order = "desc"
+	validation := newFastAPIValidation(r)
+	order := validation.queryLiteral("order", []string{"desc", "asc", "ids"}, "desc", "'desc', 'asc' or 'ids'")
+	page := int(validation.queryIntDefault("page", 1))
+	ids, _ := validation.queryIntList("ids")
+	// Python の page は制約のない int で、0 以下を渡すと SQL の OFFSET が負になり
+	// 先頭ページと同じ結果が返る (実機で page=0 / page=-1 が page=1 と同一応答) 。
+	if page < 1 {
+		page = 1
 	}
-	if order != "desc" && order != "asc" && order != "ids" {
-		writeError(w, http.StatusUnprocessableEntity, "Invalid order")
-		return
-	}
-	page, ok := parsePositivePage(query.Get("page"))
-	if !ok {
-		writeError(w, http.StatusUnprocessableEntity, "Invalid page")
-		return
-	}
-	ids, ok := parseIDList(query["ids"])
-	if !ok {
-		writeError(w, http.StatusUnprocessableEntity, "Invalid ids")
+	if validation.writeIfInvalid(w) {
 		return
 	}
 
@@ -58,20 +55,20 @@ func (s *Server) handleVideos(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleVideosSearch は録画番組検索 API (GET /api/videos/search) を処理する。
+//
+// 移植元: server/app/routers/VideosRouter.py の SearchRecordedProgramsAPI()
+// パラメータ宣言は query (str) → order (Literal) → page (int) の順。
 func (s *Server) handleVideosSearch(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query()
-	searchQuery := query.Get("query")
-	order := query.Get("order")
-	if order == "" {
-		order = "desc"
+	validation := newFastAPIValidation(r)
+	// query は制約のない str なので検証エラーにはならない (宣言順の先頭として先に読む) 。
+	searchQuery := r.URL.Query().Get("query")
+	order := validation.queryLiteral("order", []string{"desc", "asc"}, "desc", "'desc' or 'asc'")
+	page := int(validation.queryIntDefault("page", 1))
+	// 一覧 API と同じく、1 未満のページは先頭ページとして扱う
+	if page < 1 {
+		page = 1
 	}
-	if order != "desc" && order != "asc" {
-		writeError(w, http.StatusUnprocessableEntity, "Invalid order")
-		return
-	}
-	page, ok := parsePositivePage(query.Get("page"))
-	if !ok {
-		writeError(w, http.StatusUnprocessableEntity, "Invalid page")
+	if validation.writeIfInvalid(w) {
 		return
 	}
 
@@ -265,43 +262,6 @@ func sortRecordedProgramsByIDs(programs []recordedProgramResponse, indexByID map
 			programs[current-1], programs[current] = programs[current], programs[current-1]
 		}
 	}
-}
-
-// parsePositivePage はページ番号を解析する (1 以上の整数のみ) 。
-func parsePositivePage(value string) (int, bool) {
-	if value == "" {
-		return 1, true
-	}
-	page, err := strconv.Atoi(value)
-	if err != nil || page < 1 {
-		return 0, false
-	}
-	return page, true
-}
-
-// parseIDList は録画番組 ID のリストを解析する。
-func parseIDList(values []string) ([]int64, bool) {
-	// ids=1&ids=2 の形式と、ids=1,2 の形式の両方を受け付ける
-	rawValues := []string{}
-	for _, value := range values {
-		for _, part := range strings.Split(value, ",") {
-			if trimmed := strings.TrimSpace(part); trimmed != "" {
-				rawValues = append(rawValues, trimmed)
-			}
-		}
-	}
-	if len(rawValues) == 0 {
-		return nil, true
-	}
-	ids := make([]int64, 0, len(rawValues))
-	for _, value := range rawValues {
-		id, err := strconv.ParseInt(value, 10, 64)
-		if err != nil {
-			return nil, false
-		}
-		ids = append(ids, id)
-	}
-	return ids, true
 }
 
 // getRecordedProgramDetail は指定された録画番組を取得する。
@@ -703,7 +663,7 @@ func parsePathID(w http.ResponseWriter, r *http.Request, name string) (int64, bo
 	if err != nil {
 		writeValidationDetails(w, []validationDetail{{
 			Type:  "int_parsing",
-			Loc:   []string{"path", name},
+			Loc:   []any{"path", name},
 			Msg:   "Input should be a valid integer, unable to parse string as an integer",
 			Input: value,
 		}})
