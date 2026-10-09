@@ -250,16 +250,17 @@ func (s *Server) handleProgramTimeTable(w http.ResponseWriter, r *http.Request) 
 	query := r.URL.Query()
 	v := newFastAPIValidation(r)
 
-	// 開始時刻のデフォルト値: 現在時刻
+	// 開始時刻のデフォルト値: 現在時刻 (Python: start_time: datetime | None = None)
 	startTime := now
-	if value := query.Get("start_time"); value != "" {
-		parsed, ok := parseQueryDatetime(value)
-		if !ok {
-			writeError(w, http.StatusUnprocessableEntity, "Invalid start_time")
-			return
-		}
+	if parsed, ok := v.queryDatetime("start_time"); ok {
 		startTime = parsed
 	}
+
+	// 終了時刻 (Python: end_time: datetime | None = None) 。ここでは検証だけ行い、
+	// 既定値 (DB に存在する最終日時) の決定は DB 取得後に行う。
+	// Pydantic は宣言順 (start_time → end_time → channel_type) で全エラーを蓄積するため、
+	// 不正値でも打ち切らず、後段の writeIfInvalid で 1 配列にまとめて返す。
+	endTimeValue, endTimeSet := v.queryDatetime("end_time")
 
 	// チャンネル種別は Literal['GR', 'BS', 'CS', 'CATV', 'SKY', 'BS4K'] で、無効値は literal_error にする。
 	// 空文字も「未指定」ではなく許容外の入力として扱う (Python の str は空文字も有効値のため欠落と区別される) 。
@@ -306,15 +307,11 @@ func (s *Server) handleProgramTimeTable(w http.ResponseWriter, r *http.Request) 
 		latest = *dateRange.Latest
 	}
 
-	// 終了時刻のデフォルト値: DB に存在する最終日時
+	// 終了時刻のデフォルト値: DB に存在する最終日時。
+	// end_time が指定されていれば検証済みの値を使う。
 	endTime := latest
-	if value := query.Get("end_time"); value != "" {
-		parsed, ok := parseQueryDatetime(value)
-		if !ok {
-			writeError(w, http.StatusUnprocessableEntity, "Invalid end_time")
-			return
-		}
-		endTime = parsed
+	if endTimeSet {
+		endTime = endTimeValue
 	}
 
 	// チャンネル情報を取得する
@@ -579,14 +576,4 @@ func getTimeTableSubchannelDurationGroupKey(duration database.SubchannelDuration
 		return &timeTableSubchannelGroupKey{Kind: "BSService", NetworkID: duration.NetworkID, Value: duration.ServiceID}
 	}
 	return nil
-}
-
-// parseQueryDatetime はクエリパラメーターの日時文字列を JST の time.Time に変換する。
-// タイムゾーンが指定されていない場合は JST として扱う (NormalizeToJSTDatetime と同じ) 。
-func parseQueryDatetime(value string) (time.Time, bool) {
-	parsed, err := database.ParseDBTime(value)
-	if err != nil {
-		return time.Time{}, false
-	}
-	return parsed.In(constants.JST), true
 }
