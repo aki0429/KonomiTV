@@ -32,24 +32,32 @@ type videoStreamRequest struct {
 	SessionID     string
 }
 
-// parseVideoStreamPath は録画 ID と品質を共通の順序で検証する。
+// resolveVideoStream は Python の依存 (ValidateVideoID / ValidateQuality) を評価する。
 // 移植元: VideoStreamsRouter.ValidateVideoID() / ValidateQuality()
-// unknownVideoStatus は既存 HLS の 422 と offline-stream の明示契約 404 を分離する。
-func (s *Server) parseVideoStreamPath(w http.ResponseWriter, r *http.Request, unknownVideoStatus int) (*videoStreamRequest, bool) {
-	videoID, ok := parsePathID(w, r, "video_id")
-	if !ok {
-		return nil, false
-	}
-	detail, err := database.GetRecordedProgramDetail(r.Context(), s.db, videoID)
-	if err != nil {
-		s.logger.Error("[VideoStreamsRouter][ValidateVideoID] Failed to get the recorded program.", "error", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
-		return nil, false
-	}
-	if detail == nil {
-		s.logger.Error("[VideoStreamsRouter][ValidateVideoID] Specified video_id was not found.", "video_id", videoID)
-		writeError(w, unknownVideoStatus, "Specified video_id was not found")
-		return nil, false
+//
+// FastAPI はエンドポイント自身のクエリ検証より先にサブ依存を解決し、依存が HTTPException を
+// 投げるとその応答が確定する。実機の Python でも
+// /api/streams/video/abc/9999p/playlist は品質エラー、/api/streams/video/abc/720p/buffer は
+// 検証エラー配列になる。よって依存のエラーを返すときは v に積んだ検証エラーを破棄する。
+//
+// サブ依存自身のパラメータが不正な場合はその依存は呼ばれないため、video_id が整数でないときは
+// 録画 ID の存在確認を行わず、品質検証 (quality は str なので常に実行される) だけを行う。
+func (s *Server) resolveVideoStream(w http.ResponseWriter, r *http.Request, v *fastapiValidation) (*videoStreamRequest, bool) {
+	videoID, idOK := v.pathInt(r, "video_id")
+	var detail *database.RecordedProgramDetail
+	if idOK {
+		var err error
+		detail, err = database.GetRecordedProgramDetail(r.Context(), s.db, videoID)
+		if err != nil {
+			s.logger.Error("[VideoStreamsRouter][ValidateVideoID] Failed to get the recorded program.", "error", err)
+			writeError(w, http.StatusInternalServerError, "Internal Server Error")
+			return nil, false
+		}
+		if detail == nil {
+			s.logger.Error("[VideoStreamsRouter][ValidateVideoID] Specified video_id was not found.", "video_id", videoID)
+			writeError(w, http.StatusUnprocessableEntity, "Specified video_id was not found")
+			return nil, false
+		}
 	}
 
 	quality := r.PathValue("quality")
@@ -66,30 +74,21 @@ func (s *Server) parseVideoStreamPath(w http.ResponseWriter, r *http.Request, un
 		return nil, false
 	}
 
+	// video_id が整数でないときは Detail を持たない。呼び出し側は検証エラー配列を返して終わる。
 	return &videoStreamRequest{Detail: detail, StreamQuality: streamQuality}, true
 }
 
-// parseVideoStreamRequest は既存 HLS のパス検証に続いて必須 session_id を検証する。
-// 品質が不正なら session_id 欠落より先にエラーにする既存の順序を保持する。
-func (s *Server) parseVideoStreamRequest(w http.ResponseWriter, r *http.Request) (*videoStreamRequest, bool) {
-	request, ok := s.parseVideoStreamPath(w, r, http.StatusUnprocessableEntity)
-	if !ok {
-		return nil, false
-	}
-	if !r.URL.Query().Has("session_id") {
-		writeError(w, http.StatusUnprocessableEntity, "Field required: query.session_id")
-		return nil, false
-	}
-	request.SessionID = r.URL.Query().Get("session_id")
-	return request, true
-}
-
-// handleVideoStreamOffline はオフライン保存 API の検証層だけを処理する。
-// Python の session_id 非必須・品質検証・Recording 拒否を移植するが、
-// unknown ID はこの slice の明示契約 404 とし、KTVODLP 本体の未実装は 501 で区別する。
+// handleVideoStreamOffline はオフライン保存 API を処理する。
+// Python の session_id 非必須・品質検証・Recording 拒否を移植し、
+// KTVODLP 本体の未実装は 501 で区別する。
 func (s *Server) handleVideoStreamOffline(w http.ResponseWriter, r *http.Request) {
-	request, ok := s.parseVideoStreamPath(w, r, http.StatusNotFound)
+	// Python の VideoOfflineStreamAPI はパスパラメータ以外を取らないため、検証はパス型のみ。
+	v := newFastAPIValidation(r)
+	request, ok := s.resolveVideoStream(w, r, v)
 	if !ok {
+		return
+	}
+	if v.writeIfInvalid(w) { // 依存が例外を投げなかった場合だけ検証エラー配列を返す
 		return
 	}
 	// 録画中はファイル終端とハッシュが確定しないため保存を開始できない。
@@ -174,19 +173,20 @@ func (s *Server) getVideoSession(w http.ResponseWriter, r *http.Request, request
 // handleVideoStreamPlaylist は録画番組 HLS M3U8 プレイリスト API
 // (GET /api/streams/video/{video_id}/{quality}/playlist) を処理する。
 func (s *Server) handleVideoStreamPlaylist(w http.ResponseWriter, r *http.Request) {
-	request, ok := s.parseVideoStreamRequest(w, r)
+	// 依存 (ValidateVideoID / ValidateQuality) を先に解決し、その後で宣言順にクエリを検証する
+	v := newFastAPIValidation(r)
+	request, ok := s.resolveVideoStream(w, r, v)
 	if !ok {
 		return
 	}
-	query := r.URL.Query()
-	playlistType := query.Get("type")
-	if playlistType == "" {
-		playlistType = "primary-audio"
-	}
-	if playlistType != "master" && playlistType != "primary-audio" && playlistType != "secondary-audio" {
-		writeError(w, http.StatusUnprocessableEntity, "Input should be 'master', 'primary-audio' or 'secondary-audio'")
+	sessionID := v.queryString("session_id")
+	playlistType := v.queryLiteral("type", []string{"master", "primary-audio", "secondary-audio"},
+		"primary-audio", "'master', 'primary-audio' or 'secondary-audio'")
+	if v.writeIfInvalid(w) {
 		return
 	}
+	request.SessionID = sessionID
+	query := r.URL.Query()
 	session, ok := s.getVideoSession(w, r, request, true)
 	if !ok {
 		return
@@ -236,10 +236,16 @@ func parseBitrateK(value string) int64 {
 // handleVideoStreamKeepAlive は録画番組 HLS Keep-Alive API
 // (PUT /api/streams/video/{video_id}/{quality}/keep-alive) を処理する。
 func (s *Server) handleVideoStreamKeepAlive(w http.ResponseWriter, r *http.Request) {
-	request, ok := s.parseVideoStreamRequest(w, r)
+	v := newFastAPIValidation(r)
+	request, ok := s.resolveVideoStream(w, r, v)
 	if !ok {
 		return
 	}
+	sessionID := v.queryString("session_id")
+	if v.writeIfInvalid(w) {
+		return
+	}
+	request.SessionID = sessionID
 	session, ok := s.getVideoSession(w, r, request, false)
 	if !ok {
 		return
@@ -276,10 +282,16 @@ const bufferPollInterval = 100 * time.Millisecond
 // handleVideoStreamBuffer は録画番組 HLS バッファ範囲 API
 // (GET /api/streams/video/{video_id}/{quality}/buffer) を処理する (Server-Sent Events) 。
 func (s *Server) handleVideoStreamBuffer(w http.ResponseWriter, r *http.Request) {
-	request, ok := s.parseVideoStreamRequest(w, r)
+	v := newFastAPIValidation(r)
+	request, ok := s.resolveVideoStream(w, r, v)
 	if !ok {
 		return
 	}
+	sessionID := v.queryString("session_id")
+	if v.writeIfInvalid(w) {
+		return
+	}
+	request.SessionID = sessionID
 	session, ok := s.getVideoSession(w, r, request, false)
 	if !ok {
 		return
@@ -328,34 +340,26 @@ func (s *Server) handleVideoStreamBuffer(w http.ResponseWriter, r *http.Request)
 // handleVideoStreamSegment は録画番組 HLS セグメント API
 // (GET /api/streams/video/{video_id}/{quality}/segment) を処理する。
 func (s *Server) handleVideoStreamSegment(w http.ResponseWriter, r *http.Request) {
-	request, ok := s.parseVideoStreamRequest(w, r)
+	// 依存を先に解決し、その後で宣言順 (session_id → sequence → cache_key → audio) に検証する
+	v := newFastAPIValidation(r)
+	request, ok := s.resolveVideoStream(w, r, v)
 	if !ok {
 		return
 	}
-	query := r.URL.Query()
-	sequence, err := strconv.Atoi(query.Get("sequence"))
-	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, "Input should be a valid integer: query.sequence")
+	sessionID := v.queryString("session_id")
+	sequence := v.queryInt("sequence")
+	_ = v.queryString("cache_key") // 必須だが値は使わない (キャッシュ制御用)
+	audio := v.queryLiteral("audio", []string{"primary", "secondary"}, "primary", "'primary' or 'secondary'")
+	if v.writeIfInvalid(w) {
 		return
 	}
-	if !query.Has("cache_key") {
-		writeError(w, http.StatusUnprocessableEntity, "Field required: query.cache_key")
-		return
-	}
-	audio := query.Get("audio")
-	if audio == "" {
-		audio = "primary"
-	}
-	if audio != "primary" && audio != "secondary" {
-		writeError(w, http.StatusUnprocessableEntity, "Input should be 'primary' or 'secondary'")
-		return
-	}
+	request.SessionID = sessionID
 	session, ok := s.getVideoSession(w, r, request, false)
 	if !ok {
 		return
 	}
 
-	data, err := session.GetSegment(r.Context(), sequence, audio)
+	data, err := session.GetSegment(r.Context(), int(sequence), audio)
 	if err != nil {
 		switch {
 		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):

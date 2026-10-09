@@ -140,7 +140,7 @@ func TestPG4BodyLegacyProxy(t *testing.T) {
 	if recorder.Code != 200 || recorder.Body.String() != "legacy-synthetic-body" || calls.Load() != 1 {
 		t.Fatalf("valid request stopped legacy save: %d %q calls=%d", recorder.Code, recorder.Body.String(), calls.Load())
 	}
-	assertPG4Error(t, s, http.MethodGet, "/api/streams/video/9999/720p/offline-stream", 404, "Specified video_id was not found")
+	assertPG4Error(t, s, http.MethodGet, "/api/streams/video/9999/720p/offline-stream", 422, "Specified video_id was not found")
 	if calls.Load() != 1 {
 		t.Fatal("invalid request reached proxy")
 	}

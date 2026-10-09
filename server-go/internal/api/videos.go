@@ -694,11 +694,19 @@ func (s *Server) handleVideoThumbnailRegenerate(w http.ResponseWriter, r *http.R
 }
 
 // parsePathID はパスパラメータの ID を解析する (不正な場合は 422 を返す) 。
+// 本文は FastAPI/Pydantic の検証エラー配列に合わせる (移植元: Path(int) の int_parsing) 。
+// クライアント (services/APIClient.ts) は detail が配列か文字列かで表示を分岐するため、
+// 文字列の {"detail":"Invalid video_id"} では互換にならない。
 func parsePathID(w http.ResponseWriter, r *http.Request, name string) (int64, bool) {
 	value := r.PathValue(name)
 	id, err := strconv.ParseInt(value, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, fmt.Sprintf("Invalid %s", name))
+		writeValidationDetails(w, []validationDetail{{
+			Type:  "int_parsing",
+			Loc:   []string{"path", name},
+			Msg:   "Input should be a valid integer, unable to parse string as an integer",
+			Input: value,
+		}})
 		return 0, false
 	}
 	return id, true

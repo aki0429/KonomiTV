@@ -22,8 +22,9 @@ func TestVideoStreamOfflineStreamValidation(t *testing.T) {
 		status int
 		detail string
 	}{
-		// 不明 video は 404 (unknown-API の {"detail":"Not Found"} へフォールスルーしない)
-		{"unknown video", "/api/streams/video/9999/1080p/offline-stream", http.StatusNotFound, "Specified video_id was not found"},
+		// 不明 video は Python 版 ValidateVideoID() と同じ 422
+		// (unknown-API の {"detail":"Not Found"} へフォールスルーしない)
+		{"unknown video", "/api/streams/video/9999/1080p/offline-stream", http.StatusUnprocessableEntity, "Specified video_id was not found"},
 		// 不正 quality は Python 版 ValidateQuality() と同じ 422
 		{"invalid quality", "/api/streams/video/1/9999p/offline-stream", http.StatusUnprocessableEntity, "Specified quality was not found"},
 		{"reversed quality options", "/api/streams/video/1/1080p-hevc-24fps-10bit/offline-stream", http.StatusUnprocessableEntity, "Specified quality was not found"},

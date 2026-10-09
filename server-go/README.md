@@ -36,7 +36,7 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `GET /api/streams/live/{display_channel_id}/{quality}/psi-archived-data` (PSI/SI アーカイブデータ) | ✅ Go 実装済み (EDCB / Mirakurun バックエンドのみ。IPTV では 500 を返す) |
 | `GET /api/streams/video/{video_id}/{quality}/playlist`・`PUT .../keep-alive`・`GET .../buffer` (録画 HLS プレイリスト・セッション維持・バッファ範囲 SSE) | ✅ Go 実装済み (セッション管理は `internal/videostream/session*.go`) |
 | `GET /api/streams/video/{video_id}/{quality}/segment` (録画 HLS セグメント) | 🚧 セッション制御は Go 実装済み。エンコーダー (VideoEncodingTask) 待ちのため、エンコーダー未登録の間は 500 を返す |
-| `GET /api/streams/video/{video_id}/{quality}/offline-stream` (オフライン保存) | 🔁 Python 版へプロキシ |
+| `GET /api/streams/video/{video_id}/{quality}/offline-stream` (オフライン保存) | ✅ Go 実装済み (`KTVODLP` 本体をネイティブ生成。proxy 有効時は検証後に Python 版へ転送) |
 | `GET /api/videos`・`GET /api/videos/search` (録画番組一覧・検索) | ✅ Go 実装済み (応答は Python 版と完全一致を検証済み) |
 | `GET /api/videos/{video_id}` (録画番組情報) | ✅ Go 実装済み |
 | `GET /api/videos/{video_id}/thumbnail`・`/thumbnail/tiled` (サムネイル画像、ETag / 304 対応) | ✅ Go 実装済み |
@@ -68,6 +68,28 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 - `TestPG3*` は実 TCP の合成 peer のみを使用する。本番 EDCB・予約サービス・SSH へは接続していない。
 - 既存 `TestProgramSearchProxiedForEDCB` は assertion 不変で通過。no-proxy native 正常系と旧 proxy 構成を併存させる。
 - 名前付きパイプの期限・部分 Read と実機互換性は未検証。不正 UTF-16、JSON null/必須子フィールド/Pydantic coercion、特殊な拡張見出しの完全互換性は未達 (follow-up 証跡の監査項目を参照)。
+
+### FastAPI の 422 検証エラー互換 (`internal/api/fastapi_validation.go`)
+
+- Python 版の 422 は大きく 2 種類ある。Pydantic の検証エラーは `{"detail":[{...}]}` の**配列**、
+  依存 (ValidateVideoID / ValidateQuality など) が投げる HTTPException は `{"detail":"..."}` の**文字列**。
+  クライアント (`client/src/services/APIClient.ts`) は `Array.isArray(detail)` で表示を分岐するため、
+  文字列で返すと UI の表示が変わる。
+- Pydantic はパラメータごとに最初の失敗で止めず、**全エラーを宣言順に 1 つの配列**へまとめる。
+  パスパラメータ (`loc: ["path", name]`) が先、クエリパラメータ (`loc: ["query", name]`) が続く。
+- FastAPI はサブ依存を解決してからエンドポイント自身のクエリを検証する。依存が例外を投げると
+  その応答が確定し、その時点で蓄積済みの検証エラーは捨てられる
+  (実機 Python: `/api/streams/video/abc/9999p/playlist` は品質エラー、`/api/streams/video/abc/720p/buffer`
+  は検証エラー配列) 。
+- サブ依存自身のパラメータが不正な場合はその依存は呼ばれない
+  (`video_id=abc` のとき録画 ID の存在確認は走らないが、`quality` は `str` なので品質検証は走る) 。
+- 文字列 → int の変換は前後の空白・符号・アンダースコア区切り・ゼロ小数部 (`1.0`) を許容し、
+  小数 (`1.5`) や指数 (`1e2`) は `int_parsing` になる (`int_from_float` ではない) 。
+
+**既知の未達 (follow-up)**: `GET /api/videos`・`GET /api/videos/search`・`GET /api/series` の `page`、
+`GET /api/captures/folders/{folder_id}/captures?page` はまだ文字列 detail (`Invalid page` など) を返す。
+`page=0` / `page=-1` の扱いも Python 版と異なる (Python は 200、Go は 422) 。実機プローブの結果は
+移行台帳の検証記録に保存している。
 
 ## 使い方
 

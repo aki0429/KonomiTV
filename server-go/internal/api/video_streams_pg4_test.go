@@ -26,8 +26,46 @@ func assertPG4Error(t *testing.T, server *Server, method, path string, status in
 	}
 }
 
+// intParsingMarker は FastAPI/Pydantic の int_parsing 検証エラー配列を期待する目印。
+// 非整数のパスパラメータは文字列 detail ではなく検証エラー配列を返す (Python と同一) 。
+const intParsingMarker = "@int_parsing"
+
+// assertPG4Body は応答本文をそのまま比較する (検証エラー配列の順序・件数まで固定する) 。
+func assertPG4Body(t *testing.T, server *Server, method, path string, status int, want string) {
+	t.Helper()
+	recorder := videoStreamRequest_(t, server, method, path)
+	if recorder.Code != status || recorder.Body.String() != want {
+		t.Fatalf("%s %s = %d %q; want %d %q", method, path, recorder.Code, recorder.Body.String(), status, want)
+	}
+	if got := recorder.Header().Get("Content-Type"); got != "application/json" {
+		t.Errorf("Content-Type = %q, want application/json", got)
+	}
+	if count := server.videoStreams.Count(); count != 0 {
+		t.Errorf("検証だけで HLS セッションを作成した: %d", count)
+	}
+}
+
+// assertPG4ValidationArray は Pydantic の int_parsing 検証エラー配列を期待する。
+func assertPG4ValidationArray(t *testing.T, server *Server, method, path, loc, input string) {
+	t.Helper()
+	want := fmt.Sprintf(`{"detail":[{"type":"int_parsing","loc":["path",%q],`+
+		`"msg":"Input should be a valid integer, unable to parse string as an integer","input":%q}]}`+"\n", loc, input)
+	assertPG4Body(t, server, method, path, http.StatusUnprocessableEntity, want)
+}
+
+// assertPG4MissingQuery は必須クエリの欠落が FastAPI と同じ missing 配列になることを確認する。
+func assertPG4MissingQuery(t *testing.T, server *Server, method, path string, names []string) {
+	t.Helper()
+	items := make([]string, 0, len(names))
+	for _, name := range names {
+		items = append(items, fmt.Sprintf(`{"type":"missing","loc":["query",%q],"msg":"Field required","input":null}`, name))
+	}
+	want := `{"detail":[` + strings.Join(items, ",") + `]}` + "\n"
+	assertPG4Body(t, server, method, path, http.StatusUnprocessableEntity, want)
+}
+
 // TestPG4OfflineNativeValidation は session_id なしで検証がネイティブに完結する契約を固定する。
-// unknown ID の 404 はこの slice 固有の契約であり、Python ValidateVideoID の 422 とは異なる。
+// unknown ID は Python ValidateVideoID と同じ 422 を返す (実機差分プローブで確定) 。
 func TestPG4OfflineNativeValidation(t *testing.T) {
 	server, id := setupVideoStreamTest(t)
 	if server.proxy != nil {
@@ -40,14 +78,14 @@ func TestPG4OfflineNativeValidation(t *testing.T) {
 		status                        int
 		detail                        string
 	}{
-		{"整数でない ID", "abc", "1080p", "", 422, "Invalid video_id"},
-		{"小数 ID", "1.5", "1080p", "", 422, "Invalid video_id"},
-		{"int64 上限超過", "9223372036854775808", "1080p", "", 422, "Invalid video_id"},
-		{"未知 ID", "9999", "1080p", "", 404, "Specified video_id was not found"},
-		{"ゼロ ID", "0", "1080p", "", 404, "Specified video_id was not found"},
-		{"負の ID", "-1", "1080p", "", 404, "Specified video_id was not found"},
-		{"未知 ID は quality より先", "9999", "invalid", "", 404, "Specified video_id was not found"},
-		{"不正 ID は quality より先", "abc", "original", "", 422, "Invalid video_id"},
+		{"整数でない ID", "abc", "1080p", "", 422, intParsingMarker},
+		{"小数 ID", "1.5", "1080p", "", 422, intParsingMarker},
+		{"int64 上限超過", "9223372036854775808", "1080p", "", 422, intParsingMarker},
+		{"未知 ID", "9999", "1080p", "", 422, "Specified video_id was not found"},
+		{"ゼロ ID", "0", "1080p", "", 422, "Specified video_id was not found"},
+		{"負の ID", "-1", "1080p", "", 422, "Specified video_id was not found"},
+		{"未知 ID は quality より先", "9999", "invalid", "", 422, "Specified video_id was not found"},
+		{"不正 ID でも品質検証は先に走る", "abc", "original", "", 422, "Original quality is not available for HLS playlist"},
 		{"未知 quality", fmt.Sprint(id), "9999p", "", 422, "Specified quality was not found"},
 		{"逆順オプション", fmt.Sprint(id), "1080p-hevc-24fps-10bit", "", 422, "Specified quality was not found"},
 		{"重複 10bit", fmt.Sprint(id), "1080p-hevc-10bit-10bit", "", 422, "Specified quality was not found"},
@@ -61,7 +99,13 @@ func TestPG4OfflineNativeValidation(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			assertPG4Error(t, server, http.MethodGet, "/api/streams/video/"+c.videoID+"/"+c.quality+"/offline-stream"+c.query, c.status, c.detail)
+			path := "/api/streams/video/" + c.videoID + "/" + c.quality + "/offline-stream" + c.query
+			// 非整数のパス ID は検証エラー配列を返す
+			if c.detail == intParsingMarker {
+				assertPG4ValidationArray(t, server, http.MethodGet, path, "video_id", c.videoID)
+				return
+			}
+			assertPG4Error(t, server, http.MethodGet, path, c.status, c.detail)
 		})
 	}
 }
@@ -69,19 +113,30 @@ func TestPG4OfflineNativeValidation(t *testing.T) {
 // TestPG4HLSValidationOrderUnchanged は共通化後も既存 HLS の検証順と 422 を保護する。
 func TestPG4HLSValidationOrderUnchanged(t *testing.T) {
 	server, _ := setupVideoStreamTest(t)
-	cases := []struct{ method, endpoint string }{
-		{http.MethodGet, "playlist"}, {http.MethodGet, "segment"},
-		{http.MethodGet, "buffer"}, {http.MethodPut, "keep-alive"},
+	cases := []struct {
+		method, endpoint, required string
+		// missingWithoutQuery はクエリを 1 つも付けなかったときに missing になるパラメータ (宣言順)
+		missingWithoutQuery []string
+	}{
+		{http.MethodGet, "playlist", "session_id=x", []string{"session_id"}},
+		{http.MethodGet, "segment", "session_id=x&sequence=0&cache_key=k", []string{"session_id", "sequence", "cache_key"}},
+		{http.MethodGet, "buffer", "session_id=x", []string{"session_id"}},
+		{http.MethodPut, "keep-alive", "session_id=x", []string{"session_id"}},
 	}
 	for _, c := range cases {
 		t.Run(c.endpoint, func(t *testing.T) {
 			base := "/api/streams/video/"
-			assertPG4Error(t, server, c.method, base+"9999/invalid/"+c.endpoint, 422, "Specified video_id was not found")
-			assertPG4Error(t, server, c.method, base+"abc/original/"+c.endpoint, 422, "Invalid video_id")
-			assertPG4Error(t, server, c.method, base+"1/invalid/"+c.endpoint, 422, "Specified quality was not found")
-			assertPG4Error(t, server, c.method, base+"1/1080p-hevc-24fps-10bit/"+c.endpoint, 422, "Specified quality was not found")
-			assertPG4Error(t, server, c.method, base+"1/original/"+c.endpoint, 422, "Original quality is not available for HLS playlist")
-			assertPG4Error(t, server, c.method, base+"1/720p-hevc-10bit-24fps/"+c.endpoint, 422, "Field required: query.session_id")
+			// 依存 (ValidateVideoID / ValidateQuality) は Pydantic の検証通過後に走る
+			assertPG4Error(t, server, c.method, base+"9999/invalid/"+c.endpoint+"?"+c.required, 422, "Specified video_id was not found")
+			// video_id が整数でないときは video の依存が呼ばれないが、quality の依存は実行される
+			// (実機 Python: /api/streams/video/abc/original/playlist は品質エラー、abc/720p/buffer は検証エラー配列)
+			assertPG4Error(t, server, c.method, base+"abc/original/"+c.endpoint+"?"+c.required, 422, "Original quality is not available for HLS playlist")
+			assertPG4ValidationArray(t, server, c.method, base+"abc/720p/"+c.endpoint+"?"+c.required, "video_id", "abc")
+			assertPG4Error(t, server, c.method, base+"1/invalid/"+c.endpoint+"?"+c.required, 422, "Specified quality was not found")
+			assertPG4Error(t, server, c.method, base+"1/1080p-hevc-24fps-10bit/"+c.endpoint+"?"+c.required, 422, "Specified quality was not found")
+			assertPG4Error(t, server, c.method, base+"1/original/"+c.endpoint+"?"+c.required, 422, "Original quality is not available for HLS playlist")
+			// 必須クエリの欠落は FastAPI と同じ missing 配列になる
+			assertPG4MissingQuery(t, server, c.method, base+"1/720p-hevc-10bit-24fps/"+c.endpoint, c.missingWithoutQuery)
 		})
 	}
 }
@@ -94,7 +149,7 @@ func TestPG4OfflineNoProxyFallback(t *testing.T) {
 		calls++
 		http.Error(w, "unexpected proxy", http.StatusBadGateway)
 	})
-	assertPG4Error(t, server, http.MethodGet, "/api/streams/video/9999/1080p/offline-stream", 404, "Specified video_id was not found")
+	assertPG4Error(t, server, http.MethodGet, "/api/streams/video/9999/1080p/offline-stream", 422, "Specified video_id was not found")
 	assertPG4Error(t, server, http.MethodGet, "/api/streams/video/1/invalid/offline-stream", 422, "Specified quality was not found")
 	if calls != 0 {
 		t.Fatalf("proxy calls = %d", calls)
