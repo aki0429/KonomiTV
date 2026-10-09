@@ -391,84 +391,96 @@ func TestTSInfoReviewJoinedReadFailureKeepsCallerClock(t *testing.T) {
 	}
 }
 
-// Synthetic regression: a backwards PCR without a wrap near the modulus
-// cannot place a 60-second recording more than a day before its valid TOT.
+// Python 版は負の経過時間を 0 にクランプするため、PCR の巻き戻しは過去時計を
+// 生み出さず、録画開始は TOT 時点そのものになる。
 func TestIndependentReviewPCRBackwardCannotInventOldClock(t *testing.T) {
 	clock := time.Date(2026, 10, 7, 10, 0, 10, 0, constants.JST)
 	data := tsinfoPCRPacket(0x200, 90000, 0)
 	data = append(data, tsinfoPCRPacket(0x200, 0, 0)...)
 	data = append(data, tsinfoPackets(0x14, tsinfoTOT(clock), map[uint16]byte{})...)
 	start, finish := tsinfoRecordingTime(context.Background(), bytes.NewReader(data), int64(len(data)), 0x200, 60)
-	if start != nil || finish != nil {
-		t.Fatalf("3 packets (%d bytes), PCR base 90000 -> 0: expected unavailable clock; got start=%s, elapsed=%s, duration=60s", len(data), start.Format(time.RFC3339Nano), clock.Sub(*start))
+	if start == nil || finish == nil {
+		t.Fatal("clamped backward PCR must still yield a recording clock")
+	}
+	if !start.Equal(clock) || !finish.Equal(clock.Add(time.Minute)) {
+		t.Fatalf("3 packets (%d bytes), PCR base 90000 -> 0: backward PCR invented an old clock: start=%s want=%s", len(data), start.Format(time.RFC3339Nano), clock.Format(time.RFC3339Nano))
 	}
 }
 
-// Expected values are literal integer-rational nanosecond floors, not Python
-// or rounded float clocks. The large counterexample overflows ticks * 1e9.
-func TestTSInfoReviewPCRNanosecondFloor(t *testing.T) {
+// Python 版は PCR base (90kHz) のみを使い、timedelta(seconds=...) と同じく
+// マイクロ秒へ四捨五入 (banker's rounding) する。9bit extension は使わない。
+func TestTSInfoReviewPCRMicrosecondRounding(t *testing.T) {
 	for _, tc := range []struct {
-		ticks uint64
-		ns    int64
+		name       string
+		baseFirst  uint64
+		baseLast   uint64
+		extFirst   uint16
+		extLast    uint16
+		wantMicros int64
 	}{
-		{0, 0}, {1, 37}, {26999999, 999999962}, {27000000, 1000000000},
-		{27000001, 1000000037}, {905670694133, 33543359041962},
-		{905670694134, 33543359042000}, {905670694135, 33543359042037},
-		{psi.PCRModulus - 1, 95443717688851},
+		// extension を変えても base 差が 0 なら経過時間は 0 (extension 無視)。
+		{"extension_ignored", 100, 100, 0, 299, 0},
+		{"one_base_tick", 0, 1, 0, 0, 11},        // 1/90000 s = 11.11 µs
+		{"nine_base_ticks", 0, 9, 0, 0, 100},     // ちょうど 100 µs
+		{"fraction_rounds_up", 0, 5, 0, 0, 56},   // 55.56 µs
+		{"fraction_rounds_down", 0, 4, 0, 0, 44}, // 44.44 µs
+		// 実測値に依らない合成ケース: base 差がマイクロ秒の端数を持つ代表的な大きさ。
+		// 期待値は Python の timedelta(seconds=...) と同じ banker's rounding。
+		{"fractional_62659_ticks", 1000000, 1062659, 29, 245, 696211},   // 696211.111 µs
+		{"fractional_109307_ticks", 1000000, 1109307, 295, 72, 1214522}, // 1214522.222 µs
+		{"fractional_280805_ticks", 1000000, 1280805, 102, 89, 3120056}, // 3120055.556 µs
 	} {
-		t.Run(fmt.Sprint(tc.ticks), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			clock := time.Date(2026, 10, 7, 10, 0, 10, 0, constants.JST)
-			data := tsinfoPCRPacket(0x200, 0, 0)
-			data = append(data, tsinfoPCRPacket(0x200, tc.ticks/300, uint16(tc.ticks%300))...)
+			data := tsinfoPCRPacket(0x200, tc.baseFirst, tc.extFirst)
+			if tc.baseLast != tc.baseFirst || tc.extLast != tc.extFirst {
+				data = append(data, tsinfoPCRPacket(0x200, tc.baseLast, tc.extLast)...)
+			}
 			data = append(data, tsinfoPackets(0x14, tsinfoTOT(clock), map[uint16]byte{})...)
-			duration := float64(tc.ticks/27000000 + 1)
+			duration := 60.0
 			start, end := tsinfoRecordingTime(context.Background(), bytes.NewReader(data), int64(len(data)), 0x200, duration)
 			if start == nil || end == nil {
 				t.Fatal("valid synthetic PCR clock unavailable")
 			}
-			if got := clock.Sub(*start).Nanoseconds(); got != tc.ns {
-				t.Fatalf("%d ticks: nanosecond floor=%d want=%d", tc.ticks, got, tc.ns)
+			want := clock.Add(-time.Duration(tc.wantMicros) * time.Microsecond)
+			if !start.Equal(want) {
+				t.Fatalf("base %d->%d: elapsed=%d µs want=%d µs; got start=%s want=%s", tc.baseFirst, tc.baseLast, clock.Sub(*start)/time.Microsecond, tc.wantMicros, start.Format(time.RFC3339Nano), want.Format(time.RFC3339Nano))
 			}
-			if end.Sub(*start) != time.Duration(duration*float64(time.Second)) {
-				t.Fatal("float duration end-addition changed")
+			if end.Sub(*start) != time.Duration(math.RoundToEven(duration*1e6))*time.Microsecond {
+				t.Fatalf("duration must round to microseconds: got %s", end.Sub(*start))
 			}
 		})
 	}
 }
 
-// No extra slack: even an elapsed PCR fraction hidden by nanosecond flooring
-// must fit the caller's actual floating-point duration in seconds.
-func TestTSInfoReviewPCRDurationBoundary(t *testing.T) {
+// Python 版は「TOT 時点の経過時間が録画長を超えたら不採用」というガードを持たない。
+// base 差が duration を超えても TOT を基準に 1 つの時計を返し、負の差だけを 0 に
+// クランプする (Go 従来実装の duration 上限ガードは Python 非互換だった)。
+func TestTSInfoReviewPCRDurationDoesNotBoundClock(t *testing.T) {
 	for _, tc := range []struct {
-		name      string
-		ticks     uint64
-		duration  float64
-		available bool
+		name       string
+		baseFirst  uint64
+		baseLast   uint64
+		duration   float64
+		wantMicros int64
 	}{
-		{"equal", 27000000, 1, true},
-		{"one_tick_below", 26999999, 1, true},
-		{"one_tick_above", 27000001, 1, false},
-		{"fraction_equal", 40500000, 1.5, true},
-		{"fraction_one_tick_above", 40500001, 1.5, false},
-		{"fraction_one_float_above", 27000001, math.Nextafter(1+1.0/27000000, math.Inf(1)), true},
-		{"fraction_rounded_below", 27000001, 1 + 1.0/27000000, false},
-		{"fraction_next_float_below", 27000001, math.Nextafter(1+1.0/27000000, 0), false},
-		{"sub_nanosecond_over", 1, 37e-9, false},
-		{"near_modulus_wrap", 600, 60, true},
+		{"elapsed_equal_duration", 0, 90000, 1, 1000000},
+		{"elapsed_one_base_above", 0, 90001, 1, 1000011},
+		{"elapsed_far_above_duration", 0, 90000 * 90, 60, 90000000},
+		{"sub_microsecond_above", 0, 1, 37e-9, 11},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			first := uint64(0)
-			if tc.name == "near_modulus_wrap" {
-				first = psi.PCRModulus - 300
-			}
-			last := (first + tc.ticks) % psi.PCRModulus
 			clock := time.Date(2026, 10, 7, 10, 0, 10, 0, constants.JST)
-			data := tsinfoPCRPacket(0x200, first/300, uint16(first%300))
-			data = append(data, tsinfoPCRPacket(0x200, last/300, uint16(last%300))...)
+			data := tsinfoPCRPacket(0x200, tc.baseFirst, 0)
+			data = append(data, tsinfoPCRPacket(0x200, tc.baseLast, 0)...)
 			data = append(data, tsinfoPackets(0x14, tsinfoTOT(clock), map[uint16]byte{})...)
 			start, end := tsinfoRecordingTime(context.Background(), bytes.NewReader(data), int64(len(data)), 0x200, tc.duration)
-			if (start != nil && end != nil) != tc.available {
-				t.Fatalf("elapsed=%d ticks duration=%0.18g: available=%v want=%v", tc.ticks, tc.duration, start != nil, tc.available)
+			if start == nil || end == nil {
+				t.Fatalf("duration must not gate the clock (base delta %d)", tc.baseLast-tc.baseFirst)
+			}
+			want := clock.Add(-time.Duration(tc.wantMicros) * time.Microsecond)
+			if !start.Equal(want) {
+				t.Fatalf("start=%s want=%s", start.Format(time.RFC3339Nano), want.Format(time.RFC3339Nano))
 			}
 		})
 	}

@@ -578,9 +578,13 @@ func TestTSInfoNilFallbackAndZeroPaddingBoundary(t *testing.T) {
 	}
 }
 
-func TestTSInfoTOTDoesNotCrossDiscontinuityOrInventAnotherPIDClock(t *testing.T) {
+// Python 版は PCR を PID で絞らず、discontinuity_indicator も参照しない。したがって
+// (a) discontinuity flag が立っていても TOT 直近の PCR をそのまま使い、
+// (b) PMT の PCR PID とは別 PID の PCR でも TOT セクション開始時の最新値として採用する。
+func TestTSInfoTOTUsesLatestPCRAcrossPIDsAndIgnoresDiscontinuity(t *testing.T) {
 	video, data := tsinfoFixture(t)
 	clock := time.Date(2026, 10, 7, 10, 0, 10, 0, constants.JST)
+	// (a) discontinuity flag 付きでも 100000 -> 300000 base の差 (2.222222 s) を使う。
 	prefix := tsinfoPCRPacket(0x200, 100000, 0)
 	broken := tsinfoPCRPacket(0x200, 300000, 0)
 	broken[5] |= 0x80
@@ -591,16 +595,20 @@ func TestTSInfoTOTDoesNotCrossDiscontinuityOrInventAnotherPIDClock(t *testing.T)
 	}
 	video.FileSize = int64(len(prefix) + len(data))
 	p, ok := NewTSInfoProgramAnalyzer(nil, testLogger(t)).AnalyzeProgram(video, nil)
-	if !ok || p == nil || video.RecordingStartTime != nil || video.RecordingEndTime != nil {
-		t.Fatal("discontinuity must leave timestamps unknown")
+	want := clock.Add(-2222222 * time.Microsecond)
+	if !ok || p == nil || video.RecordingStartTime == nil || !video.RecordingStartTime.Equal(want) {
+		t.Fatalf("discontinuity-flagged PCR must still place the clock: ok=%v start=%v want=%s", ok, video.RecordingStartTime, want.Format(time.RFC3339Nano))
 	}
+	// (b) PMT の PCR PID (0x200) ではなく別 PID (0x999) の PCR が最初で最新なら基準になる。
 	prefix = append(tsinfoPCRPacket(0x999, 100000, 0), tsinfoPackets(0x14, tsinfoTOT(clock), map[uint16]byte{})...)
 	if err := os.WriteFile(video.FilePath, append(prefix, data...), 0600); err != nil {
 		t.Fatal(err)
 	}
 	video.FileSize = int64(len(prefix) + len(data))
-	if p, ok := NewTSInfoProgramAnalyzer(nil, testLogger(t)).AnalyzeProgram(video, nil); !ok || p == nil || video.RecordingStartTime != nil || video.RecordingEndTime != nil {
-		t.Fatal("foreign PCR must leave timestamps unknown")
+	video.RecordingStartTime, video.RecordingEndTime = nil, nil
+	p, ok = NewTSInfoProgramAnalyzer(nil, testLogger(t)).AnalyzeProgram(video, nil)
+	if !ok || p == nil || video.RecordingStartTime == nil || !video.RecordingStartTime.Equal(clock) || video.RecordingEndTime == nil || !video.RecordingEndTime.Equal(clock.Add(time.Minute)) {
+		t.Fatalf("foreign-PCR-only stream must use that PCR as first and latest: ok=%v start=%v", ok, video.RecordingStartTime)
 	}
 }
 
@@ -638,12 +646,14 @@ func tsinfoTOT(clock time.Time) []byte {
 	return binary.BigEndian.AppendUint32(raw, psi.CRC32MPEG2(raw))
 }
 
-func TestTSInfoRecordsTOTWithSelectedPMTPCRAndWrap(t *testing.T) {
+// Python 版は PCR を PMT の PCR PID で絞らない。ファイル先頭から見た最初の PCR と、
+// TOT セクション開始時点で最後に観測した PCR (別 PID でも可) の base 差を使う。
+func TestTSInfoRecordsTOTWithLatestPCRAcrossPIDs(t *testing.T) {
 	video, original := tsinfoFixture(t)
 	clock := time.Date(2026, 10, 7, 10, 0, 10, 0, constants.JST)
-	data := tsinfoPCRPacket(0x200, (1<<33)-90000, 0)
-	data = append(data, tsinfoPCRPacket(0x999, 2000000, 0)...)
-	data = append(data, tsinfoPCRPacket(0x200, 90000, 0)...)
+	data := tsinfoPCRPacket(0x200, 0, 0)                      // 最初の PCR (PMT の PCR PID)
+	data = append(data, tsinfoPCRPacket(0x200, 90000, 0)...)  // PMT PID の PCR
+	data = append(data, tsinfoPCRPacket(0x999, 180000, 0)...) // 別 PID の最新 PCR を採用する
 	data = append(data, tsinfoPackets(0x14, tsinfoTOT(clock), map[uint16]byte{})...)
 	data = append(data, original...)
 	if err := os.WriteFile(video.FilePath, data, 0600); err != nil {
@@ -653,7 +663,7 @@ func TestTSInfoRecordsTOTWithSelectedPMTPCRAndWrap(t *testing.T) {
 	p, ok := NewTSInfoProgramAnalyzer(nil, testLogger(t)).AnalyzeProgram(video, nil)
 	want := clock.Add(-2 * time.Second)
 	if !ok || video.RecordingStartTime == nil || !video.RecordingStartTime.Equal(want) || video.RecordingEndTime == nil || !video.RecordingEndTime.Equal(want.Add(time.Minute)) {
-		t.Fatal("TOT/selected PCR timestamp mismatch")
+		t.Fatal("TOT/latest PCR timestamp mismatch")
 	}
 	if p.Video.RecordingStartTime == nil || !p.Video.RecordingStartTime.Equal(want) {
 		t.Fatal("caller timestamps not propagated to result")
