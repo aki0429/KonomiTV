@@ -33,13 +33,35 @@ func TestClientSettingsAPI(t *testing.T) {
 	token := issueTestToken(t, userID)
 	handler := server.Handler()
 
-	// 初期状態では空のオブジェクトが返る
+	// Python 版は response_model (Pydantic の ClientSettings) を通すため、DB の保存値が空でも
+	// 既定値で補完された完全な設定が返る (空の {} ではない) 。
 	response := doJSONRequest(t, handler, http.MethodGet, "/api/settings/client", "", token, "")
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
 	}
-	if response.Body.String() != "{}\n" {
-		t.Errorf("body = %q, want %q", response.Body.String(), "{}\n")
+	initial := response.Body.String()
+	// 先頭は Python 版 ClientSettings のフィールドの定義順 (last_synced_at → saved_twitter_hashtags → mylist → ...)
+	if !strings.HasPrefix(initial, `{"last_synced_at":0.0,"saved_twitter_hashtags":[],"mylist":[],"watched_history":[],`+
+		`"pinned_channel_ids":[],"timetable_channel_width":"Normal","timetable_hour_height":"Normal",`+
+		`"timetable_hover_expand":false,"timetable_dim_shopping_programs":true,`) {
+		t.Errorf("body (先頭) = %q", initial[:160])
+	}
+	var defaultSettings map[string]any
+	if err := json.Unmarshal(response.Body.Bytes(), &defaultSettings); err != nil {
+		t.Fatalf("failed to parse the response: %v", err)
+	}
+	// 既定値の項目数は Python 版 ClientSettings と同じ 51 個
+	if len(defaultSettings) != 51 {
+		t.Errorf("the default settings have %d keys, want 51", len(defaultSettings))
+	}
+	if defaultSettings["panel_display_state"] != "RestorePreviousState" {
+		t.Errorf("panel_display_state = %v", defaultSettings["panel_display_state"])
+	}
+	if defaultSettings["video_watched_history_max_count"] != 50.0 {
+		t.Errorf("video_watched_history_max_count = %v", defaultSettings["video_watched_history_max_count"])
+	}
+	if genreColors, ok := defaultSettings["timetable_genre_colors"].(map[string]any); !ok || genreColors["ドラマ"] != "Pink" {
+		t.Errorf("timetable_genre_colors = %v", defaultSettings["timetable_genre_colors"])
 	}
 
 	// 未ログインの場合は 401

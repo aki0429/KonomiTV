@@ -17,7 +17,21 @@ func (s *Server) handleClientSettings(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	writeRawJSON(w, http.StatusOK, currentUser.ClientSettings)
+	// Python 版は response_model (Pydantic の ClientSettings) を通してから返すため、DB に保存された
+	// JSON が空でも既定値で補完された完全な設定が返る。Go 版も同じ形にするため、保存値を
+	// 既定値とマージし、Python 版のフィールド定義順・数値形式で出力する。
+	stored := map[string]any{}
+	if err := json.Unmarshal([]byte(currentUser.ClientSettings), &stored); err != nil {
+		// Python 版 (Tortoise の JSONField) は壊れた値・空文字を空の設定として扱うため、同じく空にする
+		stored = map[string]any{}
+	}
+	serialized, err := config.MarshalClientSettings(config.MergeClientSettings(stored))
+	if err != nil {
+		s.logger.Error("[ClientSettingsAPI] Failed to serialize the client settings.", "error", err)
+		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
+	}
+	writeRawJSON(w, http.StatusOK, serialized)
 }
 
 // handleClientSettingsUpdate はクライアント設定更新 API (PUT /api/settings/client) を処理する。
