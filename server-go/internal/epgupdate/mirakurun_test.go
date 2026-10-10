@@ -77,6 +77,8 @@ func TestMirakurunUpdateMatchesPython(t *testing.T) {
 }
 
 // TestMirakurunFailureRollsBack は API の取得失敗・Python で例外になる応答で DB を変更しないことを検証する。
+// 時刻はフィクスチャの now (Python 版で生成したオラクル) を使う。time.Now() を使うと番組が
+// 12 時間より古い扱いになり、エラーにならずスキップされてしまうため。
 func TestMirakurunFailureRollsBack(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("testdata", "mirakurun_update_fixture.json"))
 	if err != nil {
@@ -86,16 +88,24 @@ func TestMirakurunFailureRollsBack(t *testing.T) {
 	if err := json.Unmarshal(data, &fixture); err != nil {
 		t.Fatal(err)
 	}
+	now, err := time.Parse(time.RFC3339, fixture.Now)
+	if err != nil {
+		t.Fatal(err)
+	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	db := openFixtureDB(t, fixture.Cases[0].Schema, fixture.SeedSQL)
 	columns := fixture.Cases[0].Expected["programs"].Columns
 	before := dumpTable(t, db, "programs", columns)
+	// Python 版が例外になる応答だけを対象にする。
+	// - 不明な streamContent: COMPONENT_TYPE[...] の KeyError
+	// - audios が空: audios[0] の IndexError
+	// - audios も audio (Mirakurun 3.8 以前の形式) も無い: else 節の program_info['audio'] の KeyError
 	for name, programs := range map[string]string{
 		"unknown streamContent": `[{"eventId":1,"serviceId":1024,"networkId":32736,"startAt":1791560000000,"duration":600000,"isFree":true,"name":"a","video":{"type":"x","resolution":"y","streamContent":99,"componentType":1},"audios":[{"componentType":3,"samplingRate":48000,"langs":["jpn"]}]}]`,
 		"no audio":              `[{"eventId":1,"serviceId":1024,"networkId":32736,"startAt":1791560000000,"duration":600000,"isFree":true,"name":"a"}]`,
 		"empty audios":          `[{"eventId":1,"serviceId":1024,"networkId":32736,"startAt":1791560000000,"duration":600000,"isFree":true,"name":"a","audios":[]}]`,
 	} {
-		if err := UpdateProgramsFromMirakurun(context.Background(), db, fixtureMirakurun{programs: []byte(programs)}, time.Now(), logger); err == nil {
+		if err := UpdateProgramsFromMirakurun(context.Background(), db, fixtureMirakurun{programs: []byte(programs)}, now, logger); err == nil {
 			t.Errorf("%s: accepted", name)
 		}
 		if after := dumpTable(t, db, "programs", columns); !reflect.DeepEqual(before, after) {
@@ -105,6 +115,51 @@ func TestMirakurunFailureRollsBack(t *testing.T) {
 	failing := failingMirakurun{}
 	if err := UpdateChannelsFromMirakurun(context.Background(), db, failing, nil, logger); err == nil {
 		t.Error("channels: fetch failure accepted")
+	}
+}
+
+// TestMirakurunProgramWithLegacyAudioIsAccepted は Mirakurun 3.8 以前の形式 (audios ではなく
+// audio を単数で持つ) の番組を受け入れることを検証する。Python 版はこの形式をフォールバックとして
+// 扱い、言語コードを日本語で固定する。
+func TestMirakurunProgramWithLegacyAudioIsAccepted(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("testdata", "mirakurun_update_fixture.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixture mirakurunFixture
+	if err := json.Unmarshal(data, &fixture); err != nil {
+		t.Fatal(err)
+	}
+	now, err := time.Parse(time.RFC3339, fixture.Now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	db := openFixtureDB(t, fixture.Cases[0].Schema, fixture.SeedSQL)
+	programs := `[{"eventId":11,"serviceId":1024,"networkId":32736,"startAt":1791560000000,"duration":600000,"isFree":true,"name":"b","audio":{"componentType":3,"samplingRate":48000}}]`
+	if err := UpdateProgramsFromMirakurun(context.Background(), db, fixtureMirakurun{programs: []byte(programs)}, now, logger); err != nil {
+		t.Fatalf("UpdateProgramsFromMirakurun() = %v, want nil", err)
+	}
+	columns := fixture.Cases[0].Expected["programs"].Columns
+	language := -1
+	for index, column := range columns {
+		if column == "primary_audio_language" {
+			language = index
+		}
+	}
+	found := false
+	for _, record := range dumpTable(t, db, "programs", columns) {
+		if record[0] != "NID32736-SID1024-EID11" {
+			continue
+		}
+		found = true
+		// Mirakurun 3.8 以前では言語コードが取得できないため、Python 版は日本語で固定する。
+		if language >= 0 && record[language] != "日本語" {
+			t.Errorf("primary_audio_language = %q, want 日本語", record[language])
+		}
+	}
+	if !found {
+		t.Errorf("NID32736-SID1024-EID11 was not stored")
 	}
 }
 
