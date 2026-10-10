@@ -28,6 +28,10 @@
       "language": null,
       "is_geo_blocked": false,
       "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "tvg:nhkworldjapan.jp@sd",
+      "same_channel_count": 1,
+      "same_channel_sources": [],
       "quality_hint": "1080p",
       "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fnhk%2Findex.m3u8",
       "stream_type": "HLS",
@@ -46,6 +50,10 @@
       "language": null,
       "is_geo_blocked": false,
       "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:us:someuschannel",
+      "same_channel_count": 1,
+      "same_channel_sources": [],
       "quality_hint": null,
       "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fus.ts",
       "stream_type": "MPEGTS",
@@ -64,6 +72,10 @@
       "language": null,
       "is_geo_blocked": true,
       "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:musicchannelgeoblocked",
+      "same_channel_count": 1,
+      "same_channel_sources": [],
       "quality_hint": null,
       "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fiptv-org.github.io%2Fiptv%2Fcountries%2Frelative%2Fstream.m3u8",
       "stream_type": "HLS",
@@ -82,6 +94,10 @@
       "language": null,
       "is_geo_blocked": false,
       "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:fallbackname",
+      "same_channel_count": 1,
+      "same_channel_sources": [],
       "quality_hint": null,
       "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fdup.m3u8",
       "stream_type": "HLS",
@@ -100,6 +116,10 @@
       "language": null,
       "is_geo_blocked": false,
       "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:rawurlonly",
+      "same_channel_count": 1,
+      "same_channel_sources": [],
       "quality_hint": null,
       "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fiptv-org.github.io%2Fiptv%2Fcountries%2Fjp.m3u%3Ftoken%3Dabc%26x%3D1",
       "stream_type": "Other",
@@ -118,6 +138,10 @@
       "language": "ja",
       "is_geo_blocked": false,
       "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:mp4channel",
+      "same_channel_count": 1,
+      "same_channel_sources": [],
       "quality_hint": null,
       "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fvideo.mp4%3Fa%3D1%26hls%3D1",
       "stream_type": "HLS",
@@ -136,6 +160,10 @@
       "language": null,
       "is_geo_blocked": false,
       "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "tvg:invalid.toolong",
+      "same_channel_count": 1,
+      "same_channel_sources": [],
       "quality_hint": "720p",
       "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fcomma.m3u8",
       "stream_type": "HLS",
@@ -154,6 +182,10 @@
       "language": null,
       "is_geo_blocked": false,
       "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:lowercasecountry",
+      "same_channel_count": 1,
+      "same_channel_sources": [],
       "quality_hint": null,
       "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fmusic%2Findex.m3u8",
       "stream_type": "HLS",
@@ -172,6 +204,10 @@
       "language": null,
       "is_geo_blocked": false,
       "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:emptycountry",
+      "same_channel_count": 1,
+      "same_channel_sources": [],
       "quality_hint": null,
       "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fempty.m3u8",
       "stream_type": "HLS",
@@ -190,6 +226,10 @@
       "language": null,
       "is_geo_blocked": false,
       "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "tvg:foo.us",
+      "same_channel_count": 1,
+      "same_channel_sources": [],
       "quality_hint": null,
       "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fbyid.m3u8",
       "stream_type": "HLS",
@@ -208,6 +248,10 @@
       "language": null,
       "is_geo_blocked": false,
       "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:examplecom",
+      "same_channel_count": 1,
+      "same_channel_sources": [],
       "quality_hint": null,
       "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fexample.com%2Fbare-url.ts",
       "stream_type": "MPEGTS",
@@ -226,6 +270,10 @@
       "language": null,
       "is_geo_blocked": false,
       "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:barerelative",
+      "same_channel_count": 1,
+      "same_channel_sources": [],
       "quality_hint": null,
       "stream_url": "/api/iptv/proxy?url=https%3A%2F%2Fiptv-org.github.io%2Fiptv%2Fcountries%2Fstream.ts",
       "stream_type": "MPEGTS",
@@ -248,7 +296,11 @@
       "user_agent": null,
       "referrer": null,
       "is_geo_blocked": false,
-      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "tvg:nhkworldjapan.jp@sd",
+      "same_channel_count": 1,
+      "same_channel_sources": []
     },
     {
       "id": "3000391e834f953b",
@@ -264,7 +316,11 @@
       "user_agent": "CustomAgent/1.0",
       "referrer": null,
       "is_geo_blocked": false,
-      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:us:someuschannel",
+      "same_channel_count": 1,
+      "same_channel_sources": []
     },
     {
       "id": "bb514774790b8622",
@@ -280,7 +336,11 @@
       "user_agent": null,
       "referrer": null,
       "is_geo_blocked": true,
-      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:musicchannelgeoblocked",
+      "same_channel_count": 1,
+      "same_channel_sources": []
     },
     {
       "id": "90ebe0dd4dc0ae64",
@@ -296,7 +356,11 @@
       "user_agent": null,
       "referrer": null,
       "is_geo_blocked": false,
-      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:fallbackname",
+      "same_channel_count": 1,
+      "same_channel_sources": []
     },
     {
       "id": "4582ce8f1ca54fd4",
@@ -312,7 +376,11 @@
       "user_agent": null,
       "referrer": null,
       "is_geo_blocked": false,
-      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:rawurlonly",
+      "same_channel_count": 1,
+      "same_channel_sources": []
     },
     {
       "id": "5745e94046fac473",
@@ -328,7 +396,11 @@
       "user_agent": null,
       "referrer": null,
       "is_geo_blocked": false,
-      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:mp4channel",
+      "same_channel_count": 1,
+      "same_channel_sources": []
     },
     {
       "id": "6227e8f2776f9e8c",
@@ -344,7 +416,11 @@
       "user_agent": null,
       "referrer": null,
       "is_geo_blocked": false,
-      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "tvg:invalid.toolong",
+      "same_channel_count": 1,
+      "same_channel_sources": []
     },
     {
       "id": "6b4c6cd0ceb831ac",
@@ -360,7 +436,11 @@
       "user_agent": "ExtVlcAgent/2.0",
       "referrer": "https://music.example.com/",
       "is_geo_blocked": false,
-      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:lowercasecountry",
+      "same_channel_count": 1,
+      "same_channel_sources": []
     },
     {
       "id": "a6d53cf635455122",
@@ -376,7 +456,11 @@
       "user_agent": null,
       "referrer": null,
       "is_geo_blocked": false,
-      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:emptycountry",
+      "same_channel_count": 1,
+      "same_channel_sources": []
     },
     {
       "id": "17c4cea489e08035",
@@ -392,7 +476,11 @@
       "user_agent": null,
       "referrer": null,
       "is_geo_blocked": false,
-      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "tvg:foo.us",
+      "same_channel_count": 1,
+      "same_channel_sources": []
     },
     {
       "id": "84c5489afaff59a9",
@@ -408,7 +496,11 @@
       "user_agent": null,
       "referrer": null,
       "is_geo_blocked": false,
-      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:examplecom",
+      "same_channel_count": 1,
+      "same_channel_sources": []
     },
     {
       "id": "ac1c9586266ff1d6",
@@ -424,7 +516,11 @@
       "user_agent": null,
       "referrer": null,
       "is_geo_blocked": false,
-      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u"
+      "source_url": "https://iptv-org.github.io/iptv/countries/jp.m3u",
+      "source_name": "iptv-org.github.io/iptv/countries/jp.m3u",
+      "identity": "name:jp:barerelative",
+      "same_channel_count": 1,
+      "same_channel_sources": []
     }
   ],
   "tvui_registry_json": "{\n  \"user:1\": [\n    \"iptv1\",\n    \"iptv2\"\n  ],\n  \"anon:00000000-0000-0000-0000-000000000000\": []\n}",

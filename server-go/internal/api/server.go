@@ -216,6 +216,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/iptv/sources", s.handleIPTVSources)
 	mux.HandleFunc("POST /api/iptv/sources", s.handleIPTVSourceAdd)
 	mux.HandleFunc("DELETE /api/iptv/sources", s.handleIPTVSourceDelete)
+	mux.HandleFunc("POST /api/iptv/sources/enabled", s.handleIPTVSourceEnabled)
 	mux.HandleFunc("GET /api/iptv/tvui", s.handleIPTVTVUIChannels)
 	mux.HandleFunc("POST /api/iptv/tvui", s.handleIPTVTVUIRegister)
 	mux.HandleFunc("DELETE /api/iptv/tvui", s.handleIPTVTVUIUnregister)

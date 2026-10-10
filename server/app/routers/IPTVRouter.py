@@ -138,6 +138,56 @@ def BuildTVUIResponse(user_key: str) -> dict:
     }
 
 
+def BuildSourcesResponse() -> dict[str, list[str]]:
+    """
+    登録されている M3U プレイリストのソース一覧を、API レスポンス用の辞書に変換する。
+
+    Returns:
+        dict[str, list[str]]: IPTVSources 相当の辞書
+    """
+
+    config_sources = [source.strip() for source in Config().iptv.sources if source.strip() != '']
+    user_sources = IPTVUtil.LoadUserSources()
+    return {
+        'config_sources': config_sources,
+        'user_sources': user_sources,
+        'disabled_sources': BuildDisabledSources(config_sources, user_sources),
+    }
+
+
+def BuildDisabledSources(config_sources: list[str], user_sources: list[str]) -> list[str]:
+    """
+    無効化されているソースの URL を、config_sources の順 → user_sources の順 → 保存順に並べて返す。
+
+    Args:
+        config_sources (list[str]): config.yaml に設定されたソースの一覧
+        user_sources (list[str]): 追加登録されたソースの一覧
+
+    Returns:
+        list[str]: 無効化されているソースの URL の一覧
+    """
+
+    disabled_sources = IPTVUtil.LoadDisabledSources()
+    # 前後の空白を無視して一致判定できるよう、正規化したセットを作る
+    disabled_set = {source.strip() for source in disabled_sources if source.strip() != ''}
+
+    ordered: list[str] = []
+    # config の順で、無効化されているものを先頭に並べる
+    for source in config_sources:
+        if source in disabled_set and source not in ordered:
+            ordered.append(source)
+    # 続いて user の順で並べる
+    for source in user_sources:
+        if source in disabled_set and source not in ordered:
+            ordered.append(source)
+    # どちらにも無い URL (過去に無効化した後に削除された等) は保存順で末尾に並べる
+    for source in disabled_sources:
+        source = source.strip()
+        if source != '' and source not in ordered:
+            ordered.append(source)
+    return ordered
+
+
 async def ProxyStream(url: str, range_header: str | None = None) -> StreamingResponse:
     """
     指定された URL のストリームを取得し、レスポンスとして返す。
@@ -417,12 +467,7 @@ async def IPTVSourcesAPI():
     登録されている M3U プレイリストのソース (config.yaml の設定 + 追加登録分) の一覧を取得する。
     """
 
-    config_sources = [source.strip() for source in Config().iptv.sources if source.strip() != '']
-    user_sources = IPTVUtil.LoadUserSources()
-    return {
-        'config_sources': config_sources,
-        'user_sources': user_sources,
-    }
+    return BuildSourcesResponse()
 
 
 @router.post(
@@ -456,10 +501,7 @@ async def IPTVSourceAddAPI(
     # 追加したソースを即座に反映させる
     await IPTVUtil.RefreshChannels(force = True)
 
-    return {
-        'config_sources': [item.strip() for item in Config().iptv.sources if item.strip() != ''],
-        'user_sources': IPTVUtil.LoadUserSources(),
-    }
+    return BuildSourcesResponse()
 
 
 @router.delete(
@@ -483,10 +525,42 @@ async def IPTVSourceDeleteAPI(
         # ソースの削除を即座に反映させる
         await IPTVUtil.RefreshChannels(force = True)
 
-    return {
-        'config_sources': [item.strip() for item in Config().iptv.sources if item.strip() != ''],
-        'user_sources': IPTVUtil.LoadUserSources(),
-    }
+    return BuildSourcesResponse()
+
+
+@router.post(
+    '/sources/enabled',
+    summary = 'IPTV プレイリストソース有効/無効切替 API',
+    response_description = '切り替え後の M3U プレイリストのソース一覧。',
+    response_model = schemas.IPTVSources,
+)
+async def IPTVSourceEnabledAPI(
+    payload: schemas.IPTVSourceEnabledRequest,
+):
+    """
+    M3U プレイリストのソースを有効または無効にする。<br>
+    無効化したソースは、プレイリストの取得 (チャンネル一覧の生成) 時にスキップされる。
+    """
+
+    source = payload.url.strip()
+    if source == '':
+        raise HTTPException(
+            status_code = status.HTTP_400_BAD_REQUEST,
+            detail = 'The playlist URL must not be empty.',
+        )
+
+    # IPTV 機能が無効の場合は受け付けない
+    if Config().iptv.enabled is False:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail = 'IPTV is disabled.')
+
+    # 有効/無効を切り替える
+    IPTVUtil.SetSourceEnabled(source, payload.enabled)
+    logging.info(f'IPTV playlist source {"enabled" if payload.enabled else "disabled"}: {source}')
+
+    # 切り替えた内容を即座に反映させる
+    await IPTVUtil.RefreshChannels(force = True)
+
+    return BuildSourcesResponse()
 
 
 @router.get(

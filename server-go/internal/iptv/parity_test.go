@@ -100,6 +100,11 @@ func TestParseM3UPlaylistParity(t *testing.T) {
 			"referrer":       channel.Referrer,
 			"is_geo_blocked": channel.IsGeoBlocked,
 			"source_url":     channel.SourceURL,
+			// ソースの表示名と同一チャンネル判定の情報 (解析時点の値) も Python 版と一致することを検証する
+			"source_name":          channel.SourceName,
+			"identity":             channel.Identity,
+			"same_channel_count":   channel.SameChannelCount,
+			"same_channel_sources": channel.SameChannelSources,
 		})
 		if !reflect.DeepEqual(actual, expected) {
 			t.Errorf("channel %d:\n got %v\nwant %v", index, actual, expected)

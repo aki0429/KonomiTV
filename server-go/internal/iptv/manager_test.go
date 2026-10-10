@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
+	"strings"
 	"sync"
 	"testing"
 
@@ -459,6 +461,216 @@ func TestGetTVUIChannels(t *testing.T) {
 	channels := manager.GetTVUIChannels("user:1")
 	if len(channels) != 2 || channels[0] != second || channels[1] != first {
 		t.Fatalf("channels = %+v", channels)
+	}
+}
+
+// TestSourceEnabledToggle は無効化リストの保存・解除を検証する。
+func TestSourceEnabledToggle(t *testing.T) {
+	cfg := testConfig()
+	manager := New(Options{Config: cfg, DataDir: t.TempDir()})
+	source := "https://example.com/a.m3u"
+
+	// ファイルが無い場合は空のリストを返す (nil ではない)
+	if disabled := manager.LoadDisabledSources(); disabled == nil || len(disabled) != 0 {
+		t.Fatalf("disabled sources = %v, want empty slice", disabled)
+	}
+
+	// 無効化する (変更あり)
+	changed, err := manager.SetSourceEnabled(source, false)
+	if err != nil || !changed {
+		t.Fatalf("disable = %v, %v", changed, err)
+	}
+	if disabled := manager.LoadDisabledSources(); !reflect.DeepEqual(disabled, []string{source}) {
+		t.Errorf("disabled = %v", disabled)
+	}
+	// 同じソースを再度無効化しても変更なし (重複追加しない)
+	if changed, _ := manager.SetSourceEnabled(source, false); changed {
+		t.Errorf("disable again = %v, want false", changed)
+	}
+	if disabled := manager.LoadDisabledSources(); len(disabled) != 1 {
+		t.Errorf("disabled = %v", disabled)
+	}
+
+	// ファイルに保存されている
+	saved, err := os.ReadFile(manager.disabledSourcesPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(saved), source) {
+		t.Errorf("saved = %s", saved)
+	}
+
+	// 有効化すると除去される (変更あり)
+	if changed, err := manager.SetSourceEnabled(source, true); err != nil || !changed {
+		t.Fatalf("enable = %v, %v", changed, err)
+	}
+	if disabled := manager.LoadDisabledSources(); len(disabled) != 0 {
+		t.Errorf("disabled = %v", disabled)
+	}
+	// 登録されていないソースを有効化しても変更なし
+	if changed, _ := manager.SetSourceEnabled(source, true); changed {
+		t.Errorf("enable again = %v, want false", changed)
+	}
+}
+
+// TestRefreshSkipsDisabledSources は無効化されたソースがプレイリストの取得から除外されることを検証する。
+func TestRefreshSkipsDisabledSources(t *testing.T) {
+	cfg := testConfig()
+	manager, server := newTestManager(t, cfg, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/countries.json":
+			_, _ = w.Write([]byte(testCountriesJSON))
+		case "/a.m3u":
+			_, _ = w.Write([]byte(testPlaylistA))
+		case "/b.m3u":
+			_, _ = w.Write([]byte(testPlaylistB))
+		default:
+			http.Error(w, "not found", http.StatusNotFound)
+		}
+	})
+	cfg.IPTV.Sources = []string{server.URL + "/a.m3u", server.URL + "/b.m3u"}
+
+	// b.m3u を無効化する
+	if _, err := manager.SetSourceEnabled(server.URL+"/b.m3u", false); err != nil {
+		t.Fatal(err)
+	}
+	// 無効化されたソースは AllSourceURLs から除外される
+	if sources := manager.AllSourceURLs(); !reflect.DeepEqual(sources, []string{server.URL + "/a.m3u"}) {
+		t.Errorf("sources = %v", sources)
+	}
+
+	// a.m3u の 3 件のみが取り込まれ、b.m3u にしか無い Beta Channel は含まれない
+	channels := manager.Refresh(context.Background(), true)
+	if len(channels) != 3 {
+		t.Fatalf("channels = %d, want 3", len(channels))
+	}
+	for _, channel := range channels {
+		if channel.Name == "Beta Channel" {
+			t.Errorf("channel from disabled source was imported: %s", channel.Name)
+		}
+	}
+
+	// 有効化すると再度取り込まれる
+	if _, err := manager.SetSourceEnabled(server.URL+"/b.m3u", true); err != nil {
+		t.Fatal(err)
+	}
+	if channels := manager.Refresh(context.Background(), true); len(channels) != 4 {
+		t.Errorf("channels after enable = %d, want 4", len(channels))
+	}
+}
+
+// TestSameChannelAggregation は同一 identity の集計を検証する。
+func TestSameChannelAggregation(t *testing.T) {
+	cfg := testConfig()
+	const sharedPlaylistOne = `#EXTM3U
+#EXTINF:-1 tvg-id="Shared.jp",Shared One
+https://example.com/one.m3u8
+`
+	const sharedPlaylistTwo = `#EXTM3U
+#EXTINF:-1 tvg-id="Shared.jp",Shared Two
+https://example.com/two.m3u8
+`
+	const uniquePlaylist = `#EXTM3U
+#EXTINF:-1,Unique Channel
+https://example.com/unique.m3u8
+`
+	manager, server := newTestManager(t, cfg, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/countries.json":
+			_, _ = w.Write([]byte(testCountriesJSON))
+		case "/one.m3u":
+			_, _ = w.Write([]byte(sharedPlaylistOne))
+		case "/two.m3u":
+			_, _ = w.Write([]byte(sharedPlaylistTwo))
+		case "/three.m3u":
+			_, _ = w.Write([]byte(uniquePlaylist))
+		default:
+			http.Error(w, "not found", http.StatusNotFound)
+		}
+	})
+	cfg.IPTV.Sources = []string{server.URL + "/one.m3u", server.URL + "/two.m3u", server.URL + "/three.m3u"}
+	channels := manager.Refresh(context.Background(), true)
+
+	byName := map[string]*Channel{}
+	for _, channel := range channels {
+		byName[channel.Name] = channel
+	}
+	// 同じ identity (tvg:shared.jp) を持つ 2 件は、総数 2・由来ソース名 2 件になる
+	expectedSources := []string{BuildSourceName(server.URL + "/one.m3u"), BuildSourceName(server.URL + "/two.m3u")}
+	sort.Strings(expectedSources)
+	for _, name := range []string{"Shared One", "Shared Two"} {
+		channel := byName[name]
+		if channel == nil {
+			t.Fatalf("%s not found", name)
+		}
+		if channel.Identity != "tvg:shared.jp" {
+			t.Errorf("%s identity = %s", name, channel.Identity)
+		}
+		if channel.SameChannelCount != 2 {
+			t.Errorf("%s count = %d, want 2", name, channel.SameChannelCount)
+		}
+		if !reflect.DeepEqual(channel.SameChannelSources, expectedSources) {
+			t.Errorf("%s sources = %v, want %v", name, channel.SameChannelSources, expectedSources)
+		}
+	}
+	// 単独のチャンネルは総数 1・由来ソース名は自分のみ
+	unique := byName["Unique Channel"]
+	if unique == nil {
+		t.Fatal("Unique Channel not found")
+	}
+	if unique.SameChannelCount != 1 {
+		t.Errorf("unique count = %d, want 1", unique.SameChannelCount)
+	}
+	if !reflect.DeepEqual(unique.SameChannelSources, []string{BuildSourceName(server.URL + "/three.m3u")}) {
+		t.Errorf("unique sources = %v", unique.SameChannelSources)
+	}
+	// ToResponse にソース表示名・identity・集計結果が引き継がれる
+	response := unique.ToResponse()
+	if response.SourceName != unique.SourceName || response.Identity != unique.Identity ||
+		response.SameChannelCount != 1 || !reflect.DeepEqual(response.SameChannelSources, unique.SameChannelSources) {
+		t.Errorf("response = %+v", response)
+	}
+}
+
+// TestBuildSourceNameAndIdentity はソース表示名・正規化・identity の生成を検証する。
+func TestBuildSourceNameAndIdentity(t *testing.T) {
+	// ソース表示名: http(s) はホスト + パス、ローカルパスは basename
+	for source, expected := range map[string]string{
+		"https://iptv-org.github.io/streams/jp.m3u": "iptv-org.github.io/streams/jp.m3u",
+		"https://example.com/list.m3u?token=1#frag": "example.com/list.m3u",
+		"https://example.com/":                      "example.com",
+		"https://example.com":                       "example.com",
+		"/var/lists/local.m3u":                      "local.m3u",
+	} {
+		if actual := BuildSourceName(source); actual != expected {
+			t.Errorf("BuildSourceName(%q) = %q, want %q", source, actual, expected)
+		}
+	}
+
+	// tvg-id があればそれを trim・小文字化して使う
+	if actual := BuildIdentity(strPtr("  NHKWorldJapan.jp@SD  "), strPtr("JP"), "NHK", "iptv1"); actual != "tvg:nhkworldjapan.jp@sd" {
+		t.Errorf("identity tvg = %s", actual)
+	}
+	// tvg-id が無ければ 国コード + 正規化した名前を使う
+	if actual := BuildIdentity(nil, strPtr("US"), "Some US Channel", "iptv1"); actual != "name:us:someuschannel" {
+		t.Errorf("identity name = %s", actual)
+	}
+	// 国コードが無い場合は空文字になる
+	if actual := BuildIdentity(nil, nil, "Channel!", "iptv1"); actual != "name::channel" {
+		t.Errorf("identity no country = %s", actual)
+	}
+	// 名前が正規化すると空になる場合は display_channel_id を使う
+	if actual := BuildIdentity(nil, nil, " --- ", "iptv42"); actual != "id:iptv42" {
+		t.Errorf("identity fallback = %s", actual)
+	}
+
+	// 正規化は小文字化・空白と記号の除去を行う
+	if actual := NormalizeChannelName("NHK World-Japan (1080p)"); actual != "nhkworldjapan1080p" {
+		t.Errorf("normalize ascii = %s", actual)
+	}
+	// 全角英数記号・全角スペースは畳み込んだうえで除去する (NFKC の代替)
+	if actual := NormalizeChannelName("ＡＢＣ　（テスト）"); actual != "abcテスト" {
+		t.Errorf("normalize fullwidth = %s", actual)
 	}
 }
 

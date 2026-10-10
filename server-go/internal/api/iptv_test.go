@@ -371,6 +371,16 @@ func TestIPTVSourcesAPI(t *testing.T) {
 	if !strings.HasSuffix(sources.ConfigSources[0], "/jp.m3u") {
 		t.Errorf("config sources = %v", sources.ConfigSources)
 	}
+	// 無効化されているソースは無い (空配列で返る)
+	if sources.DisabledSources == nil || len(sources.DisabledSources) != 0 {
+		t.Errorf("disabled sources = %v, want empty slice", sources.DisabledSources)
+	}
+	// フィールド順は config_sources → user_sources → disabled_sources
+	body := recorder.Body.String()
+	if !(strings.Index(body, `"config_sources"`) < strings.Index(body, `"user_sources"`) &&
+		strings.Index(body, `"user_sources"`) < strings.Index(body, `"disabled_sources"`)) {
+		t.Errorf("field order = %s", body)
+	}
 
 	// ***** 追加 *****
 	recorder = doJSONRequest(t, handler, http.MethodPost, "/api/iptv/sources",
@@ -425,6 +435,103 @@ func TestIPTVSourcesAPI(t *testing.T) {
 	}
 	if len(sources.ConfigSources) != 1 || len(sources.UserSources) != 0 {
 		t.Errorf("sources = %+v", sources)
+	}
+
+	// ***** 有効/無効切替 *****
+	// config.yaml のソースを無効化する
+	recorder = doJSONRequest(t, handler, http.MethodPost, "/api/iptv/sources/enabled",
+		`{"url": "`+upstream.URL+`/jp.m3u", "enabled": false}`, "", "application/json")
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("disable status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &sources); err != nil {
+		t.Fatal(err)
+	}
+	if len(sources.DisabledSources) != 1 || sources.DisabledSources[0] != upstream.URL+"/jp.m3u" {
+		t.Errorf("disabled sources = %v", sources.DisabledSources)
+	}
+	// 無効化されたソースはチャンネル一覧の sources に現れない (＝取得対象から除外される)
+	var channels iptvChannelsResponse
+	if err := json.Unmarshal(doJSONRequest(t, handler, http.MethodGet, "/api/iptv/channels?refresh=true", "", "", "").Body.Bytes(), &channels); err != nil {
+		t.Fatal(err)
+	}
+	if len(channels.Sources) != 0 || channels.AllTotal != 0 {
+		t.Errorf("channels sources = %v, all_total = %d", channels.Sources, channels.AllTotal)
+	}
+	// 再度無効化しても重複しない
+	doJSONRequest(t, handler, http.MethodPost, "/api/iptv/sources/enabled",
+		`{"url": "`+upstream.URL+`/jp.m3u", "enabled": false}`, "", "application/json")
+	if err := json.Unmarshal(doJSONRequest(t, handler, http.MethodGet, "/api/iptv/sources", "", "", "").Body.Bytes(), &sources); err != nil {
+		t.Fatal(err)
+	}
+	if len(sources.DisabledSources) != 1 {
+		t.Errorf("disabled sources = %v", sources.DisabledSources)
+	}
+	// 有効化すると無効化リストから除去される
+	recorder = doJSONRequest(t, handler, http.MethodPost, "/api/iptv/sources/enabled",
+		`{"url": "`+upstream.URL+`/jp.m3u", "enabled": true}`, "", "application/json")
+	if err := json.Unmarshal(recorder.Body.Bytes(), &sources); err != nil {
+		t.Fatal(err)
+	}
+	if len(sources.DisabledSources) != 0 {
+		t.Errorf("disabled sources = %v", sources.DisabledSources)
+	}
+	// 空の URL は 400
+	recorder = doJSONRequest(t, handler, http.MethodPost, "/api/iptv/sources/enabled",
+		`{"url": "  ", "enabled": false}`, "", "application/json")
+	if recorder.Code != http.StatusBadRequest || !strings.Contains(recorder.Body.String(), "The playlist URL must not be empty.") {
+		t.Errorf("empty url = %d %s", recorder.Code, recorder.Body.String())
+	}
+	// IPTV 機能が無効な場合は 400
+	server.config.IPTV.Enabled = false
+	recorder = doJSONRequest(t, handler, http.MethodPost, "/api/iptv/sources/enabled",
+		`{"url": "`+upstream.URL+`/jp.m3u", "enabled": false}`, "", "application/json")
+	if recorder.Code != http.StatusBadRequest || !strings.Contains(recorder.Body.String(), "IPTV is disabled.") {
+		t.Errorf("disabled feature = %d %s", recorder.Code, recorder.Body.String())
+	}
+	server.config.IPTV.Enabled = true
+}
+
+// TestIPTVChannelJSONFields はチャンネル一覧 API の JSON フィールド順と同一チャンネル判定の情報を検証する。
+func TestIPTVChannelJSONFields(t *testing.T) {
+	server, _ := setupIPTVTestServer(t)
+	handler := server.Handler()
+
+	recorder := doJSONRequest(t, handler, http.MethodGet, "/api/iptv/channels", "", "", "")
+	body := recorder.Body.String()
+	// 4 つの新フィールドは qualities の直後に並ぶ
+	order := []string{`"qualities"`, `"source_name"`, `"identity"`, `"same_channel_count"`, `"same_channel_sources"`}
+	previous := -1
+	for _, key := range order {
+		index := strings.Index(body, key)
+		if index < 0 {
+			t.Fatalf("key %s not found in %s", key, body)
+		}
+		if index < previous {
+			t.Errorf("field order broken at %s: %s", key, body)
+		}
+		previous = index
+	}
+
+	var channels iptvChannelsResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &channels); err != nil {
+		t.Fatal(err)
+	}
+	alpha := channels.Channels[0]
+	// tvg-id="Alpha.jp" があるため identity はそれを trim・小文字化した tvg:... になる
+	if alpha.Identity != "tvg:alpha.jp" {
+		t.Errorf("identity = %s", alpha.Identity)
+	}
+	// source_name はホスト + パスになる
+	if !strings.HasPrefix(alpha.SourceName, "127.0.0.1") || !strings.HasSuffix(alpha.SourceName, "/jp.m3u") {
+		t.Errorf("source_name = %s", alpha.SourceName)
+	}
+	// 同一 identity のチャンネルは 1 件のみ (由来ソース名は自分のソース 1 件)
+	if alpha.SameChannelCount != 1 || alpha.SameChannelSources == nil || len(alpha.SameChannelSources) != 1 {
+		t.Errorf("same channel = %d / %v", alpha.SameChannelCount, alpha.SameChannelSources)
+	}
+	if len(alpha.SameChannelSources) == 1 && !strings.HasSuffix(alpha.SameChannelSources[0], "/jp.m3u") {
+		t.Errorf("same channel sources = %v", alpha.SameChannelSources)
 	}
 }
 

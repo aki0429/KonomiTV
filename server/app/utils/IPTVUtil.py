@@ -14,7 +14,8 @@ import hashlib
 import json
 import re
 import time
-from dataclasses import asdict, dataclass
+import unicodedata
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import quote, urljoin, urlparse
@@ -31,6 +32,10 @@ IPTV_PROXY_PATH = '/api/iptv/proxy'
 
 # 追加登録した M3U プレイリストの URL を保存するファイル
 IPTV_USER_SOURCES_PATH = DATA_DIR / 'iptv_sources.json'
+
+# 無効化した M3U プレイリストの URL を保存するファイル
+## config.yaml 由来のソースも追加登録したソースも区別せず、URL 単位で無効化状態を保持する
+IPTV_DISABLED_SOURCES_PATH = DATA_DIR / 'iptv_disabled_sources.json'
 
 # テレビ視聴 UI (TV ホーム / 視聴画面) に登録した IPTV チャンネルの display_channel_id を保存するファイル
 IPTV_TVUI_CHANNELS_PATH = DATA_DIR / 'iptv_tvui_channels.json'
@@ -94,6 +99,10 @@ _NAME_QUALITY_PATTERN = re.compile(r'[\[\uff08(]\s*(\d{3,4}[pi])\s*[\]\uff09)]')
 # プレイリストの URL (例: ".../countries/jp.m3u") から国コードを抽出するための正規表現
 _SOURCE_URL_COUNTRY_PATTERN = re.compile(r'/countries/([A-Za-z]{2})\.m3u', re.IGNORECASE)
 
+# チャンネル名を正規化する際に除去する空白・記号
+## NFKC 正規化で全角記号は半角に畳み込まれるため、念のため全角・半角の両方を列挙しておく
+_NORMALIZE_NAME_SYMBOLS = set('.・_-:：/／\\()（）[]「」『』!！?？,，、\'"’”')
+
 
 @dataclass
 class IPTVChannel:
@@ -127,6 +136,14 @@ class IPTVChannel:
     is_geo_blocked: bool
     # このチャンネルを提供しているプレイリストの URL
     source_url: str
+    # このチャンネルを提供しているプレイリストの表示名 (ソース URL から生成する)
+    source_name: str
+    # 同一チャンネル判定キー (同じ identity なら同一チャンネルとみなす)
+    identity: str
+    # 同じ identity を持つチャンネルの総数 (チャンネル一覧の構築後に集計する。1 = この1件のみ)
+    same_channel_count: int = 1
+    # 同じ identity を持つチャンネルが由来するソース表示名の一覧 (重複除去・ソート済み)
+    same_channel_sources: list[str] = field(default_factory=list)
 
 
 # 解析済みのチャンネル一覧のキャッシュ
@@ -171,6 +188,95 @@ def _NormalizeURL(base_url: str, url: str) -> str:
     """プレイリスト内の相対 URL を、プレイリストの URL を基準に絶対 URL に変換する。"""
 
     return urljoin(base_url, url.strip())
+
+
+def _BuildSourceName(source_url: str) -> str:
+    """
+    プレイリストのソース URL から、表示用のソース名を生成する。
+
+    http(s):// の場合はホスト + パスを使い (クエリ・フラグメントは無視する) 、パスが無い場合はホストのみを使う。
+    それ以外はローカルファイルパスとみなし、basename を使う。
+    URL として解釈できない場合は、URL の文字列をそのまま返す。
+
+    Args:
+        source_url (str): プレイリストの取得元 URL
+
+    Returns:
+        str: ソースの表示名 (例: 'iptv-org.github.io/streams/jp.m3u')
+    """
+
+    try:
+        parsed = urlparse(source_url)
+    except ValueError:
+        # URL として解釈できなかった場合は、文字列をそのまま表示名にする
+        return source_url
+
+    # http(s):// の場合はホスト + パスを使う
+    if parsed.scheme in ('http', 'https'):
+        host = parsed.netloc
+        if host == '':
+            return source_url
+        path = parsed.path
+        if path not in ('', '/'):
+            return f'{host}{path}'
+        return host
+
+    # それ以外はローカルファイルパスとして basename を使う
+    name = Path(source_url).name
+    return name if name != '' else source_url
+
+
+def _NormalizeChannelName(name: str) -> str:
+    """
+    チャンネル名を、同一チャンネル判定用に正規化する。
+
+    NFKC 正規化 → 小文字化 → 空白と記号の除去、の順で行う。
+    これにより全角・半角や区切り記号の表記ゆれを吸収する。
+
+    Args:
+        name (str): 正規化するチャンネル名
+
+    Returns:
+        str: 正規化したチャンネル名
+    """
+
+    normalized = unicodedata.normalize('NFKC', name).lower()
+    return ''.join(
+        char for char in normalized
+        if char.isspace() is False and char not in _NORMALIZE_NAME_SYMBOLS
+    )
+
+
+def _BuildIdentity(tvg_id: str | None, country: str | None, name: str, display_channel_id: str) -> str:
+    """
+    チャンネルの identity (同一チャンネル判定キー) を生成する。
+
+    優先順位は tvg-id > 国コード + 正規化チャンネル名 > display_channel_id の順。
+    tvg-id があればそれを trim・小文字化して使い、無ければ国コードと正規化したチャンネル名で判定する。
+    名前が正規化すると空になる場合のみ、最終フォールバックとして display_channel_id を使う。
+
+    Args:
+        tvg_id (str | None): プレイリストで振られた tvg-id
+        country (str | None): 国コード (ISO 3166-1 alpha-2, 大文字)
+        name (str): チャンネル名
+        display_channel_id (str): チャンネルの display_channel_id (最終フォールバックに使う)
+
+    Returns:
+        str: identity (例: 'tvg:nhkworldjapan.jp@sd' / 'name:jp:nhkworldjapan')
+    """
+
+    # tvg-id が指定されている場合はそれを最優先で使う
+    if tvg_id is not None and tvg_id.strip() != '':
+        return f'tvg:{tvg_id.strip().lower()}'
+
+    # 国コード + 正規化チャンネル名で判定する
+    normalized_name = _NormalizeChannelName(name)
+    if normalized_name != '':
+        country_part = country.lower() if country is not None else ''
+        return f'name:{country_part}:{normalized_name}'
+
+    # 名前が正規化すると空になる場合のみ display_channel_id を使う
+    return f'id:{display_channel_id}'
 
 
 def _DeriveCountryCode(attributes: dict[str, str], source_url: str) -> str | None:
@@ -227,6 +333,9 @@ def ParseM3UPlaylist(content: str, source_url: str) -> list[IPTVChannel]:
 
     channels: list[IPTVChannel] = []
     seen_urls: set[str] = set()
+
+    # ソースの表示名は全チャンネルで共通なので、ループの外で1回だけ生成する
+    source_name = _BuildSourceName(source_url)
 
     # 現在処理中の #EXTINF 行の属性
     current_attributes: dict[str, str] = {}
@@ -287,6 +396,10 @@ def ParseM3UPlaylist(content: str, source_url: str) -> list[IPTVChannel]:
         country = _DeriveCountryCode(attributes, source_url)
         country_info = _countries_by_code.get(country, {}) if country is not None else {}
 
+        # tvg-id と display_channel_id は identity の生成にも使うため、先に変数へ取り出す
+        tvg_id = attributes.get('tvg-id') or None
+        display_channel_id = BuildDisplayChannelID(url)
+
         channels.append(IPTVChannel(
             id = _BuildChannelID(url),
             name = name,
@@ -296,12 +409,14 @@ def ParseM3UPlaylist(content: str, source_url: str) -> list[IPTVChannel]:
             country = country,
             country_name = country_info.get('name'),
             country_flag = country_info.get('flag'),
-            tvg_id = attributes.get('tvg-id') or None,
+            tvg_id = tvg_id,
             language = attributes.get('tvg-language') or None,
             user_agent = attributes.get('http-user-agent') or None,
             referrer = attributes.get('http-referrer') or None,
             is_geo_blocked = is_geo_blocked,
             source_url = source_url,
+            source_name = source_name,
+            identity = _BuildIdentity(tvg_id, country, name, display_channel_id),
         ))
 
     return channels
@@ -331,13 +446,83 @@ def SaveUserSources(sources: list[str]) -> None:
     )
 
 
+def LoadDisabledSources() -> list[str]:
+    """
+    無効化されている M3U プレイリストの URL の一覧を読み込む。ファイルが無い場合は空のリストを返す。
+
+    config.yaml 由来のソースも追加登録したソースも区別せず、URL 単位で保持している。
+
+    Returns:
+        list[str]: 無効化されているソースの URL の一覧
+    """
+
+    if IPTV_DISABLED_SOURCES_PATH.exists() is False:
+        return []
+    try:
+        data = json.loads(IPTV_DISABLED_SOURCES_PATH.read_text(encoding='utf-8'))
+        if isinstance(data, list):
+            return [str(item) for item in data]
+    except (json.JSONDecodeError, OSError) as ex:
+        logging.warning(f'Failed to load IPTV disabled sources: {ex}')
+    return []
+
+
+def SaveDisabledSources(sources: list[str]) -> None:
+    """無効化されている M3U プレイリストの URL の一覧を保存する。"""
+
+    IPTV_DISABLED_SOURCES_PATH.parent.mkdir(parents=True, exist_ok=True)
+    IPTV_DISABLED_SOURCES_PATH.write_text(
+        json.dumps(sources, ensure_ascii=False, indent=2),
+        encoding = 'utf-8',
+    )
+
+
+def SetSourceEnabled(url: str, enabled: bool) -> list[str]:
+    """
+    指定された M3U プレイリストのソースを有効または無効にする。
+
+    enabled が False の場合は無効化リストに追加し (重複追加しない) 、True の場合は無効化リストから除去する。
+    実際に変更があった場合のみ保存する。
+
+    Args:
+        url (str): 有効/無効を切り替えるソースの URL
+        enabled (bool): True なら有効化、False なら無効化する
+
+    Returns:
+        list[str]: 切り替え後の無効化されているソースの URL の一覧
+    """
+
+    disabled_sources = LoadDisabledSources()
+    if enabled is False:
+        # 無効化リストに未登録の場合のみ追加する
+        if url not in disabled_sources:
+            disabled_sources.append(url)
+            SaveDisabledSources(disabled_sources)
+    else:
+        # 無効化リストに登録済みの場合のみ除去する
+        if url in disabled_sources:
+            disabled_sources.remove(url)
+            SaveDisabledSources(disabled_sources)
+    return disabled_sources
+
+
 def GetAllSourceURLs() -> list[str]:
-    """config.yaml に設定されたソースと、追加登録されたソースをまとめて返す (重複は除外する)。"""
+    """
+    config.yaml に設定されたソースと、追加登録されたソースから、無効化されているものを除いて返す。
+
+    重複は除外する。無効化されたソースはプレイリストの取得時にスキップする必要があるため、ここで除去する。
+
+    Returns:
+        list[str]: 有効なソースの URL の一覧
+    """
+
+    # 無効化されている URL は、前後の空白を無視して一致判定できるようにセットにしておく
+    disabled_sources = {source.strip() for source in LoadDisabledSources()}
 
     sources: list[str] = []
     for source in list(Config().iptv.sources) + LoadUserSources():
         source = source.strip()
-        if source != '' and source not in sources:
+        if source != '' and source not in sources and source not in disabled_sources:
             sources.append(source)
     return sources
 
@@ -504,6 +689,19 @@ async def RefreshChannels(force: bool = False) -> list[IPTVChannel]:
             (channel.group or '\uffff').lower(),
             channel.name.lower(),
         ))
+
+        # 同一チャンネル判定の集計を行う
+        ## 有効なソースから取得した全チャンネル (= これから _channels に入るキャッシュ全体) を対象にする
+        same_channel_counts: dict[str, int] = {}
+        same_channel_source_names: dict[str, set[str]] = {}
+        for channel in channels:
+            same_channel_counts[channel.identity] = same_channel_counts.get(channel.identity, 0) + 1
+            same_channel_source_names.setdefault(channel.identity, set()).add(channel.source_name)
+
+        # 各チャンネルに、同じ identity を持つチャンネルの総数と、それらの由来ソース名の一覧を付与する
+        for channel in channels:
+            channel.same_channel_count = same_channel_counts[channel.identity]
+            channel.same_channel_sources = sorted(same_channel_source_names[channel.identity])
 
         _channels = channels
         _stream_headers_by_url = headers_by_url

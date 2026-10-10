@@ -132,6 +132,11 @@ func (m *Manager) userSourcesPath() string {
 	return filepath.Join(m.dataDir, UserSourcesFileName)
 }
 
+// disabledSourcesPath は無効化した M3U プレイリストの URL を保存するファイルのパスを返す。
+func (m *Manager) disabledSourcesPath() string {
+	return filepath.Join(m.dataDir, DisabledSourcesFileName)
+}
+
 // tvuiChannelsPath はテレビ視聴 UI への登録を保存するファイルのパスを返す。
 func (m *Manager) tvuiChannelsPath() string {
 	return filepath.Join(m.dataDir, TVUIChannelsFileName)
@@ -160,12 +165,82 @@ func (m *Manager) SaveUserSources(sources []string) error {
 	return writeJSONFile(m.userSourcesPath(), sources)
 }
 
-// AllSourceURLs は config.yaml に設定されたソースと、追加登録されたソースをまとめて返す (重複は除外する) 。
+// LoadDisabledSources は無効化されている M3U プレイリストの URL の一覧を読み込む。
+//
+// config.yaml 由来のソースも追加登録したソースも区別せず、URL 単位で保持している。
+// ファイルが無い (または内容が不正な) 場合は空のリストを返す。
+func (m *Manager) LoadDisabledSources() []string {
+	data, err := os.ReadFile(m.disabledSourcesPath())
+	if err != nil {
+		return []string{}
+	}
+	var sources []string
+	if err := json.Unmarshal(data, &sources); err != nil {
+		m.logger.Warn("Failed to load IPTV disabled sources", "error", err)
+		return []string{}
+	}
+	return sources
+}
+
+// SaveDisabledSources は無効化されている M3U プレイリストの URL の一覧を保存する。
+func (m *Manager) SaveDisabledSources(sources []string) error {
+	if err := os.MkdirAll(m.dataDir, 0o755); err != nil {
+		return err
+	}
+	return writeJSONFile(m.disabledSourcesPath(), sources)
+}
+
+// SetSourceEnabled は指定された M3U プレイリストのソースを有効または無効にする。
+//
+// enabled が false の場合は無効化リストに追加し (重複追加しない) 、true の場合は無効化リストから除去する。
+// 実際に変更があった場合のみ保存し、その有無を返す (呼び出し側は true のときキャッシュを更新する) 。
+func (m *Manager) SetSourceEnabled(url string, enabled bool) (bool, error) {
+	disabledSources := m.LoadDisabledSources()
+	if enabled {
+		// 無効化リストに登録済みの場合のみ除去する
+		remaining := make([]string, 0, len(disabledSources))
+		removed := false
+		for _, existing := range disabledSources {
+			if existing == url {
+				removed = true
+				continue
+			}
+			remaining = append(remaining, existing)
+		}
+		if !removed {
+			return false, nil
+		}
+		if err := m.SaveDisabledSources(remaining); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	// 無効化リストに未登録の場合のみ追加する
+	for _, existing := range disabledSources {
+		if existing == url {
+			return false, nil
+		}
+	}
+	if err := m.SaveDisabledSources(append(disabledSources, url)); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// AllSourceURLs は config.yaml に設定されたソースと、追加登録されたソースから、
+// 無効化されているものを除いて返す (重複は除外する) 。
+//
+// 無効化されたソースはプレイリストの取得時にスキップする必要があるため、ここで除去する。
 func (m *Manager) AllSourceURLs() []string {
+	// 無効化されている URL は、前後の空白を無視して一致判定できるようにセットにしておく
+	disabledSources := map[string]bool{}
+	for _, source := range m.LoadDisabledSources() {
+		disabledSources[strings.TrimSpace(source)] = true
+	}
 	sources := []string{}
 	for _, source := range append(append([]string{}, m.config.IPTV.Sources...), m.LoadUserSources()...) {
 		source = strings.TrimSpace(source)
-		if source == "" {
+		if source == "" || disabledSources[source] {
 			continue
 		}
 		duplicated := false
@@ -318,6 +393,28 @@ func (m *Manager) Refresh(ctx context.Context, force bool) []*Channel {
 		}
 		return strings.ToLower(left.Name) < strings.ToLower(right.Name)
 	})
+
+	// 同一チャンネル判定の集計を行う
+	// 有効なソースから取得した全チャンネル (これからキャッシュに入る全体) を対象に、identity ごとに数える
+	sameChannelCounts := map[string]int{}
+	sameChannelSourceNames := map[string]map[string]bool{}
+	for _, channel := range channels {
+		sameChannelCounts[channel.Identity]++
+		if _, exists := sameChannelSourceNames[channel.Identity]; !exists {
+			sameChannelSourceNames[channel.Identity] = map[string]bool{}
+		}
+		sameChannelSourceNames[channel.Identity][channel.SourceName] = true
+	}
+	// 各チャンネルに、同じ identity を持つチャンネルの総数と、それらの由来ソース名の一覧 (重複除去・ソート済み) を付与する
+	for _, channel := range channels {
+		channel.SameChannelCount = sameChannelCounts[channel.Identity]
+		sourceNames := make([]string, 0, len(sameChannelSourceNames[channel.Identity]))
+		for sourceName := range sameChannelSourceNames[channel.Identity] {
+			sourceNames = append(sourceNames, sourceName)
+		}
+		sort.Strings(sourceNames)
+		channel.SameChannelSources = sourceNames
+	}
 
 	byDisplayID := map[string]*Channel{}
 	for _, channel := range channels {

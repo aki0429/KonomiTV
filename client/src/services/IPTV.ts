@@ -34,6 +34,14 @@ export interface IIPTVChannel {
     qualities: IIPTVQuality[];
     // チャンネル名から推定した画質 (例: 'NHK World-Japan (1080p)' の '1080p')
     quality_hint: string | null;
+    // このチャンネルを提供しているプレイリストの表示名 (例: 'iptv-org.github.io/streams/jp.m3u')
+    source_name: string;
+    // 同一チャンネル判定キー (同じ値なら同一チャンネル。tvg_id があればそれ、無ければ国 + 正規化したチャンネル名から作る)
+    identity: string;
+    // 同じ identity を持つチャンネルの総数 (1 の場合はこのチャンネルだけ)
+    same_channel_count: number;
+    // 同じ identity を持つチャンネルが由来するプレイリストの表示名 (重複除去済み・ソート済み)
+    same_channel_sources: string[];
 }
 
 /** IPTV の元配信の画質を表すインターフェイス (サーバー側の IPTVQuality に対応) */
@@ -89,6 +97,8 @@ export interface IIPTVGroups {
 export interface IIPTVSources {
     config_sources: string[];
     user_sources: string[];
+    // 無効化されているソースの URL (config.yaml 由来のソースも追加登録したソースも含まれ得る)
+    disabled_sources: string[];
 }
 
 /** テレビ視聴 UI に登録された IPTV チャンネルを表すインターフェイス (サーバー側の IPTVTVUIChannel に対応) */
@@ -263,6 +273,27 @@ class IPTV {
 
         if (response.type === 'error') {
             APIClient.showGenericError(response, 'IPTV のソースを削除できませんでした。');
+            return null;
+        }
+
+        return response.data;
+    }
+
+    /**
+     * IPTV プレイリストのソースを有効または無効に設定する
+     * @param url 設定する M3U プレイリストの URL
+     * @param enabled 有効にする場合は true
+     * @returns 更新後のソース一覧 or 設定に失敗した場合は null
+     */
+    static async setSourceEnabled(url: string, enabled: boolean): Promise<IIPTVSources | null> {
+
+        const response = await APIClient.post<IIPTVSources>('/iptv/sources/enabled', {url: url, enabled: enabled}, {
+            // 無効化したソースを除外してプレイリストを取得し直すため、タイムアウトを 90 秒に伸ばす
+            timeout: 90 * 1000,
+        });
+
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, 'IPTV のソースの有効/無効を変更できませんでした。');
             return null;
         }
 

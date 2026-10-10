@@ -9,9 +9,11 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"math/big"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 const (
@@ -29,6 +31,8 @@ const (
 	CountriesAPIURL = "https://iptv-org.github.io/api/countries.json"
 	// UserSourcesFileName は追加登録した M3U プレイリストの URL を保存するファイル名。
 	UserSourcesFileName = "iptv_sources.json"
+	// DisabledSourcesFileName は無効化した M3U プレイリストの URL を保存するファイル名。
+	DisabledSourcesFileName = "iptv_disabled_sources.json"
 	// TVUIChannelsFileName はテレビ視聴 UI に登録した IPTV チャンネルを保存するファイル名。
 	TVUIChannelsFileName = "iptv_tvui_channels.json"
 	// QualityDetectionConcurrency は画質の検出を同時に実行する数の上限。
@@ -81,6 +85,15 @@ type Channel struct {
 	IsGeoBlocked bool `json:"is_geo_blocked"`
 	// SourceURL はこのチャンネルを提供しているプレイリストの URL。
 	SourceURL string `json:"source_url"`
+	// SourceName はこのチャンネルを提供しているプレイリストの表示名 (ソース URL から生成する) 。
+	SourceName string `json:"source_name"`
+	// Identity は同一チャンネル判定キー (同じ Identity なら同一チャンネルとみなす) 。
+	Identity string `json:"identity"`
+	// SameChannelCount は同じ Identity を持つチャンネルの総数 (1 = この 1 件のみ) 。
+	// チャンネル一覧のキャッシュ構築後に集計するため、解析直後は常に 1 になる。
+	SameChannelCount int `json:"same_channel_count"`
+	// SameChannelSources は同じ Identity を持つチャンネルが由来するソース表示名の一覧 (重複除去・ソート済み) 。
+	SameChannelSources []string `json:"same_channel_sources"`
 }
 
 // CountryInfo は国コードに対する国名・国旗の情報。
@@ -140,6 +153,104 @@ type ChannelResponse struct {
 	SourceQuality    *string   `json:"source_quality"`
 	SourceCodec      *string   `json:"source_codec"`
 	Qualities        []Quality `json:"qualities"`
+	// SourceName はこのチャンネルを提供しているプレイリストの表示名 (例: 'iptv-org.github.io/streams/jp.m3u') 。
+	SourceName string `json:"source_name"`
+	// Identity は同一チャンネル判定キー (同じ Identity なら同一チャンネルとみなす) 。
+	Identity string `json:"identity"`
+	// SameChannelCount は同じ Identity を持つチャンネルの総数 (1 = この 1 件のみ) 。
+	SameChannelCount int `json:"same_channel_count"`
+	// SameChannelSources は同じ Identity を持つチャンネルが由来するソース表示名の一覧 (重複除去・ソート済み) 。
+	SameChannelSources []string `json:"same_channel_sources"`
+}
+
+// normalizeNameSymbols はチャンネル名の正規化で除去する記号の集合 (Python 版の _NORMALIZE_NAME_SYMBOLS と等価) 。
+// 全角形は正規化の過程で半角に畳み込まれるが、畳み込みの有無に関わらず除去できるよう両方の形を登録しておく。
+var normalizeNameSymbols = map[rune]bool{
+	'.': true, '・': true, '_': true, '-': true, ':': true, '：': true, '/': true, '／': true,
+	'\\': true, '(': true, ')': true, '（': true, '）': true, '[': true, ']': true,
+	'「': true, '」': true, '『': true, '』': true, '!': true, '！': true, '?': true, '？': true,
+	',': true, '，': true, '、': true, '\'': true, '"': true, '’': true, '”': true,
+}
+
+// BuildSourceName はプレイリストのソース URL から、表示用のソース名を生成する。
+//
+// http(s):// の場合はホスト + パスを使い (クエリ・フラグメントは無視する) 、パスが無い場合はホストのみを使う。
+// それ以外はローカルファイルパスとみなし、basename を使う。
+// URL として解釈できない場合は、URL の文字列をそのまま返す (Python 版の _BuildSourceName() と等価) 。
+func BuildSourceName(sourceURL string) string {
+	parsed := SplitURL(sourceURL)
+	// http(s):// の場合はホスト + パスを使う
+	if parsed.Scheme == "http" || parsed.Scheme == "https" {
+		host := parsed.Netloc
+		if host == "" {
+			return sourceURL
+		}
+		if parsed.Path != "" && parsed.Path != "/" {
+			return host + parsed.Path
+		}
+		return host
+	}
+	// それ以外はローカルファイルパスとして basename を使う
+	// (basename が空・カレントディレクトリ・ルートになる場合は URL として解釈できなかったものとみなす)
+	name := filepath.Base(sourceURL)
+	if name != "" && name != "." && name != "/" && name != "\\" {
+		return name
+	}
+	return sourceURL
+}
+
+// NormalizeChannelName はチャンネル名を、同一チャンネル判定用に正規化する。
+//
+// Python 版は NFKC 正規化 → 小文字化 → 空白と記号の除去の順で行うが、
+// Go の標準ライブラリには NFKC が無いため、全角英数記号 (U+FF01–U+FF5E → U+0021–U+007E) と
+// 全角スペース (U+3000 → 半角空白) の畳み込みで代替する。
+// この代替は ASCII の名前・tvg-id では Python 版と完全に一致する (日本語の合字など NFKC 固有の変換は近似になる) 。
+// その上で小文字化し、空白と区切り記号を除去する。
+func NormalizeChannelName(name string) string {
+	var builder strings.Builder
+	for _, character := range name {
+		// 全角英数記号を半角に、全角スペースを半角空白に畳み込む (NFKC の代替)
+		switch {
+		case character >= 0xFF01 && character <= 0xFF5E:
+			character -= 0xFEE0
+		case character == 0x3000:
+			character = ' '
+		}
+		// 空白は除去する
+		if unicode.IsSpace(character) {
+			continue
+		}
+		// 区切り記号は除去する
+		if normalizeNameSymbols[character] {
+			continue
+		}
+		builder.WriteRune(unicode.ToLower(character))
+	}
+	return builder.String()
+}
+
+// BuildIdentity はチャンネルの identity (同一チャンネル判定キー) を生成する。
+//
+// 優先順位は tvg-id > 国コード + 正規化チャンネル名 > display_channel_id の順。
+// tvg-id があればそれを trim・小文字化して使い、無ければ国コードと正規化したチャンネル名で判定する。
+// 名前が正規化すると空になる場合のみ、最終フォールバックとして display_channel_id を使う
+// (Python 版の _BuildIdentity() と等価) 。
+func BuildIdentity(tvgID *string, country *string, name string, displayChannelID string) string {
+	// tvg-id が指定されている場合はそれを最優先で使う
+	if tvgID != nil && strings.TrimSpace(*tvgID) != "" {
+		return "tvg:" + strings.ToLower(strings.TrimSpace(*tvgID))
+	}
+	// 国コード + 正規化チャンネル名で判定する
+	normalizedName := NormalizeChannelName(name)
+	if normalizedName != "" {
+		countryPart := ""
+		if country != nil {
+			countryPart = strings.ToLower(*country)
+		}
+		return "name:" + countryPart + ":" + normalizedName
+	}
+	// 名前が正規化すると空になる場合のみ display_channel_id を使う
+	return "id:" + displayChannelID
 }
 
 // BuildChannelID はストリームの URL から、チャンネルを一意に識別する安定した ID を生成する。
@@ -486,6 +597,11 @@ func IsHLSPlaylist(streamURL string) bool {
 // ToResponse はチャンネル情報を、API レスポンス用の構造体に変換する。
 func (channel *Channel) ToResponse() *ChannelResponse {
 	streamType := DetectStreamType(channel.URL)
+	// same_channel_sources は常に配列で返す (未集計時も null にしない)
+	sameChannelSources := channel.SameChannelSources
+	if sameChannelSources == nil {
+		sameChannelSources = []string{}
+	}
 	return &ChannelResponse{
 		ID:           channel.ID,
 		Name:         channel.Name,
@@ -506,6 +622,11 @@ func (channel *Channel) ToResponse() *ChannelResponse {
 		IsHLS:            streamType == "HLS",
 		DisplayChannelID: BuildDisplayChannelID(channel.URL),
 		Qualities:        []Quality{},
+		// ソースの表示名と同一チャンネル判定の情報は、解析・集計済みの値をそのまま引き継ぐ
+		SourceName:         channel.SourceName,
+		Identity:           channel.Identity,
+		SameChannelCount:   channel.SameChannelCount,
+		SameChannelSources: sameChannelSources,
 	}
 }
 

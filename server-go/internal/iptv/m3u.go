@@ -17,6 +17,9 @@ func ParseM3UPlaylist(content string, sourceURL string, countriesByCode map[stri
 	channels := make([]*Channel, 0)
 	seenURLs := map[string]bool{}
 
+	// ソースの表示名は全チャンネルで共通なので、ループの外で1回だけ生成する
+	sourceName := BuildSourceName(sourceURL)
+
 	// 現在処理中の #EXTINF 行の属性
 	currentAttributes := map[string]string{}
 	var currentName *string
@@ -105,6 +108,10 @@ func ParseM3UPlaylist(content string, sourceURL string, countriesByCode map[stri
 			countryInfo = countriesByCode[*country]
 		}
 
+		// tvg-id と display_channel_id は identity の生成にも使うため、先に変数へ取り出す
+		tvgID := optionalAttribute(attributes, "tvg-id")
+		displayChannelID := BuildDisplayChannelID(streamURL)
+
 		channel := &Channel{
 			ID:           BuildChannelID(streamURL),
 			Name:         name,
@@ -112,12 +119,19 @@ func ParseM3UPlaylist(content string, sourceURL string, countriesByCode map[stri
 			LogoURL:      optionalAttribute(attributes, "tvg-logo"),
 			Group:        optionalAttribute(attributes, "group-title"),
 			Country:      country,
-			TvgID:        optionalAttribute(attributes, "tvg-id"),
+			TvgID:        tvgID,
 			Language:     optionalAttribute(attributes, "tvg-language"),
 			UserAgent:    optionalAttribute(attributes, "http-user-agent"),
 			Referrer:     optionalAttribute(attributes, "http-referrer"),
 			IsGeoBlocked: isGeoBlocked,
 			SourceURL:    sourceURL,
+			// ソースの表示名 (プレイリストの URL から生成する)
+			SourceName: sourceName,
+			// identity は tvg-id / 国コード + 正規化チャンネル名 / display_channel_id から生成する
+			Identity: BuildIdentity(tvgID, country, name, displayChannelID),
+			// 同一チャンネル判定の集計はキャッシュ構築後に行うため、解析直後は自分 1 件のみとして初期化する
+			SameChannelCount:   1,
+			SameChannelSources: []string{},
 		}
 		if countryInfo.Name != "" {
 			name := countryInfo.Name

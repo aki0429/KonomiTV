@@ -108,6 +108,16 @@
                                     <span v-if="channel.is_tvui_registered" class="iptv-channel-card__badge iptv-channel-card__badge--tv">
                                         TV 登録済み
                                     </span>
+                                    <!-- 同じチャンネルが複数のプレイリストにある場合の表示 (ツールチップでどのソースにあるかを示す) -->
+                                    <span v-if="channel.same_channel_count > 1" class="iptv-channel-card__badge iptv-channel-card__badge--same"
+                                        :title="`同じチャンネルが次のソースにもあります: ${channel.same_channel_sources.join(' / ')}`">
+                                        同一チャンネル ×{{ channel.same_channel_count }}
+                                    </span>
+                                    <!-- 提供元のプレイリスト名 (名前が同じでも別チャンネルかどうかを判別するために表示する) -->
+                                    <span class="iptv-channel-card__source"
+                                        :title="`提供元: ${channel.source_url} (同一判定キー: ${channel.identity})`">
+                                        {{ channel.source_name }}
+                                    </span>
                                 </div>
                             </div>
                             <!-- 画質の選択 (元配信の画質に応じた選択肢を提示する) -->
@@ -147,9 +157,18 @@
                     </v-btn>
                 </v-card-title>
                 <v-card-text class="iptv-source__body">
+                    <div class="iptv-source__note">
+                        チェックを外したソースは無効になり、チャンネル一覧の取得対象から除外されます (config.yaml で設定されたソースも無効にできます)。
+                    </div>
                     <div class="iptv-source__section-title">追加登録したソース</div>
                     <div class="iptv-source__list" v-if="sources !== null && sources.user_sources.length > 0">
-                        <div class="iptv-source__item" v-for="source in sources.user_sources" :key="source">
+                        <div class="iptv-source__item" v-for="source in sources.user_sources" :key="source"
+                            :class="{'iptv-source__item--disabled': isSourceEnabled(source) === false}">
+                            <v-checkbox-btn class="iptv-source__item-toggle" color="primary" density="compact"
+                                :model-value="isSourceEnabled(source)" :loading="toggling_source_url === source"
+                                :title="isSourceEnabled(source) ? 'このソースを無効にする' : 'このソースを有効にする'"
+                                @update:model-value="setSourceEnabled(source, $event)">
+                            </v-checkbox-btn>
                             <span class="iptv-source__item-url">{{ source }}</span>
                             <v-btn icon variant="text" size="small" :loading="is_removing_source"
                                 @click="removeSource(source)">
@@ -172,7 +191,13 @@
                     </div>
                     <div class="iptv-source__section-title">config.yaml で設定されたソース (変更するには config.yaml を編集してください)</div>
                     <div class="iptv-source__list">
-                        <div class="iptv-source__item iptv-source__item--readonly" v-for="source in sources?.config_sources ?? []" :key="source">
+                        <div class="iptv-source__item iptv-source__item--readonly" v-for="source in sources?.config_sources ?? []"
+                            :key="source" :class="{'iptv-source__item--disabled': isSourceEnabled(source) === false}">
+                            <v-checkbox-btn class="iptv-source__item-toggle" color="primary" density="compact"
+                                :model-value="isSourceEnabled(source)" :loading="toggling_source_url === source"
+                                :title="isSourceEnabled(source) ? 'このソースを無効にする' : 'このソースを有効にする'"
+                                @update:model-value="setSourceEnabled(source, $event)">
+                            </v-checkbox-btn>
                             <span class="iptv-source__item-url">{{ source }}</span>
                         </div>
                     </div>
@@ -275,6 +300,8 @@ const sources = ref<IIPTVSources | null>(null);
 const new_source_url = ref('');
 const is_adding_source = ref(false);
 const is_removing_source = ref(false);
+// 有効/無効を切り替え中のソースの URL (切り替え中はその行にローディングを表示する)
+const toggling_source_url = ref<string | null>(null);
 
 // ==================== データ取得 ====================
 
@@ -557,6 +584,48 @@ async function removeSource(url: string): Promise<void> {
     }
 }
 
+/**
+ * 指定されたソースが有効かどうかを返す
+ * @param url 判定するソースの URL
+ * @returns 有効な場合は true (無効化リストに含まれていない場合)
+ */
+function isSourceEnabled(url: string): boolean {
+    if (sources.value === null) {
+        return true;
+    }
+    return sources.value.disabled_sources.includes(url) === false;
+}
+
+/**
+ * ソースの有効/無効を切り替える
+ * @param url 切り替えるソースの URL
+ * @param enabled 有効にする場合は true (v-checkbox-btn からは null が渡ることがある)
+ */
+async function setSourceEnabled(url: string, enabled: boolean | null): Promise<void> {
+
+    // 二重操作を防ぐ
+    if (toggling_source_url.value !== null) {
+        return;
+    }
+
+    toggling_source_url.value = url;
+    try {
+        const result = await IPTV.setSourceEnabled(url, enabled === true);
+        if (result === null) {
+            return;
+        }
+        sources.value = result;
+        Message.success(enabled === true ? 'IPTV のソースを有効にしました。' : 'IPTV のソースを無効にしました。');
+        // 有効なソースだけを対象にチャンネル一覧・国・グループを取得し直す
+        page.value = 1;
+        await fetchChannels(true);
+        await fetchCountries();
+        await fetchGroups();
+    } finally {
+        toggling_source_url.value = null;
+    }
+}
+
 // ==================== ライフサイクル ====================
 
 onMounted(async () => {
@@ -814,10 +883,24 @@ onMounted(async () => {
         color: rgb(var(--v-theme-primary));
     }
 
+    &--same {
+        // 同じチャンネルが複数のソースにあることを示すバッジ (目立たせすぎないよう警告色を使う)
+        color: rgb(var(--v-theme-warning));
+    }
+
     &--quality {
         color: rgb(var(--v-theme-primary));
         font-weight: 600;
     }
+}
+
+.iptv-channel-card__source {
+    // 提供元のプレイリスト名 (名前が同じでも別チャンネルかどうかを判別できるように、控えめに表示する)
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.7;
 }
 
 .iptv-channel-card__quality {
@@ -888,11 +971,29 @@ onMounted(async () => {
     &--readonly {
         padding: 6px 8px;
     }
+
+    &--disabled {
+        // 無効化されているソースは薄く表示して、有効なソースと区別できるようにする
+        opacity: 0.45;
+    }
+}
+
+.iptv-source__item-toggle {
+    // チェックボックスが縦に潰れないように固定する
+    flex: 0 0 auto;
+    margin-inline-start: -6px;
 }
 
 .iptv-source__item-url {
     font-size: 12px;
     word-break: break-all;
+    flex: 1 1 auto;
+}
+
+.iptv-source__note {
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: rgb(var(--v-theme-gray));
 }
 
 .iptv-source__list {

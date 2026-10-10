@@ -61,6 +61,8 @@ type iptvGroupsResponse struct {
 type iptvSourcesResponse struct {
 	ConfigSources []string `json:"config_sources"`
 	UserSources   []string `json:"user_sources"`
+	// DisabledSources は無効化されているソースの URL (config_sources の順 → user_sources の順 → 保存順) 。
+	DisabledSources []string `json:"disabled_sources"`
 }
 
 // iptvTVUIChannelResponse はテレビ視聴 UI 登録チャンネルの1件分。
@@ -291,15 +293,58 @@ func (s *Server) handleIPTVPlaylist(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(iptv.BuildM3UPlaylist(filtered)))
 }
 
+// orderedDisabledSources は無効化されているソースの URL を、
+// config_sources の順 → user_sources の順 → 保存順で並べて返す (Python 版の BuildDisabledSources() と等価) 。
+//
+// config / user のどちらにも無い URL (過去に無効化した後に削除された等) は末尾に保存順で並べる。
+func orderedDisabledSources(configSources []string, userSources []string, disabledSources []string) []string {
+	// 前後の空白を無視して一致判定できるよう、正規化したセットを作る
+	disabledSet := map[string]bool{}
+	for _, source := range disabledSources {
+		if trimmed := strings.TrimSpace(source); trimmed != "" {
+			disabledSet[trimmed] = true
+		}
+	}
+
+	ordered := []string{}
+	seen := map[string]bool{}
+	// config の順で、無効化されているものを先頭に並べる
+	for _, source := range configSources {
+		if disabledSet[source] && !seen[source] {
+			ordered = append(ordered, source)
+			seen[source] = true
+		}
+	}
+	// 続いて user の順で並べる
+	for _, source := range userSources {
+		if disabledSet[source] && !seen[source] {
+			ordered = append(ordered, source)
+			seen[source] = true
+		}
+	}
+	// どちらにも無い URL は保存順で末尾に並べる
+	for _, source := range disabledSources {
+		trimmed := strings.TrimSpace(source)
+		if trimmed != "" && !seen[trimmed] {
+			ordered = append(ordered, trimmed)
+			seen[trimmed] = true
+		}
+	}
+	return ordered
+}
+
 // iptvSources はソース一覧 API のレスポンスを生成する。
 func (s *Server) iptvSources() *iptvSourcesResponse {
+	configSources := s.iptv.ConfigSources()
 	userSources := s.iptv.LoadUserSources()
 	if userSources == nil {
 		userSources = []string{}
 	}
 	return &iptvSourcesResponse{
-		ConfigSources: s.iptv.ConfigSources(),
+		ConfigSources: configSources,
 		UserSources:   userSources,
+		// 無効化されているソースは config → user → 保存順で並べる
+		DisabledSources: orderedDisabledSources(configSources, userSources, s.iptv.LoadDisabledSources()),
 	}
 }
 
@@ -369,6 +414,42 @@ func (s *Server) handleIPTVSourceDelete(w http.ResponseWriter, r *http.Request) 
 		s.iptv.Refresh(r.Context(), true)
 	}
 
+	writeJSON(w, http.StatusOK, s.iptvSources())
+}
+
+// handleIPTVSourceEnabled は POST /api/iptv/sources/enabled を処理する。
+//
+// 指定されたソースを有効または無効にする。無効化したソースはプレイリストの取得時にスキップされる。
+func (s *Server) handleIPTVSourceEnabled(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		URL     string `json:"url"`
+		Enabled bool   `json:"enabled"`
+	}
+	if !decodeJSONBody(r, &payload) {
+		writeError(w, http.StatusUnprocessableEntity, "Invalid JSON body")
+		return
+	}
+
+	source := strings.TrimSpace(payload.URL)
+	if source == "" {
+		writeError(w, http.StatusBadRequest, "The playlist URL must not be empty.")
+		return
+	}
+
+	// IPTV 機能が無効の場合は受け付けない
+	if !s.config.IPTV.Enabled {
+		writeError(w, http.StatusBadRequest, "IPTV is disabled.")
+		return
+	}
+
+	// 有効/無効を切り替える (無効化リストの保存は変更があった場合のみ行われる)
+	if _, err := s.iptv.SetSourceEnabled(source, payload.Enabled); err != nil {
+		s.logger.Error("failed to save IPTV disabled sources", "error", err)
+	}
+	s.logger.Info("IPTV playlist source enabled state changed", "source", source, "enabled", payload.Enabled)
+
+	// 切り替えた内容を即座に反映させる
+	s.iptv.Refresh(r.Context(), true)
 	writeJSON(w, http.StatusOK, s.iptvSources())
 }
 

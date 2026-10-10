@@ -907,6 +907,14 @@ class IPTVChannel(BaseModel):
     source_codec: str | None = None
     # 元配信で配信されている画質 (バリアント) の一覧 (解像度の高い順)
     qualities: list[IPTVQuality] = []
+    # このチャンネルを提供しているプレイリスト (ソース) の表示名 (例: 'iptv-org.github.io/streams/jp.m3u')
+    source_name: str
+    # 同一チャンネル判定キー (同じ identity なら同一チャンネルとみなす)
+    identity: str
+    # 同じ identity を持つチャンネルの総数 (1 = この 1 件のみ)
+    same_channel_count: int
+    # 同じ identity を持つチャンネルが由来する source_name の一覧 (重複除去・ソート済み)
+    same_channel_sources: list[str]
 
 class IPTVQuality(BaseModel):
     # 画質名 (例: '1080p')
@@ -952,9 +960,18 @@ class IPTVGroups(BaseModel):
 class IPTVSources(BaseModel):
     config_sources: list[str]
     user_sources: list[str]
+    # 無効化されているソースの URL (config_sources の順 → user_sources の順 → 保存順)
+    disabled_sources: list[str]
 
 class IPTVSourceAddRequest(BaseModel):
     url: str
+
+class IPTVSourceEnabledRequest(BaseModel):
+    """IPTV ソースの有効/無効を切り替えるリクエストを表すスキーマ"""
+    # 有効/無効を切り替える M3U プレイリストの URL
+    url: str
+    # 有効にする場合は True、無効にする場合は False
+    enabled: bool
 
 class IPTVTVUIChannel(BaseModel):
     display_channel_id: str

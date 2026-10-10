@@ -25,7 +25,7 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `POST /api/programs/search` (番組検索) | 🚧 Go native 完成候補 (EDCB 以外は 422。`-no-proxy` 時は SearchPg 1025、有効時は既存 Python 転送を維持。実機・親受入れ未実施) |
 | `GET /api/series`・`GET /api/series/search`・`GET /api/series/{series_id}` (シリーズ番組) | ✅ Go 実装済み (録画番組・録画ファイル・チャンネルまで展開) |
 | `GET /api/iptv/channels`・`/countries`・`/groups`・`/playlist.m3u` (IPTV チャンネル一覧・国・グループ・プレイリスト出力) | ✅ Go 実装済み (実データ 11152 チャンネルで Python 版と完全一致を検証済み) |
-| `GET`/`POST`/`DELETE /api/iptv/sources` (プレイリストソース管理) | ✅ Go 実装済み |
+| `GET`/`POST`/`DELETE /api/iptv/sources`・`POST /api/iptv/sources/enabled` (プレイリストソース管理・有効/無効切替) | ✅ Go 実装済み |
 | `GET`/`POST`/`DELETE /api/iptv/tvui` (テレビ視聴 UI 登録) | ✅ Go 実装済み (呼び出し元ごとに分離) |
 | `GET /api/iptv/proxy` (IPTV ストリームプロキシ、HLS プレイリストの書き換え含む) | ✅ Go 実装済み |
 | `GET /api/iptv/logo` (IPTV チャンネルロゴプロキシ) | ✅ Go 実装済み (取得できない場合は既定のロゴ) |
