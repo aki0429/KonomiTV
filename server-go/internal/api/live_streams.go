@@ -319,6 +319,9 @@ func (s *Server) handleLiveStreamMPEGTS(w http.ResponseWriter, r *http.Request) 
 				// エンコードタスクが終了した場合は接続を切断してループを終了する。
 				return
 			}
+			// Python 版の readStreamData() と同じく、データを受け取った時点で最終読み取り時刻を更新する。
+			// これを行わないと、正常に視聴中のクライアントでも 10 秒でタイムアウト扱いになり切断される。
+			client.MarkStreamDataRead()
 			if _, err := w.Write(data); err != nil {
 				return
 			}

@@ -46,6 +46,17 @@ func (c *LiveStreamClient) StreamDataReadAt() float64 {
 	return c.streamDataReadAt
 }
 
+// MarkStreamDataRead はストリームデータの最終読み取り時刻を現在時刻に更新する。
+// HTTP ハンドラーがキューからデータを受け取った直後に呼び出す。
+// ReadStreamData() を使わずにチャネルを直接 select する場合、これを呼ばないと
+// 書き込み側 (WriteStreamData) から「10 秒間読み取っていない」と判断され、
+// 正常に視聴中のクライアントが切断されてしまう。
+func (c *LiveStreamClient) MarkStreamDataRead() {
+	c.mu.Lock()
+	c.streamDataReadAt = float64(time.Now().UnixNano()) / 1e9
+	c.mu.Unlock()
+}
+
 // ReadStreamData は自分自身のキューからストリームデータを読み取って返す。
 // エンコードタスクが終了した場合は ok に false を返す。
 func (c *LiveStreamClient) ReadStreamData() ([]byte, bool) {

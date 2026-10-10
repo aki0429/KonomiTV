@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -515,24 +516,28 @@ func unixNow() float64 {
 }
 
 // openMirakurunStream は Mirakurun / mirakc の Service Stream API へ HTTP リクエストを開始する。
+// 移植元: LiveEncodingTask.run() の Mirakurun バックエンド分岐
+//
+// ストリーム本文はレスポンスを受け取った後も読み続けるため、リクエストの context には
+// タスク本体の ctx (タスク終了時にキャンセルされる) をそのまま使う。ここでタイムアウト付きの
+// context を作って defer cancel() すると、関数から戻った瞬間に本文の読み取りが打ち切られ、
+// チューナーに接続できているのに起動直後に切断扱い (ER-05) になってしまう。
+// 接続と応答ヘッダーの待ち時間だけを Python 版の aiohttp (connect=15 / sock_connect=15 /
+// sock_read=15) に相当する 15 秒で制限する。読み取りが止まったかどうかの判定は
+// controlLoop がチューナーの最終読み取り時刻で行う。
 func (t *liveEncodingTask) openMirakurunStream(ctx context.Context, mirakurunServiceID string) (*http.Response, error) {
 	baseURL := strings.TrimSuffix(t.options.Config.General.MirakurunURL, "/")
-	requestCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-	request, err := http.NewRequestWithContext(requestCtx, http.MethodGet, baseURL+"/api/services/"+mirakurunServiceID+"/stream", nil)
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/api/services/"+mirakurunServiceID+"/stream", nil)
 	if err != nil {
 		return nil, err
 	}
+	// Python 版は X-Mirakurun-Priority: 0 を付けて Mirakurun の Service Stream API を呼ぶ。
 	request.Header.Set("X-Mirakurun-Priority", "0")
-	client := &http.Client{}
-	response, err := client.Do(request)
-	if err != nil {
-		return nil, err
-	}
-	if response.StatusCode != http.StatusOK {
-		return response, nil
-	}
-	return response, nil
+	client := &http.Client{Transport: &http.Transport{
+		DialContext:           (&net.Dialer{Timeout: 15 * time.Second}).DialContext,
+		ResponseHeaderTimeout: 15 * time.Second,
+	}}
+	return client.Do(request)
 }
 
 // controlLoop はエンコードタスク全体を制御する。

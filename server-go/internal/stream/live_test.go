@@ -1,11 +1,17 @@
 package stream
 
 import (
+	"bytes"
+	"context"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/aki0429/KonomiTV/server-go/internal/config"
 )
 
 // newTestManager はテスト用のマネージャーを生成する。
@@ -203,6 +209,32 @@ func TestWriteStreamDataTimeout(t *testing.T) {
 	}
 }
 
+// TestMarkStreamDataReadPreventsTimeout は、キューからデータを受け取った時点で
+// 最終読み取り時刻を更新していれば、10 秒のタイムアウトで切断されないことを検証する。
+// MPEGTS 配信のハンドラーがこの更新を忘れると、正常に視聴中のクライアントが
+// 接続から 10 秒でタイムアウト扱いになり切断されてしまう。
+func TestMarkStreamDataReadPreventsTimeout(t *testing.T) {
+	manager := newTestManager()
+	liveStream := manager.GetLiveStream("gr011", "720p", StreamEncodingOptions{})
+	client := manager.Connect(liveStream, "mpegts")
+	defer liveStream.Disconnect(client)
+
+	for index := 0; index < 3; index++ {
+		// 接続から 11 秒経過した状態を再現する (このままではタイムアウトで削除される)
+		client.mu.Lock()
+		client.streamDataReadAt = unixNow() - 11
+		client.mu.Unlock()
+
+		// ハンドラーと同じく、データを受け取った直後に最終読み取り時刻を更新する
+		client.MarkStreamDataRead()
+
+		liveStream.WriteStreamData([]byte("stream-data"))
+		if liveStream.GetStatus().ClientCount != 1 {
+			t.Fatalf("client count = %d, want 1 (the client must be kept while it keeps reading)", liveStream.GetStatus().ClientCount)
+		}
+	}
+}
+
 // TestDisconnectAll はすべてのクライアントの切断を検証する。
 func TestDisconnectAll(t *testing.T) {
 	manager := newTestManager()
@@ -372,5 +404,64 @@ func TestEncoderProgressPattern(t *testing.T) {
 		if line != testCase.want {
 			t.Errorf("progress line = %q, want %q", line, testCase.want)
 		}
+	}
+}
+
+// TestOpenMirakurunStreamKeepsBodyReadable は、openMirakurunStream が返した後も Mirakurun の
+// ストリーム本文を読み続けられることを検証する。
+// レスポンスを受け取った直後に context をキャンセルすると (defer cancel()) 本文の読み取りが
+// 打ち切られ、チューナーに接続できているのに起動直後に切断扱い (ER-05) になるため。
+func TestOpenMirakurunStreamKeepsBodyReadable(t *testing.T) {
+	packets := 5
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/services/3211240960/stream" {
+			t.Errorf("path = %q, want /api/services/3211240960/stream", r.URL.Path)
+			return
+		}
+		// Python 版と同じく X-Mirakurun-Priority: 0 を送ること
+		if priority := r.Header.Get("X-Mirakurun-Priority"); priority != "0" {
+			t.Errorf("X-Mirakurun-Priority = %q, want 0", priority)
+		}
+		w.Header().Set("Content-Type", "video/MP2T")
+		w.WriteHeader(http.StatusOK)
+		flusher, _ := w.(http.Flusher)
+		packet := bytes.Repeat([]byte{0x47}, 188)
+		for index := 0; index < packets; index++ {
+			// 実際の放送波と同じく、時間をかけて少しずつ流す
+			if _, err := w.Write(packet); err != nil {
+				return
+			}
+			if flusher != nil {
+				flusher.Flush()
+			}
+			time.Sleep(20 * time.Millisecond)
+		}
+	}))
+	defer server.Close()
+
+	// Mirakurun の URL だけを差し替えたタスクを組み立てる (実際の起動はしない)
+	serverConfig := &config.Config{}
+	serverConfig.General.MirakurunURL = server.URL + "/"
+	task := &liveEncodingTask{
+		options: TaskOptions{Config: serverConfig},
+		logger:  slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}
+
+	response, err := task.openMirakurunStream(context.Background(), "3211240960")
+	if err != nil {
+		t.Fatalf("openMirakurunStream() = %v", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", response.StatusCode)
+	}
+
+	// 関数から戻った後 (ストリーム受信中) に本文を読み切れること
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatalf("failed to read the stream body: %v", err)
+	}
+	if len(body) != 188*packets {
+		t.Errorf("body = %d bytes, want %d", len(body), 188*packets)
 	}
 }
