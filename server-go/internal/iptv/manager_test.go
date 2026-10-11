@@ -199,11 +199,61 @@ func TestRefreshCacheAndForce(t *testing.T) {
 	}
 	// 存在しないファイルはエラーとして記録される
 	cfg.IPTV.Sources = []string{filepath.Join(t.TempDir(), "missing.m3u")}
-	if channels := manager.Refresh(context.Background(), true); len(channels) != 0 {
-		t.Errorf("channels = %+v", channels)
+	// 全てのソースの取得に失敗した場合は、キャッシュを空で上書きせず前回の一覧を保持する
+	if channels := manager.Refresh(context.Background(), true); len(channels) != 1 || channels[0].Name != "Local Channel" {
+		t.Errorf("channels = %+v (the previous channels must be kept)", channels)
 	}
 	if message := manager.SourceErrors()[cfg.IPTV.Sources[0]]; message != "File Not Found" {
 		t.Errorf("error = %q", message)
+	}
+}
+
+// TestRefreshKeepsChannelsWhenAllSourcesFail は、全てのソースの取得に失敗した場合に、
+// キャッシュを空で上書きせずに前回のチャンネル一覧を保持し、エラーだけを更新することを検証する。
+func TestRefreshKeepsChannelsWhenAllSourcesFail(t *testing.T) {
+	cfg := testConfig()
+	// 失敗フラグを立てると全ソースが 500 を返すようにする
+	var failingMutex sync.Mutex
+	failing := false
+	manager, server := newTestManager(t, cfg, func(w http.ResponseWriter, r *http.Request) {
+		failingMutex.Lock()
+		isFailing := failing
+		failingMutex.Unlock()
+		switch r.URL.Path {
+		case "/api/countries.json":
+			_, _ = w.Write([]byte(testCountriesJSON))
+		case "/a.m3u":
+			if isFailing {
+				http.Error(w, "boom", http.StatusInternalServerError)
+				return
+			}
+			_, _ = w.Write([]byte(testPlaylistA))
+		default:
+			http.Error(w, "not found", http.StatusNotFound)
+		}
+	})
+	cfg.IPTV.Sources = []string{server.URL + "/a.m3u"}
+
+	// 1 回目の更新は成功する
+	if channels := manager.Refresh(context.Background(), true); len(channels) != 3 {
+		t.Fatalf("channels = %d, want 3", len(channels))
+	}
+	updatedAt := manager.UpdatedAt()
+
+	// 2 回目は全ソースが失敗するが、一覧は前回の内容のまま保持される
+	failingMutex.Lock()
+	failing = true
+	failingMutex.Unlock()
+	channels := manager.Refresh(context.Background(), true)
+	if len(channels) != 3 {
+		t.Fatalf("channels after failure = %d, want 3 (the previous channels must be kept)", len(channels))
+	}
+	if manager.UpdatedAt() != updatedAt {
+		t.Errorf("updatedAt = %v, want %v (the cache must not be treated as updated)", manager.UpdatedAt(), updatedAt)
+	}
+	// 失敗したソースはエラーとして記録される (クライアント側で警告表示される)
+	if errors := manager.SourceErrors(); len(errors) != 1 || errors[server.URL+"/a.m3u"] == "" {
+		t.Errorf("sourceErrors = %v, want the failing source recorded", errors)
 	}
 }
 

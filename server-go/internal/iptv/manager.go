@@ -382,6 +382,23 @@ func (m *Manager) Refresh(ctx context.Context, force bool) []*Channel {
 		}
 	}
 
+	// 全てのソースの取得に失敗した場合は、キャッシュを空で上書きしない
+	// 一時的なネットワーク障害で一覧が消えると、クライアント側では「更新したら一覧が空になった」状態になり、
+	// cache_ttl の間は空の一覧が返り続けてしまうため、前回の一覧を保持してエラーだけを更新する
+	if len(sources) > 0 && len(channels) == 0 {
+		if previous := m.Channels(); len(previous) > 0 {
+			m.dataMutex.Lock()
+			m.current.sourceErrors = errorsBySource
+			m.dataMutex.Unlock()
+			m.logger.Warn(
+				"IPTV playlists update failed. Keeping the previous channels.",
+				"errors", len(errorsBySource),
+				"duration", time.Since(timestamp).Seconds(),
+			)
+			return previous
+		}
+	}
+
 	// 国名・グループ名・チャンネル名の順で並べ替える
 	sort.SliceStable(channels, func(i int, j int) bool {
 		left, right := channels[i], channels[j]

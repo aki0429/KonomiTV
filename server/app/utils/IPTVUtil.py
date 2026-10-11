@@ -683,6 +683,17 @@ async def RefreshChannels(force: bool = False) -> list[IPTVChannel]:
                     if host not in headers_by_host:
                         headers_by_host[host] = stream_headers
 
+        # 全てのソースの取得に失敗した場合は、キャッシュを空で上書きしない
+        ## 一時的なネットワーク障害で一覧が消えると、クライアント側では「更新したら一覧が空になった」状態になり、
+        ## cache_ttl の間は空の一覧が返り続けてしまうため、前回の一覧を保持してエラーだけを更新する
+        if len(sources) > 0 and len(channels) == 0 and len(_channels) > 0:
+            _source_errors = errors
+            logging.warning(
+                f'IPTV playlists update failed. Keeping the previous channels. '
+                f'({len(errors)} error(s), {round(time.time() - timestamp, 3)} sec)'
+            )
+            return _channels
+
         # 国名・グループ名・チャンネル名の順で並べ替える
         channels.sort(key = lambda channel: (
             (channel.country_name or '\uffff').lower(),
