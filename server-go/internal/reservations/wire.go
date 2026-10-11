@@ -630,6 +630,20 @@ func (w *wireWriter) writeVector(count int, write func()) {
 	w.writeIntInplace(position, len(w.buf)-position)
 }
 
+// writeSetChInfo はチャンネル・NetworkTV モード変更情報を書き出す (Python 版 __writeSetChInfo) 。
+func writeSetChInfo(w *wireWriter, value SetChInfo) {
+	position := len(w.buf)
+	w.writeInt(0)
+	w.writeBoolInt(value.UseSid)
+	w.writeUshort(value.Onid)
+	w.writeUshort(value.Tsid)
+	w.writeUshort(value.Sid)
+	w.writeBoolInt(value.UseBonCh)
+	w.writeInt(value.SpaceOrID)
+	w.writeInt(value.ChOrMode)
+	w.writeIntInplace(position, len(w.buf)-position)
+}
+
 func writeRecFileSetInfo(w *wireWriter, value RecFileSetInfo) {
 	position := len(w.buf)
 	w.writeInt(0)

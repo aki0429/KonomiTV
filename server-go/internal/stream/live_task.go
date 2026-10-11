@@ -22,6 +22,7 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/constants"
 	"github.com/aki0429/KonomiTV/server-go/internal/database"
 	"github.com/aki0429/KonomiTV/server-go/internal/iptv"
+	"github.com/aki0429/KonomiTV/server-go/internal/reservations"
 )
 
 // エンコードタスクの定数 (server/app/streams/LiveEncodingTask.py と一致させること) 。
@@ -176,6 +177,15 @@ func (t *liveEncodingTask) run(ctx context.Context) {
 			} else {
 				t.liveStream.SetStatus("Offline", "ライブストリームの再起動に失敗しました。契約されていないため視聴できません。(E-17)", false)
 			}
+			// チューナーを終了する (EDCB バックエンドのみ) 。
+			// tuner.close() した時点でそのチューナーインスタンスは意味をなさなくなるので、LiveStream からも削除する。
+			if t.backendType() == "EDCB" {
+				if tuner := t.liveStream.Tuner(); tuner != nil {
+					if tuner.Close(t.liveStream.ID, false) {
+						t.liveStream.SetTuner(nil)
+					}
+				}
+			}
 			return
 		}
 		t.retryCount++
@@ -190,6 +200,24 @@ func (t *liveEncodingTask) backendType() string {
 		return "Mirakurun"
 	}
 	return t.options.Config.General.Backend
+}
+
+// edcbTunerBackend は EDCB バックエンド用のチューナーの依存関係を組み立てる。
+//
+// CtrlCmd の接続先は設定の edcb_url から決まり、ホスト名が edcb-namedpipe の場合は
+// 名前付きパイプモードになる (Python 版 EDCBUtil.getEDCBHost() と同じ判定) 。
+func (t *liveEncodingTask) edcbTunerBackend() (EDCBTunerBackend, error) {
+	edcbURL := t.options.Config.General.EDCBURL
+	host, err := reservations.EDCBHost(edcbURL)
+	if err != nil {
+		return EDCBTunerBackend{}, err
+	}
+	return EDCBTunerBackend{
+		NewCtrlCmd: func() (EDCBCtrlCmd, error) {
+			return reservations.NewClientFromURL(edcbURL)
+		},
+		NamedPipe: host == "edcb-namedpipe",
+	}, nil
 }
 
 // runOnce はエンコードタスクを1回実行する。
@@ -411,10 +439,101 @@ func (t *liveEncodingTask) runOnce(ctx context.Context) {
 		mirakurunStatusCode = mirakurunResponse.StatusCode
 		source = mirakurunResponse.Body
 
+	case t.backendType() == "EDCB":
+		// ***** EDCB バックエンド *****
+
+		// チューナーインスタンスを取得する。
+		// Idling への切り替え、ONAir への復帰時に LiveStream 側でチューナーのアンロック/ロックが行われる。
+		if t.liveStream.Tuner() == nil {
+			backend, backendErr := t.edcbTunerBackend()
+			if backendErr != nil {
+				// チューナーの起動に失敗した (ほとんどがチューナー不足によるものなので、ステータス詳細でもそのように表示する) 。
+				t.logger.Error(t.logPrefix()+" Failed to configure the EDCB tuner backend. "+backendErr.Error(), "live_stream_id", t.liveStream.ID)
+				t.liveStream.SetStatus("Offline", "チューナーの起動に失敗しました。空きチューナーが不足していると考えられます。(E-02E)", false)
+				t.liveStream.DisconnectAll()
+				tsreadex.kill()
+				encoder.kill()
+				return
+			}
+			t.liveStream.SetTuner(GetOrCreateEDCBTuner(t.liveStream.ID, backend))
+		}
+
+		tuner := t.liveStream.Tuner()
+		t.logger.Debug(fmt.Sprintf("%s EDCB NetworkTV ID: %d", t.logPrefix(), tuner.GetEDCBNetworkTVID()), "live_stream_id", t.liveStream.ID)
+
+		// チューナーを起動する。
+		t.liveStream.SetStatus("Standby", "チューナーを起動しています…", false)
+		transportStreamID := 0
+		if encodingChannel.TransportStreamID != nil {
+			transportStreamID = *encodingChannel.TransportStreamID
+		}
+		isTunerOpened := tuner.SetChannel(encodingChannel.NetworkID, encodingChannel.ServiceID, transportStreamID, t.liveStream.ID)
+
+		// チューナーの起動に失敗した。
+		// ほとんどがチューナー不足によるものなので、ステータス詳細でもそのように表示する。
+		// 成功時は tuner.close() するか予約などに割り込まれるまで起動しつづけるので注意。
+		if !isTunerOpened {
+			t.liveStream.SetStatus("Offline", "チューナーの起動に失敗しました。空きチューナーが不足していると考えられます。(E-02E)", false)
+
+			// チューナーを閉じる。
+			tuner.Close(t.liveStream.ID, false)
+
+			// すべての視聴中クライアントのライブストリームへの接続を切断する。
+			t.liveStream.DisconnectAll()
+
+			// PSI/SI データアーカイバーを終了・破棄する。
+			if archiver := t.liveStream.PSIDataArchiver(); archiver != nil {
+				archiver.Destroy()
+				t.liveStream.SetPSIDataArchiver(nil)
+			}
+
+			// 明示的にエンコーダープロセスを終了する。
+			// エンコーダープロセスはチューナー接続よりも前に起動されているため、ここで終了しないとプロセスがリークする。
+			tsreadex.kill()
+			encoder.kill()
+			return
+		}
+
+		// チューナーをロックする (ロックしないと途中でチューナーの制御を横取りされてしまう) 。
+		tuner.Lock(t.liveStream.ID)
+
+		// チューナーに接続する (放送波が送信される TCP ソケットを取得する) 。
+		t.liveStream.SetStatus("Standby", "チューナーに接続しています…", false)
+		reader, connectErr := tuner.Connect(t.liveStream.ID)
+
+		// チューナーへの接続に失敗した。
+		if reader == nil {
+			if connectErr != nil {
+				t.logger.Error(t.logPrefix()+" Failed to connect to the tuner. "+connectErr.Error(), "live_stream_id", t.liveStream.ID)
+			}
+			t.liveStream.SetStatus("Offline", "チューナーへの接続に失敗しました。チューナー側に何らかの問題があるかもしれません。(E-03E)", false)
+
+			// チューナーを閉じる。
+			tuner.Close(t.liveStream.ID, false)
+
+			// すべての視聴中クライアントのライブストリームへの接続を切断する。
+			t.liveStream.DisconnectAll()
+
+			// PSI/SI データアーカイバーを終了・破棄する。
+			if archiver := t.liveStream.PSIDataArchiver(); archiver != nil {
+				archiver.Destroy()
+				t.liveStream.SetPSIDataArchiver(nil)
+			}
+
+			// 明示的にエンコーダープロセスを終了する。
+			// エンコーダープロセスはチューナー接続よりも前に起動されているため、ここで終了しないとプロセスがリークする。
+			tsreadex.kill()
+			encoder.kill()
+			return
+		}
+
+		// 放送波の MPEG2-TS の受信元として設定する。
+		source = reader
+
 	default:
-		// EDCB バックエンドは Go 版では未対応。
-		t.logger.Warn(t.logPrefix()+" The EDCB backend is not supported in the Go server.", "live_stream_id", t.liveStream.ID)
-		t.liveStream.SetStatus("Offline", "EDCB バックエンドは Go 版サーバーでは未対応です。(E-02E)", false)
+		// 想定外のバックエンド (設定不正など) 。バックエンドは EDCB / Mirakurun / IPTV に限られるため、通常ここには到達しない。
+		t.logger.Warn(t.logPrefix()+" The backend is not supported.", "live_stream_id", t.liveStream.ID)
+		t.liveStream.SetStatus("Offline", "このバックエンドはサポートされていません。(E-02E)", false)
 		t.liveStream.DisconnectAll()
 		return
 	}
@@ -458,6 +577,14 @@ func (t *liveEncodingTask) runOnce(ctx context.Context) {
 		}
 		if mirakurunResponse != nil {
 			mirakurunResponse.Body.Close()
+		}
+
+		// EDCB バックエンド: チューナーとのストリーミング接続を閉じる。
+		// チャンネル切り替え時に再利用するため、ここではチューナー自体は閉じない。
+		if t.backendType() == "EDCB" {
+			if tuner := t.liveStream.Tuner(); tuner != nil {
+				tuner.Disconnect(t.liveStream.ID)
+			}
 		}
 	}()
 
@@ -504,6 +631,25 @@ func (t *liveEncodingTask) runOnce(ctx context.Context) {
 	if archiver := t.liveStream.PSIDataArchiver(); archiver != nil {
 		archiver.Destroy()
 		t.liveStream.SetPSIDataArchiver(nil)
+	}
+
+	// EDCB バックエンドのチューナーの後始末を行う。
+	// 移植元: LiveEncodingTask.run() の終了処理の EDCB バックエンド分岐
+	if t.backendType() == "EDCB" {
+		if tuner := t.liveStream.Tuner(); tuner != nil {
+			if t.liveStream.GetStatus().Status == "Restart" {
+				// チューナーをアンロックする。
+				// 新しいエンコードタスクが今回立ち上げたチューナーを再利用できるようにする
+				// (エンコーダーの再起動が必要なだけでチューナー自体はそのまま使える) 。
+				tuner.Unlock(t.liveStream.ID)
+			} else if tuner.GetState() != EDCBTunerCancelling {
+				// 再利用中ならチューナーを閉じない (LiveStream 側の handoff と競合しないようにする) 。
+				// まだ制御をこのライブストリームが保持している場合のみ、チューナーを終了する。
+				if tuner.Close(t.liveStream.ID, false) {
+					t.liveStream.SetTuner(nil)
+				}
+			}
+		}
 	}
 
 	// 非同期処理の終了を待つ (最大 5 秒) 。
@@ -640,6 +786,15 @@ func (t *liveEncodingTask) controlLoop(
 					t.liveStream.SetStatus("Restart", "チューナーとの接続が切断されました。エンコードタスクを再起動しています… (ER-05)", false)
 				}
 			default:
+			}
+		}
+		// EDCB バックエンドの場合は、チューナーとのストリーミング接続が閉じられたかどうかで判定する
+		// (Python 版 LiveEncodingTask.run() の EDCB バックエンド向け isDisconnected() 判定) 。
+		if t.backendType() == "EDCB" {
+			if tuner := t.liveStream.Tuner(); tuner != nil && tuner.IsDisconnected() {
+				if status.Status == "Standby" || status.Status == "ONAir" {
+					t.liveStream.SetStatus("Restart", "チューナーとの接続が切断されました。エンコードタスクを再起動しています… (ER-05)", false)
+				}
 			}
 		}
 

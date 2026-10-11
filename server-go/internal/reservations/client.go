@@ -36,6 +36,13 @@ const (
 	cmdAddAutoAdd2  = 2132
 	cmdChgAutoAdd2  = 2134
 	cmdDelAutoAdd   = 1033
+
+	// cmdNwTVIDSetCh は NetworkTV モードの View アプリのチャンネルを切り替え、または起動を確認するコマンド。
+	cmdNwTVIDSetCh = 1073
+	// cmdNwTVIDClose は NetworkTV モードで起動中の View アプリを終了するコマンド。
+	cmdNwTVIDClose = 1074
+	// cmdRelayViewStream は View アプリの SrvPipe ストリームの転送を開始するコマンド。
+	cmdRelayViewStream = 301
 )
 
 // defaultConnectTimeout は Python 版 CtrlCmdUtil の既定タイムアウト (15 秒) 。
@@ -519,4 +526,102 @@ func (c *Client) DelAutoAdd(idList []int) bool {
 		})
 	})
 	return ok && response.Code == cmdSuccess
+}
+
+// NwTVIDSetCh は NetworkTV モードの View アプリのチャンネルを切り替え、または起動を確認する
+// (CMD_EPG_SRV_NWTV_ID_SET_CH) 。
+//
+// 成功した場合は EpgDataCap_Bon のプロセス ID を返す (Python 版は失敗時に None を返す) 。
+func (c *Client) NwTVIDSetCh(info SetChInfo) (int, bool) {
+	response, ok := c.sendCmd(cmdNwTVIDSetCh, func(writer *wireWriter) {
+		writeSetChInfo(writer, info)
+	})
+	if !ok || response.Code != cmdSuccess {
+		return 0, false
+	}
+	return decodeResponse(func() int {
+		reader := &wireReader{buf: response.Data}
+		return reader.readInt(len(response.Data))
+	})
+}
+
+// NwTVIDClose は NetworkTV モードで起動中の View アプリを終了する (CMD_EPG_SRV_NWTV_ID_CLOSE) 。
+func (c *Client) NwTVIDClose(nwtvID int) bool {
+	response, ok := c.sendCmd(cmdNwTVIDClose, func(writer *wireWriter) {
+		writer.writeInt(nwtvID)
+	})
+	return ok && response.Code == cmdSuccess
+}
+
+// RelayViewStream は View アプリの SrvPipe ストリームの転送を開始する (CMD_EPG_SRV_RELAY_VIEW_STREAM) 。
+//
+// 成功した場合、返された net.Conn は以降そのまま放送波の MPEG2-TS ストリームになる。通常のコマンドの
+// ような「8 バイトのヘッダー + 本文」を都度読み取る形式ではなく、ヘッダー (戻り値 + サイズ) の後に
+// TS が流れ続けるため、接続はストリームが終わるまで閉じずに保持する。
+// TCP/IP モード専用で、名前付きパイプモードでは未対応のエラーを返す。
+func (c *Client) RelayViewStream(processID int) (net.Conn, error) {
+	// TCP/IP モードであること (名前付きパイプモードではストリームの転送は未対応)
+	tcp, ok := c.transport.(*TCPTransport)
+	if !ok {
+		return nil, fmt.Errorf("edcb: relay view stream is only supported in TCP mode")
+	}
+	timeout := tcp.Timeout
+	if timeout <= 0 {
+		timeout = defaultConnectTimeout
+	}
+
+	// ストリーム転送用に専用の接続を張る (通常のコマンド送受信のように使い捨てにしない)
+	connection, err := net.DialTimeout("tcp", tcp.Address, timeout)
+	if err != nil {
+		return nil, fmt.Errorf("edcb: failed to connect for the view stream: %w", err)
+	}
+	// ハンドシェイクの間に限り期限を設定する (成功後は解除してストリームを読めるようにする)
+	if err := connection.SetDeadline(time.Now().Add(timeout)); err != nil {
+		_ = connection.Close()
+		return nil, fmt.Errorf("edcb: failed to set the deadline for the view stream: %w", err)
+	}
+
+	// コマンド本体 (コマンド + サイズ + プロセス ID) を送信する
+	writer := &wireWriter{buf: make([]byte, 0, 12)}
+	writer.writeInt(cmdRelayViewStream)
+	writer.writeInt(4)
+	writer.writeInt(processID)
+	if _, err := connection.Write(writer.buf); err != nil {
+		_ = connection.Close()
+		return nil, fmt.Errorf("edcb: failed to request the view stream: %w", err)
+	}
+
+	// 戻り値 (8 バイトのヘッダーの先頭 4 バイト) を確認する
+	header := make([]byte, 8)
+	if _, err := readFull(connection, header); err != nil {
+		_ = connection.Close()
+		return nil, fmt.Errorf("edcb: failed to read the view stream header: %w", err)
+	}
+	code := int(int32(binary.LittleEndian.Uint32(header[0:4])))
+	if code != cmdSuccess {
+		_ = connection.Close()
+		return nil, fmt.Errorf("edcb: the view stream request failed with code %d", code)
+	}
+
+	// 以降はストリームの連続読み取りを妨げないよう、期限を解除する
+	if err := connection.SetDeadline(time.Time{}); err != nil {
+		_ = connection.Close()
+		return nil, fmt.Errorf("edcb: failed to clear the deadline for the view stream: %w", err)
+	}
+	return connection, nil
+}
+
+// EDCBHost は edcb_url の接続先ホスト名を返す (Python 版 EDCBUtil.getEDCBHost) 。
+//
+// ホスト名が "edcb-namedpipe" の場合は名前付きパイプモードを表す。
+func EDCBHost(edcbURL string) (string, error) {
+	parsed, err := url.Parse(edcbURL)
+	if err != nil {
+		return "", fmt.Errorf("edcb: failed to parse edcb_url %q: %w", edcbURL, err)
+	}
+	host := parsed.Hostname()
+	if host == "" {
+		return "", fmt.Errorf("edcb: edcb_url %q has no host", edcbURL)
+	}
+	return host, nil
 }

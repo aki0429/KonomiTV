@@ -137,6 +137,8 @@ type LiveStream struct {
 	taskDone chan struct{}
 	// psiDataArchiver は PSI/SI データアーカイバー (IPTV では常に nil) 。
 	psiDataArchiver *LivePSIDataArchiver
+	// tuner は EDCB バックエンドのチューナーインスタンス (Mirakurun バックエンドでは常に nil) 。
+	tuner *EDCBTuner
 }
 
 // LogPrefix はログのプレフィックスを返す。
@@ -204,6 +206,8 @@ func (s *LiveStream) SetStatus(status string, detail string, quiet bool) bool {
 	s.status = status
 	s.detail = detail
 	s.updatedAt = now
+	// チューナーインスタンス (= EDCB バックエンド利用時のみ非 nil) はロックを保持したまま参照する。
+	tuner := s.tuner
 	s.mu.Unlock()
 
 	if !quiet {
@@ -211,6 +215,18 @@ func (s *LiveStream) SetStatus(status string, detail string, quiet bool) bool {
 	}
 	if startupComplete {
 		s.manager.logger.Info(s.LogPrefix()+" Startup complete. ("+formatSeconds(startupElapsed)+" sec)", "live_stream_id", s.ID)
+	}
+
+	// チューナーインスタンスが存在する場合 (= EDCB バックエンド利用時) のみ
+	if tuner != nil {
+		// Idling への切り替え時、チューナーをアンロックして再利用できるようにする。
+		if status == "Idling" {
+			tuner.Unlock(s.ID)
+		}
+		// ONAir への切り替え (復帰) 時、再びチューナーをロックして制御を横取りされないようにする。
+		if status == "ONAir" {
+			tuner.Lock(s.ID)
+		}
 	}
 	return true
 }
@@ -295,6 +311,20 @@ func (s *LiveStream) PSIDataArchiver() *LivePSIDataArchiver {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.psiDataArchiver
+}
+
+// Tuner はこのライブストリームに割り当てられた EDCB チューナーを取得する (Mirakurun バックエンドでは常に nil) 。
+func (s *LiveStream) Tuner() *EDCBTuner {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.tuner
+}
+
+// SetTuner はこのライブストリームに EDCB チューナーを設定する (nil を渡すと解除する) 。
+func (s *LiveStream) SetTuner(tuner *EDCBTuner) {
+	s.mu.Lock()
+	s.tuner = tuner
+	s.mu.Unlock()
 }
 
 // SetTask は実行中のエンコードタスクを設定する。
@@ -475,7 +505,13 @@ func (m *Manager) Connect(liveStream *LiveStream, clientType string) *LiveStream
 	}
 
 	// チューナーリソースを解放する (IPTV の疑似チャンネルはチューナーを利用しないため対象外) 。
-	if shouldStartTask && m.usesTuner(liveStream.DisplayChannelID) {
+	isEDCBBackend := m.isEDCBBackend()
+	isIPTVChannel := m.isIPTVChannelByDisplayID(liveStream.DisplayChannelID)
+	if shouldStartTask && isEDCBBackend && !isIPTVChannel {
+		// EDCB バックエンドの場合は、再利用できるチューナーがあれば取得しておく。
+		m.reuseEDCBTuner(liveStream)
+	} else if shouldStartTask && !isEDCBBackend && !isIPTVChannel {
+		// Mirakurun バックエンドの場合は現在 Idling 状態のライブストリームを Offline にしてチューナーリソースを解放する。
 		m.releaseIdlingLiveStreams()
 	}
 
@@ -504,12 +540,126 @@ func (m *Manager) Connect(liveStream *LiveStream, clientType string) *LiveStream
 	return client
 }
 
-// usesTuner は指定されたチャンネルがチューナーを利用するかどうかを返す (IPTV の疑似チャンネルは利用しない) 。
-func (m *Manager) usesTuner(displayChannelID string) bool {
+// isIPTVChannelByDisplayID は指定されたチャンネルが IPTV の疑似チャンネルかどうかを返す。
+func (m *Manager) isIPTVChannelByDisplayID(displayChannelID string) bool {
 	if m.isIPTVChannel == nil {
-		return true
+		return false
 	}
-	return !m.isIPTVChannel(displayChannelID)
+	return m.isIPTVChannel(displayChannelID)
+}
+
+// isEDCBBackend は EDCB バックエンドで動作しているかどうかを返す。
+//
+// 移植元: LiveStream.connect() の is_edcb_backend
+func (m *Manager) isEDCBBackend() bool {
+	if m.taskOptions == nil || m.taskOptions.Config == nil {
+		return false
+	}
+	return m.taskOptions.Config.General.Backend == "EDCB" && !m.taskOptions.Config.General.AlwaysReceiveTVFromMirakurun
+}
+
+// reuseEDCBTuner は新しいライブストリームの開始時に、ほかのライブストリームが使っている
+// EDCB チューナーを再利用する。
+//
+// 移植元: LiveStream.connect() の EDCB バックエンド向けチューナー再利用処理
+// チューナーリソースは無尽蔵にあるわけではないため、クライアントが 0 のストリームから
+// チューナーインスタンスを引き継ぐ。制御権限の移譲とストリーミング接続のクリーンアップを行い、
+// 旧エンコードタスクをキャンセルしてから新しいライブストリームにチューナーを割り当てる。
+func (m *Manager) reuseEDCBTuner(newLiveStream *LiveStream) {
+	// Idling への移行は非同期で遅れて発生するため、短時間リトライする。
+	for attempt := 0; attempt < 15; attempt++ {
+		foundReusableTuner := false
+		shouldWaitNextRetry := false
+
+		for _, liveStream := range m.GetAllLiveStreams() {
+			// 自分自身は対象外。
+			if liveStream == newLiveStream {
+				continue
+			}
+
+			status := liveStream.GetStatus()
+
+			// クライアントが接続されている場合は対象外。
+			// ただし Standby 状態のストリームはまだクライアントに有意なデータを配信していないため、
+			// client_count に関係なくチューナー再利用の対象にする (disconnectAll() で安全に切断できる) 。
+			if status.ClientCount != 0 && status.Status != "Standby" {
+				// 近いタイミングで Idling に遷移する可能性があるため、リトライ対象とする。
+				if status.Status == "ONAir" || status.Status == "Idling" {
+					shouldWaitNextRetry = true
+				}
+				continue
+			}
+
+			// Standby / ONAir / Idling 状態でない場合は対象外。
+			if status.Status != "Standby" && status.Status != "ONAir" && status.Status != "Idling" {
+				continue
+			}
+
+			// チューナーが割り当てられていない場合は対象外。
+			tuner := liveStream.Tuner()
+			if tuner == nil {
+				continue
+			}
+
+			// チューナーが既にキャンセル中の場合は対象外。
+			if tuner.GetState() == EDCBTunerCancelling {
+				continue
+			}
+
+			// チューナー再利用のため、チューナー状態をキャンセル中に切り替える。
+			tuner.SetState(EDCBTunerCancelling)
+
+			// ステータスを Offline に設定する。
+			liveStream.SetStatus("Offline", "新しいライブストリームが開始されたため、チューナーリソースを再利用します。", false)
+
+			// すべての視聴中クライアントのライブストリームへの接続を切断する。
+			liveStream.DisconnectAll()
+
+			// PSI/SI データアーカイバーを終了・破棄する。
+			if archiver := liveStream.PSIDataArchiver(); archiver != nil {
+				archiver.Destroy()
+				liveStream.SetPSIDataArchiver(nil)
+			}
+
+			// チューナーとのストリーミング接続を明示的に閉じる。
+			tuner.Disconnect(liveStream.ID)
+
+			// チューナーの制御権限を移譲する。
+			if !tuner.Handoff(liveStream.ID, newLiveStream.ID) {
+				continue
+			}
+
+			// 実行中のタスクがあればキャンセルする。
+			cancel, done := liveStream.TakeTask()
+			if cancel != nil {
+				cancel()
+
+				// タスクの完了を最大 10 秒待つ
+				// (エンコーダープロセスの kill とバックグラウンドタスクの完了を含め、通常は 0.5 秒程度で完了する) 。
+				// EDCB との通信ハングなどで無期限にブロックされることを防ぐためにタイムアウトを設ける。
+				select {
+				case <-done:
+				case <-time.After(10 * time.Second):
+					m.logger.Warn(liveStream.LogPrefix() + " Encoding task cleanup did not complete within 10 seconds.")
+				}
+			}
+
+			// チューナーインスタンスを移譲する。
+			newLiveStream.SetTuner(tuner)
+			liveStream.SetTuner(nil)
+			foundReusableTuner = true
+			break
+		}
+
+		if foundReusableTuner {
+			break
+		}
+		if !shouldWaitNextRetry {
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 // releaseIdlingLiveStreams は現在 Idling 状態のライブストリームを Offline にしてチューナーリソースを解放する。

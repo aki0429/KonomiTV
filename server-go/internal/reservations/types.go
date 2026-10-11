@@ -112,6 +112,26 @@ type NWPlayTimeShiftInfo struct {
 	FilePath string
 }
 
+// SetChInfo はチャンネル・NetworkTV モード変更情報 (Python 版 SetChInfo) 。
+//
+// CMD_EPG_SRV_NWTV_ID_SET_CH で EpgDataCap_Bon の起動とチャンネル切り替えを行う際に使う。
+type SetChInfo struct {
+	// UseSid は onid・tsid・sid の値が使用できるかどうか。
+	UseSid bool
+	// Onid はネットワーク ID。
+	Onid int
+	// Tsid はトランスポートストリーム ID。
+	Tsid int
+	// Sid はサービス ID。
+	Sid int
+	// UseBonCh は space_or_id・ch_or_mode の値が使用できるかどうか。
+	UseBonCh bool
+	// SpaceOrID は NetworkTV ID。
+	SpaceOrID int
+	// ChOrMode は EpgDataCap_Bon の起動モード (1:UDP 2:TCP 3:UDP+TCP) 。
+	ChOrMode int
+}
+
 // ShortEventInfo はイベントの基本情報 (Python 版 ShortEventInfo) 。
 type ShortEventInfo struct {
 	EventName string

@@ -164,10 +164,17 @@ curl http://127.0.0.77:7002/api/version
   停波・チューナー不足などのエラー判定も Python 版と同じメッセージを返す。
 - `LivePSIDataArchiver`: psisiarc を起動してデータ放送用の PSI/SI アーカイブデータを配信する
   (IPTV の疑似チャンネルでは起動しない) 。
+- `EDCBTuner` (`edcb_tuner.go`): EDCB バックエンドのチューナー制御。NetworkTV モードの EpgDataCap_Bon を
+  起動して放送波の MPEG-2 TS を受信し、`RelayViewStream` (CMD 301) で取得した TCP 接続をストリームとして
+  扱う。NetworkTV ID は 500 から採番し、Idle / Starting / Active / Cancelling の状態機械、`_isOwner()` 相当の
+  制御権限ガード、チューナーの再利用 (`handoff`) とロック/アンロックは Python 版と同じ意味論で実装している。
+  チューナーの確保 → チャンネル設定 (失敗時 0.5 秒間隔で最大 5 秒リトライ、`E-02E`) → 接続 (失敗時 `E-03E`) →
+  読み取り → 終了処理 (切断・チューナー解放) の順に動作する。
 
-**未対応**: EDCB バックエンドのチューナー制御 (`EDCBTuner`) 。EDCB バックエンドで放送波を受信する場合、
-Go 版では `EDCB バックエンドは Go 版サーバーでは未対応です。(E-02E)` を返して Offline になる
-(IPTV バックエンドと Mirakurun / mirakc バックエンドは Go 版で動作する) 。
+**未対応**: EDCB バックエンドの**名前付きパイプモード** (`edcb_url` に `edcb-namedpipe` を指定した場合) の
+放送波ストリーム受信。TCP モード (`RelayViewStream`) のみ実装しており、名前付きパイプモードでは
+チューナーの起動までは行うがストリーム接続でエラーになる (`E-03E`) 。
+(IPTV バックエンドと Mirakurun / mirakc バックエンドは従来どおり動作する) 。
 
 ### サーバー設定 API
 

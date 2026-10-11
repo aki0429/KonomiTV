@@ -207,6 +207,8 @@ func main() {
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("failed to shutdown server gracefully", slog.Any("error", err))
 	}
+	// EDCB バックエンドで起動したチューナー (EpgDataCap_Bon) を全て終了する (Python 版 EDCBTuner.closeAll() 相当)
+	stream.CloseAllEDCBTuners()
 	logger.Info("server stopped")
 }
 
