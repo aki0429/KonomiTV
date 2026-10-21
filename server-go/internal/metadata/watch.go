@@ -11,6 +11,11 @@ import (
 	"time"
 )
 
+const maxRecordingWalkDepth = 64
+const maxRecordingWalkDirectories = 65536
+
+var errRecordingWalkLimit = errors.New("recording directory traversal limit exceeded")
+
 // WatchRecordedFolders はディレクトリを逐次走査し、新規・変更・完了・削除を反映する。
 // イベント通知を利用できない NAS/SMB でも働くよう polling を使う。全件パスの収集・ソートや
 // 全件分の worker は作らず、各 pass は ReadDir(128) と DB keyset page(256) で処理する。
@@ -51,7 +56,7 @@ func (s *Service) watchPass(ctx context.Context, identities map[string]os.FileIn
 		if identities[root] == nil {
 			identities[root] = info
 		}
-		err = walkRecordingDirectory(ctx, folder, excluded, map[string]bool{}, func(path string) error {
+		err = walkRecordingFolders(ctx, folder, s.Config.RecordedFolders, excluded, identities, func(path string) error {
 			if err := s.ProcessRecordedFile(ctx, path, ProcessOptions{OriginalPath: path, SkipIfBusy: true}); err != nil {
 				if ctx.Err() != nil {
 					return ctx.Err()
@@ -64,34 +69,101 @@ func (s *Service) watchPass(ctx context.Context, identities map[string]os.FileIn
 			return ctx.Err()
 		}
 		after, statErr := os.Stat(root)
-		if err == nil && statErr == nil && os.SameFile(identities[root], after) && os.SameFile(info, after) {
+		if err == nil && statErr == nil && os.SameFile(identities[root], after) && os.SameFile(info, after) && verifyRecordingDirectories(ctx, root, identities) {
 			complete[root] = after
 		} else {
 			s.logger().Warn("Recording folder could not be verified; deletion reconciliation skipped.", "folder", folder, "error", err)
 		}
 	}
-	return s.reconcileMissingRecordings(ctx, complete)
+	return s.reconcileMissingRecordings(ctx, complete, identities)
 }
 
-// walkRecordingDirectory はディレクトリ単位の全件 allocation も避け、見つけたファイルから処理する。
-// ancestors は symlink による循環だけを検出し、録画全件の集合は保持しない。
-func walkRecordingDirectory(ctx context.Context, directory string, excluded []string, ancestors map[string]bool, visit func(string) error) error {
+// walkRecordingFolders は見つけた録画から逐次処理する。設定済み root の外へは辿らない。
+// 既知ディレクトリの集合は上限付き。全録画ファイルの集合やソートは作らない。
+func walkRecordingFolders(ctx context.Context, directory string, configured, excluded []string, identities map[string]os.FileInfo, visit func(string) error) error {
+	roots := make([]string, 0, len(configured))
+	for _, folder := range configured {
+		if root, err := strictRecordingPath(folder); err == nil {
+			roots = append(roots, root)
+		}
+	}
+	if identities == nil {
+		identities = map[string]os.FileInfo{}
+	}
+	return walkRecordingDirectory(ctx, directory, roots, excluded, map[string]bool{}, identities, 0, visit)
+}
+
+func strictRecordingPath(path string) (string, error) {
+	resolved, err := resolveRecordingFilesystemPath(path)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Abs(resolved)
+}
+
+func withinRecordingRoot(path, root string) bool {
+	relative, err := filepath.Rel(root, path)
+	return err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) && !filepath.IsAbs(relative)
+}
+
+func withinRecordingRoots(path string, roots []string) bool {
+	for _, root := range roots {
+		if withinRecordingRoot(path, root) {
+			return true
+		}
+	}
+	return false
+}
+
+func verifyRecordingDirectories(ctx context.Context, root string, identities map[string]os.FileInfo) bool {
+	for path, before := range identities {
+		if ctx.Err() != nil {
+			return false
+		}
+		if !withinRecordingRoot(path, root) {
+			continue
+		}
+		after, err := os.Stat(path)
+		if err != nil || !os.SameFile(before, after) {
+			return false
+		}
+	}
+	return true
+}
+
+func walkRecordingDirectory(ctx context.Context, directory string, roots, excluded []string, seen map[string]bool, identities map[string]os.FileInfo, depth int, visit func(string) error) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	canonical := ResolveRecordedPath(directory)
-	if isExcluded(normalizePathForPrefixMatch(directory), excluded) || isExcluded(normalizePathForPrefixMatch(canonical), excluded) || ancestors[canonical] {
+	if depth >= maxRecordingWalkDepth {
+		return errRecordingWalkLimit
+	}
+	canonical, err := strictRecordingPath(directory)
+	if err != nil {
+		return err
+	}
+	if !withinRecordingRoots(canonical, roots) || isExcluded(normalizePathForPrefixMatch(directory), excluded) || isExcluded(normalizePathForPrefixMatch(canonical), excluded) || seen[canonical] {
 		return nil
 	}
-	file, err := os.Open(directory)
+	if len(seen) >= maxRecordingWalkDirectories || (identities[canonical] == nil && len(identities) >= maxRecordingWalkDirectories) {
+		return errRecordingWalkLimit
+	}
+	file, err := os.Open(canonical)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-	ancestors[canonical] = true
-	defer delete(ancestors, canonical)
+	info, err := file.Stat()
+	if err != nil {
+		return err
+	}
+	if before := identities[canonical]; before != nil && !os.SameFile(before, info) {
+		return errors.New("recording directory identity changed")
+	}
+	identities[canonical] = info
+	seen[canonical] = true
 	for {
-		entries, readErr := file.ReadDir(128)
+		entries, readErr := readRecordingDirectory(ctx, file)
 		for _, entry := range entries {
 			if err := ctx.Err(); err != nil {
 				return err
@@ -99,12 +171,21 @@ func walkRecordingDirectory(ctx context.Context, directory string, excluded []st
 			if strings.HasPrefix(entry.Name(), "._") {
 				continue
 			}
-			path := filepath.Join(directory, entry.Name())
-			resolved := ResolveRecordedPath(path)
+			path := filepath.Join(canonical, entry.Name())
+			resolved, resolveErr := strictRecordingPath(path)
+			if resolveErr != nil {
+				if os.IsNotExist(resolveErr) && entry.Type()&os.ModeSymlink == 0 {
+					continue
+				}
+				return resolveErr
+			}
+			if !withinRecordingRoots(resolved, roots) {
+				continue
+			}
 			if isExcluded(normalizePathForPrefixMatch(path), excluded) || isExcluded(normalizePathForPrefixMatch(resolved), excluded) {
 				continue
 			}
-			info, err := os.Stat(path)
+			info, err := os.Stat(resolved)
 			if err != nil {
 				// 消えた直後のファイルは次の照合へ。読取拒否等は root の削除照合を止める。
 				if os.IsNotExist(err) {
@@ -113,11 +194,11 @@ func walkRecordingDirectory(ctx context.Context, directory string, excluded []st
 				return err
 			}
 			if info.IsDir() {
-				if err := walkRecordingDirectory(ctx, path, excluded, ancestors, visit); err != nil {
+				if err := walkRecordingDirectory(ctx, resolved, roots, excluded, seen, identities, depth+1, visit); err != nil {
 					return err
 				}
 			} else if info.Mode().IsRegular() && isScanTarget(path) {
-				if err := visit(path); err != nil {
+				if err := visit(resolved); err != nil {
 					return err
 				}
 			}
@@ -131,7 +212,7 @@ func walkRecordingDirectory(ctx context.Context, directory string, excluded []st
 	}
 }
 
-func (s *Service) reconcileMissingRecordings(ctx context.Context, complete map[string]os.FileInfo) error {
+func (s *Service) reconcileMissingRecordings(ctx context.Context, complete map[string]os.FileInfo, snapshots ...map[string]os.FileInfo) error {
 	if len(complete) == 0 {
 		return nil
 	}
@@ -165,6 +246,27 @@ func (s *Service) reconcileMissingRecordings(ctx context.Context, complete map[s
 				}
 			}
 			if !verified {
+				continue
+			}
+			// 親ディレクトリが消失/差し替えされた場合は、削除とストレージ切断を区別できない。
+			// メタデータを残し、復旧または明示的な次回 scan を待つ。
+			parentsValid := true
+			for parent := filepath.Dir(path); withinRecordingRoot(parent, verifiedRoot); parent = filepath.Dir(parent) {
+				current, parentErr := os.Stat(parent)
+				if parentErr != nil {
+					parentsValid = false
+					break
+				}
+				for _, snapshot := range snapshots {
+					if before := snapshot[parent]; before != nil && !os.SameFile(before, current) {
+						parentsValid = false
+					}
+				}
+				if parent == verifiedRoot {
+					break
+				}
+			}
+			if !parentsValid {
 				continue
 			}
 			if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {

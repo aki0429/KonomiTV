@@ -640,19 +640,6 @@ func (s *Server) handleVideoDelete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// handleVideoReanalyze は録画番組メタデータ再解析 API (POST /api/videos/{video_id}/reanalyze) を処理する。
-// Go 版では未実装のため、Python 版へプロキシする。
-func (s *Server) handleVideoReanalyze(w http.ResponseWriter, r *http.Request) {
-	s.proxyRequest(w, r)
-}
-
-// handleVideoThumbnailRegenerate はサムネイル画像再生成 API
-// (POST /api/videos/{video_id}/thumbnail/regenerate) を処理する。
-// Go 版では未実装のため、Python 版へプロキシする。
-func (s *Server) handleVideoThumbnailRegenerate(w http.ResponseWriter, r *http.Request) {
-	s.proxyRequest(w, r)
-}
-
 // parsePathID はパスパラメータの ID を解析する (不正な場合は 422 を返す) 。
 // 本文は FastAPI/Pydantic の検証エラー配列に合わせる (移植元: Path(int) の int_parsing) 。
 // クライアント (services/APIClient.ts) は detail が配列か文字列かで表示を分岐するため、

@@ -183,6 +183,7 @@ func (s *Service) RunBatchScan(ctx context.Context) (bool, error) {
 
 	// 読めた root だけを照合対象にする。共有ストレージの切断や権限エラーを削除とみなさない。
 	complete := map[string]os.FileInfo{}
+	directoryIdentities := map[string]os.FileInfo{}
 	excludeScanPaths := normalizeExcludePaths(s.Config.ExcludeScanPaths)
 	s.logger().Info("Scanning recorded folders...")
 	for _, folder := range s.Config.RecordedFolders {
@@ -194,7 +195,7 @@ func (s *Service) RunBatchScan(ctx context.Context) (bool, error) {
 		if statErr != nil || !before.IsDir() {
 			continue
 		}
-		err := walkRecordingDirectory(ctx, folder, excludeScanPaths, map[string]bool{}, func(path string) error {
+		err := walkRecordingFolders(ctx, folder, s.Config.RecordedFolders, excludeScanPaths, directoryIdentities, func(path string) error {
 			canonical := ResolveRecordedPath(path)
 			if err := s.ProcessRecordedFile(ctx, canonical, ProcessOptions{
 				OriginalPath: path, ExistingDBRecordedVideos: existingDBRecordedVideos,
@@ -210,13 +211,13 @@ func (s *Service) RunBatchScan(ctx context.Context) (bool, error) {
 			return false, ctx.Err()
 		}
 		after, statErr := os.Stat(root)
-		if err == nil && statErr == nil && os.SameFile(before, after) {
+		if err == nil && statErr == nil && os.SameFile(before, after) && verifyRecordingDirectories(ctx, root, directoryIdentities) {
 			complete[root] = after
 		} else {
 			s.logger().Warn("Recording folder scan incomplete; deletion reconciliation skipped.", "folder", folder, "error", err)
 		}
 	}
-	if err := s.reconcileMissingRecordings(ctx, complete); err != nil {
+	if err := s.reconcileMissingRecordings(ctx, complete, directoryIdentities); err != nil {
 		return false, err
 	}
 	// サムネイルフォルダ内の不要なファイルを削除
@@ -388,6 +389,14 @@ func (s *Service) ProcessRecordedFile(ctx context.Context, filePath string, opti
 	}
 
 	// メタデータを解析
+	releaseIO, acquired, err := acquireMetadataIO(ctx, options.SkipIfBusy)
+	if err != nil {
+		return err
+	}
+	if !acquired {
+		return nil
+	}
+	defer releaseIO()
 	program, err := s.Analyzer.Analyze(ctx, filePath)
 	if ctx.Err() != nil {
 		// 停止・期限超過を解析失敗として DB に書き込まない。
@@ -510,33 +519,59 @@ func (s *Service) RunBackgroundAnalysis(ctx context.Context) error {
 		return err
 	}
 	for _, row := range rows {
-		if !isRegularFile(row.FilePath) {
-			s.logger().Warn("File not found. Skipping...", "file_path", row.FilePath)
-			continue
-		}
-		// CM 区間情報が未解析 (NULL) の場合のみ検出する。
-		// cm_sections が [] の場合は「解析済みだが CM 区間がなかった」ことを表す。
-		if row.CMSections == nil {
-			sections := detectCMSections(row.FilePath, row.Duration)
-			if err := s.Store.UpdateCMSections(ctx, row.FilePath, sections); err != nil {
-				s.logger().Error("Failed to save CM sections.", "file_path", row.FilePath, "error", err)
-				continue
-			}
-		}
-
-		// サムネイルが未生成の場合は生成する
-		if s.Thumbnails != nil {
-			tilePath, representativePath := ThumbnailPaths(s.Config.ThumbnailsDir, row.FileHash)
-			if !isRegularFile(tilePath) || !isRegularFile(representativePath) {
-				if err := s.Thumbnails.GenerateAndSave(ctx, row.FilePath, row.Duration); err != nil {
-					s.logger().Error("Failed to generate thumbnails.", "file_path", row.FilePath, "error", err)
-					continue
-				}
-			}
+		if err := s.analyzeBackgroundRow(ctx, row); err != nil {
+			return err
 		}
 	}
 	s.logger().Info("Manual background analysis has finished processing all recorded files.")
 	return nil
+}
+
+// ファイル単位で I/O 枠を譲り、長い手動解析が監視を独占しない。
+func (s *Service) analyzeBackgroundRow(ctx context.Context, row VideoRow) error {
+	release, _, err := acquireMetadataIO(ctx, false)
+	if err != nil {
+		return err
+	}
+	defer release()
+	if !isRegularFile(row.FilePath) {
+		s.logger().Warn("File not found. Skipping...", "file_path", row.FilePath)
+		return nil
+	}
+	// CM 区間情報が未解析 (NULL) の場合のみ検出する。
+	// cm_sections が [] の場合は「解析済みだが CM 区間がなかった」ことを表す。
+	if row.CMSections == nil {
+		sections := detectCMSections(row.FilePath, row.Duration)
+		if err := s.Store.UpdateCMSections(ctx, row.FilePath, sections); err != nil {
+			s.logger().Error("Failed to save CM sections.", "file_path", row.FilePath, "error", err)
+			return nil
+		}
+	}
+
+	// サムネイルが未生成の場合は生成する
+	if s.Thumbnails != nil {
+		tilePath, representativePath := ThumbnailPaths(s.Config.ThumbnailsDir, row.FileHash)
+		if !isRegularFile(tilePath) || !isRegularFile(representativePath) {
+			if err := s.Thumbnails.GenerateAndSave(ctx, row.FilePath, row.Duration); err != nil {
+				s.logger().Error("Failed to generate thumbnails.", "file_path", row.FilePath, "error", err)
+				return nil
+			}
+		}
+	}
+	return nil
+}
+
+// RegenerateThumbnail は手動再生成も監視・起動時解析と同じ I/O 枠で実行する。
+func (s *Service) RegenerateThumbnail(ctx context.Context, path string, duration float64) error {
+	release, _, err := acquireMetadataIO(ctx, false)
+	if err != nil {
+		return err
+	}
+	defer release()
+	if s.Thumbnails == nil {
+		return fmt.Errorf("thumbnail generator is unavailable")
+	}
+	return s.Thumbnails.GenerateAndSave(ctx, path, duration)
 }
 
 // deleteOrphanedThumbnails は DB に存在しないハッシュのサムネイルファイルを削除する。

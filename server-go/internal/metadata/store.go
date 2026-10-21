@@ -609,7 +609,7 @@ func JSTNow() time.Time {
 // ResolveRecordedPath はシンボリックリンクを解決して実体のパスを返す (解決に失敗した場合は元のパス) 。
 // 移植元: RecordedScanTask.resolveRecordedPath()
 func ResolveRecordedPath(filePath string) string {
-	resolved, err := filepath.EvalSymlinks(filePath)
+	resolved, err := resolveRecordingFilesystemPath(filePath)
 	if err != nil {
 		return filePath
 	}

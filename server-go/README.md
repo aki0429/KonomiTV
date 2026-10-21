@@ -358,3 +358,5 @@ go vet ./...
 Twitter の実 Web App 互換性、録画監視の追加互換性監査、解析互換性・実機検証を継続します。第3チェックポイントは [STANDALONE_PHASE3.md](STANDALONE_PHASE3.md) を参照してください。
 既存 DB の初期化・インストーラーは別作業のため、この変更には含めません。
 詳細と実測結果は [STANDALONE_PROGRESS.md](STANDALONE_PROGRESS.md) を参照してください。
+
+Go 単独化の安全監査と既知制約、限定ベータ候補としての評価は [STANDALONE_PHASE4.md](STANDALONE_PHASE4.md) を参照してください。範囲外 symlink の target は録画フォルダへ明示登録が必要です。
