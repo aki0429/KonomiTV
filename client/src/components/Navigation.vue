@@ -12,7 +12,7 @@
                         <Icon class="navigation__link-icon" icon="fluent:tv-20-regular" width="26px" />
                         <span v-if="!iconOnly" class="navigation__link-text">テレビをみる</span>
                     </router-link>
-                    <router-link v-ripple class="navigation__link" active-class="navigation__link--active" to="/iptv/"
+                    <router-link v-if="iptvEnabled" v-ripple class="navigation__link" active-class="navigation__link--active" to="/iptv/"
                         :class="{
                             'navigation__link--active': $route.path.startsWith('/iptv'),
                             'navigation__link--icon-only': iconOnly,
@@ -127,6 +127,7 @@ import useVersionStore from '@/stores/VersionStore';
 
 export default defineComponent({
     name: 'Navigation',
+    data: () => ({ iptvEnabled: import.meta.env.KONOMITV_IPTV !== false }),
     components: {
         BottomNavigation,
         OfflineDownloadBadge,

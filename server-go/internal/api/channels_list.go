@@ -99,7 +99,11 @@ func (s *Server) handleChannels(w http.ResponseWriter, r *http.Request) {
 	// 呼び出し元 (ログイン中のユーザー、または Cookie の匿名 ID) が IPTV ページから
 	// テレビ視聴 UI に登録した IPTV チャンネルを追加する (登録内容は呼び出し元ごとに分離されている)
 	userKey := s.auth.ResolveUserKey(w, r)
-	for _, iptvChannel := range s.iptv.GetTVUIChannels(userKey) {
+	var iptvChannels []*iptv.Channel
+	if !s.config.IPTV.InstallationDisabled {
+		iptvChannels = s.iptv.GetTVUIChannels(userKey)
+	}
+	for _, iptvChannel := range iptvChannels {
 		response := toLiveChannelResponse(iptvChannel.ToLiveChannelResponse())
 		// 現在の視聴者数を取得する
 		response.ViewerCount = s.liveStreams.GetViewerCount(response.DisplayChannelID)

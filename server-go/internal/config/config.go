@@ -80,6 +80,8 @@ type CaptureConfig struct {
 
 // IPTVConfig は iptv セクションの設定。
 type IPTVConfig struct {
+	// InstallationDisabled はインストーラーで無効を選んだ場合の実行時ロック。設定保存では変更しない。
+	InstallationDisabled bool `yaml:"-"`
 	// Enabled は IPTV 機能が有効か。
 	Enabled bool `yaml:"enabled"`
 	// Sources は取り込む M3U プレイリストの URL (またはローカルファイルパス) の一覧。

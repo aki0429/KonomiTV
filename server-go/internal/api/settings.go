@@ -132,6 +132,14 @@ func (s *Server) handleServerSettingsUpdate(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusUnprocessableEntity, detail)
 		return
 	}
+	if s.config.IPTV.InstallationDisabled {
+		general, _ := normalized["general"].(map[string]any)
+		iptvSettings, _ := normalized["iptv"].(map[string]any)
+		if general["backend"] == "IPTV" || iptvSettings["enabled"] == true {
+			writeError(w, http.StatusUnprocessableEntity, "IPTV is disabled for this installation")
+			return
+		}
+	}
 
 	if err := config.SaveServerSettings(s.paths.ConfigYAMLPath, normalized); err != nil {
 		s.logger.Error("[ServerSettingsUpdateAPI] Failed to save config.yaml.", "error", err)

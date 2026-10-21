@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -58,6 +59,28 @@ func main() {
 	cfg, err := config.Load(paths.ConfigYAMLPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[Fatal] Failed to load server settings: %v\n", err)
+		os.Exit(1)
+	}
+	// インストール時の選択を設定画面から意図せず解除しない。既存設定やIPTVデータは削除しない。
+	featureData, featureErr := os.ReadFile(filepath.Join(paths.RepoRootDir, "installer-features.json"))
+	if featureErr == nil {
+		var features struct {
+			IPTV bool `json:"iptv"`
+		}
+		if err := json.Unmarshal(featureData, &features); err != nil {
+			fmt.Fprintln(os.Stderr, "[Fatal] Invalid installer-features.json")
+			os.Exit(1)
+		}
+		if !features.IPTV {
+			if cfg.General.Backend == "IPTV" {
+				fmt.Fprintln(os.Stderr, "[Fatal] IPTV backend cannot be used with IPTV disabled")
+				os.Exit(1)
+			}
+			cfg.IPTV.Enabled = false
+			cfg.IPTV.InstallationDisabled = true
+		}
+	} else if !os.IsNotExist(featureErr) {
+		fmt.Fprintln(os.Stderr, "[Fatal] Cannot read installer-features.json")
 		os.Exit(1)
 	}
 

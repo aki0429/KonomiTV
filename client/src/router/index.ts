@@ -34,11 +34,11 @@ const router = createRouter({
             name: 'TV Search',
             component: () => import('@/views/TV/Search.vue'),
         },
-        {
+        ...(import.meta.env.KONOMITV_IPTV !== false ? [{
             path: '/iptv/',
             name: 'IPTV',
             component: () => import('@/views/IPTV.vue'),
-        },
+        }] : []),
         {
             path: '/videos/',
             name: 'Videos Home',

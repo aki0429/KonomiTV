@@ -18,7 +18,7 @@
                         <div class="channels-tab__highlight"></div>
                     </div>
                     <!-- テレビを見る UI から IPTV ページを開くための導線 -->
-                    <router-link v-ripple class="channels-tab__iptv" to="/iptv/">
+                    <router-link v-if="iptvEnabled" v-ripple class="channels-tab__iptv" to="/iptv/">
                         <Icon icon="fluent:live-20-regular" width="22px" />
                         <span class="channels-tab__iptv-text">IPTV</span>
                     </router-link>
@@ -157,6 +157,7 @@ export default defineComponent({
     },
     data() {
         return {
+            iptvEnabled: import.meta.env.KONOMITV_IPTV !== false,
 
             // ユーティリティをテンプレートで使えるように
             Utils: Object.freeze(Utils),

@@ -265,6 +265,11 @@ func (s *Server) Handler() http.Handler {
 	// "//" を除去する ServeMux のパスクリーニングを通すことができない。
 	// そのため ServeMux の手前で直接ディスパッチする。
 	dispatcher := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 無効インストールでは直接URLや旧クライアントからもIPTVを使用できない。
+		if s.config.IPTV.InstallationDisabled && (strings.HasPrefix(r.URL.Path, "/api/iptv") || strings.HasPrefix(r.URL.Path, "/iptv") || strings.Contains(r.URL.Path, "/iptv") || strings.Contains(r.URL.Path, "/IPTV-")) {
+			writeError(w, http.StatusNotFound, "IPTV is disabled for this installation")
+			return
+		}
 		if strings.HasPrefix(r.URL.Path, dataBroadcastingProxyPrefix) {
 			s.handleDataBroadcastingProxy(w, r)
 			return
