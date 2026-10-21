@@ -360,3 +360,5 @@ Twitter の実 Web App 互換性、録画監視の追加互換性監査、解析
 詳細と実測結果は [STANDALONE_PROGRESS.md](STANDALONE_PROGRESS.md) を参照してください。
 
 Go 単独化の安全監査と既知制約、限定ベータ候補としての評価は [STANDALONE_PHASE4.md](STANDALONE_PHASE4.md) を参照してください。範囲外 symlink の target は録画フォルダへ明示登録が必要です。
+
+EDCB 未同梱ロゴと旧 key_frames の保護付き自動移行・Go復元ツールを追加しました。配布時の空き容量/復元方法を含む最新記録は [STANDALONE_PHASE5.md](STANDALONE_PHASE5.md) を参照してください。

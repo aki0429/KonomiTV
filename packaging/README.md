@@ -5,8 +5,12 @@ version is `akki-0.14.1-β0.1`; ASCII asset names use `akki-0.14.1-beta0.1`.
 The server API compatibility version remains `0.14.1`. These Go executables do
 not currently carry a Windows numeric VERSIONINFO or a code-signing signature.
 
-**Publication is on hold pending integration of the standalone Go work.**
-Pre-integration builds are test artifacts, not a completed public release.
+Use only release artifacts whose source commit and checksums are identified in
+the accompanying release notes. Intermediate builds are local test artifacts.
+
+This limited beta does not guarantee complete Python-edition compatibility.
+Real Twitter accounts, live EDCB hardware, GPU encoding and large NAS/SMB loads
+have not been validated. No measured playback-memory improvement is claimed.
 
 ## Install
 
@@ -61,6 +65,31 @@ directory (including any SQLite sidecars), then install to a new directory.
 Only transfer the backup after confirming the target release's database schema
 compatibility. Do not copy a live SQLite database. Retain the old directory for
 rollback. This beta intentionally provides no in-place migration/overwrite.
+
+On startup, the Go server can migrate legacy `key_frames` / `segment_map`
+caches in an existing compatible database. Before any cache update it writes a
+per-video JSON backup beside the DB under `keyframe-migration-backups/`.
+Backups are never automatically deleted. Allow free space for both the old
+and new cache JSON (including JSON escaping overhead), as well as SQLite WAL/
+journal growth and your full database backup. Migration does not VACUUM or
+guarantee a smaller DB file. If saving a backup fails the affected row is not
+updated; invalid/oversized caches remain unchanged with diagnostics.
+
+Stop the server before using the included standalone maintenance tool:
+
+```text
+bin/keyframe-cache.exe -database server/data/database.sqlite -restore server/data/keyframe-migration-backups/video-ID-SHA256.json
+./bin/keyframe-cache -database server/data/database.sqlite -restore server/data/keyframe-migration-backups/video-ID-SHA256.json
+```
+
+Use the first command on Windows and the second on Linux. Restoration only
+restores the two cache columns; it is not a full DB or recording backup.
+The tool verifies checksum, recording identity/state and the migrated cache,
+and rejects modified backups or conflicting later changes. Existing files and
+backup JSON are retained. `-migrate [-backup-dir PATH]` explicitly runs cache
+migration; use it only on an offline copy or under a separately planned DB
+maintenance procedure. Backups contain recording paths/hashes: keep them private
+and never upload them as release assets.
 
 To remove managed application files, stop the application and run the installer
 outside the install directory with `--uninstall --dir PATH` (add `--yes` for

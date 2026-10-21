@@ -1,4 +1,4 @@
-# API ルート実装台帳 (第4チェックポイント)
+# API ルート実装台帳 (第5チェックポイント)
 
 Python Router の115 routeとGoの登録先を照合。ルート登録は完全な動作互換性の証明ではない。
 個々の正常系・実機の受入れは残作業。Twitter は Go CDP を追加しモックと localhost Chromium を検証。実 Twitter Web App は未検証。全機能完成とはしない。
@@ -32,7 +32,7 @@ Python Router の115 routeとGoの登録先を照合。ルート登録は完全�
 | `GET /api/channels` | `server.go:handleChannels` | Go native。SQLite・認証・静的asset |
 | `GET /api/channels/{channel_id}` | `server.go:handleChannel` | Go native。SQLite・認証・静的asset |
 | `GET /api/channels/{channel_id}/jikkyo` | `server.go:handleChannelJikkyo` | Go native。外部サービス・必要時の認証。モック検証、実アカウント未操作 |
-| `GET /api/channels/{channel_id}/logo` | `server.go:handleChannelLogo` | 部分対応: 同梱/Mirakurun ロゴは Go。EDCB の未同梱ロゴ取得は未実装で既定画像へフォールバック |
+| `GET /api/channels/{channel_id}/logo` | `server.go:handleChannelLogo` | Go native。同梱/Mirakurun/EDCB FileCopy2 ロゴ。mock/wire検証、実機未検証 |
 | `GET /api/data-broadcasting/internet-status` | `server.go:handleDataBroadcastingInternetStatus` | Go native。SQLite・認証・静的asset |
 | `GET /api/data-broadcasting/request/{request_url:path}` | `server.go:dispatcher -> databroadcasting.go` | Go native外部Web中継。Pythonアプリproxyではない |
 | `GET /api/iptv/channels` | `server.go:handleIPTVChannels` | Go native。M3U/配信URL。Pythonアプリ依存なし |
@@ -122,3 +122,5 @@ Python Router の115 routeとGoの登録先を照合。ルート登録は完全�
 | `PUT /api/users/me/icon` | `server.go:handleUserUpdateIcon` | Go native。SQLite・認証・静的asset |
 
 安全監査・残る Python 転送3件・未実装/未検証の区別・限定ベータ評価は [STANDALONE_PHASE4.md](STANDALONE_PHASE4.md) を参照。115件の Python ソース/Go AST/分類台帳照合は TestAllPythonRoutesHaveNativeRegistrationAndClassification で検証。
+
+第5の EDCBロゴ・保護付き旧キャッシュ移行/復元・proxy既定無効の検証は [STANDALONE_PHASE5.md](STANDALONE_PHASE5.md) を参照。第4で挙げたロゴ/旧キャッシュ移行の未実装は解消。

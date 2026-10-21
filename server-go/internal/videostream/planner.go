@@ -149,6 +149,8 @@ func ConvertKeyFramesToSegmentMap(keyFrames []KeyFrame, videoFrameRate float64, 
 	}
 
 	segmentMap := []SegmentMapEntry{}
+	type sourcePosition struct{ file, dts int64 }
+	savedPositions := map[sourcePosition]bool{}
 	for sequenceIndex := range segmentCount {
 		// プレイリスト上の時刻に対し、その時刻以前で最も近いキーフレームを採用する
 		playlistStartSeconds := float64(sequenceIndex) * segmentDurationSeconds
@@ -175,16 +177,11 @@ func ConvertKeyFramesToSegmentMap(keyFrames []KeyFrame, videoFrameRate float64, 
 		}
 		// 同じ入力位置を複数セグメントへ保存すると、シーク時に同一範囲を何度もエンコードしてしまうため、
 		// 長い GOP や PID 切替直前の不自然な key_frames は、該当シーケンスだけオンデマンド探索へ任せる
-		duplicated := false
-		for _, saved := range segmentMap {
-			if saved.SourceFilePosition == entry.SourceFilePosition && saved.SourceStartDTS == entry.SourceStartDTS {
-				duplicated = true
-				break
-			}
-		}
-		if duplicated {
+		position := sourcePosition{entry.SourceFilePosition, entry.SourceStartDTS}
+		if savedPositions[position] {
 			continue
 		}
+		savedPositions[position] = true
 		segmentMap = append(segmentMap, entry)
 	}
 	return segmentMap

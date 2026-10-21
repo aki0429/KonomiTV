@@ -27,6 +27,7 @@ $goRoot = (& go env GOROOT).Trim()
 Copy-Item -LiteralPath (Join-Path $goRoot 'LICENSE') -Destination $goLicenseDir
 Copy-Item -LiteralPath (Join-Path $repoRoot 'server-go\internal\tsinfo\arib\THIRD_PARTY_NOTICES.md') -Destination (Join-Path $licenses 'ARIB-THIRD-PARTY-NOTICES.md')
 Copy-Item -LiteralPath (Join-Path $repoRoot 'server-go\internal\tsinfo\arib\licenses\CPython.txt') -Destination (Join-Path $licenses 'CPython.txt')
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'licenses\fonts') -Destination (Join-Path $licenses 'fonts') -Recurse
 
 Push-Location (Join-Path $repoRoot 'server-go')
 try {

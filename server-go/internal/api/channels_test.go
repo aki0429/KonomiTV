@@ -212,6 +212,7 @@ func TestChannelDetailSubchannel(t *testing.T) {
 
 // TestChannelLogo はチャンネルロゴ API の挙動を検証する。
 func TestChannelLogo(t *testing.T) {
+	disableEDCBLogoNetwork(t)
 	server, paths := newTestServer(t, "")
 	handler := server.Handler()
 
@@ -311,6 +312,7 @@ func TestChannelLogo(t *testing.T) {
 
 // TestChannelLogoSubchannel はサブチャンネルのロゴがメインチャンネルのロゴになることを検証する。
 func TestChannelLogoSubchannel(t *testing.T) {
+	disableEDCBLogoNetwork(t)
 	server, paths := newTestServer(t, "")
 	handler := server.Handler()
 	writeFile(t, filepath.Join(paths.StaticDir, "logos", "default.png"), "default-logo-bytes")

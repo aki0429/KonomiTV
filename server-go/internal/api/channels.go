@@ -250,8 +250,13 @@ func (s *Server) handleChannelLogo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 同梱のロゴファイルも Mirakurun からのロゴもない場合は、デフォルトのロゴ画像を返す
-	// (EDCB バックエンドのロゴ取得 (CtrlCmdUtil) は未移植のため、常にデフォルトのロゴになる)
+	if s.config.General.Backend == "EDCB" {
+		if data, mediaType, ok := s.fetchEDCBChannelLogo(r.Context(), channel); ok {
+			s.writeChannelLogoData(w, r, data, mediaType)
+			return
+		}
+	}
+	// バックエンドでも取得できない場合は既定ロゴを返す。
 	s.serveChannelLogoFile(w, r, "default.png", sha256HexString("default"))
 }
 

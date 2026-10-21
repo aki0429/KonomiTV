@@ -46,6 +46,7 @@ func run() error {
 	}
 	core := filepath.Join(output, "konomitv-go-"+*target+ext)
 	base := filepath.Join(output, "installer-base-"+*target+ext)
+	cacheTool := filepath.Join(output, "keyframe-cache-"+*target+ext)
 	// テスト用のloaded設定スナップショット（録画パス等）は製品バイナリへ埋め込まない。
 	// ソースや本体側の並行作業を変えず、GoのoverlayでdefaultsだけのJSONを使う。
 	fixturePath := filepath.Join(root, "server-go", "internal", "config", "server_settings_defaults.json")
@@ -76,7 +77,7 @@ func run() error {
 	if err = os.WriteFile(overlayPath, overlay, 0600); err != nil {
 		return err
 	}
-	for pkg, p := range map[string]string{"./cmd/konomitv-go": core, "./cmd/installer": base} {
+	for pkg, p := range map[string]string{"./cmd/konomitv-go": core, "./cmd/installer": base, "./cmd/keyframe-cache": cacheTool} {
 		cmd := exec.Command("go", "build", "-mod=readonly", "-trimpath", "-overlay", overlayPath, "-o", p, pkg)
 		cmd.Env = append(os.Environ(), "GOOS="+*target, "GOARCH=amd64", "CGO_ENABLED=0")
 		cmd.Stdout = os.Stdout
@@ -136,6 +137,9 @@ func run() error {
 		})
 	}
 	if err = add(core, "bin/konomitv-go"+ext, 0755); err != nil {
+		return err
+	}
+	if err = add(cacheTool, "bin/keyframe-cache"+ext, 0755); err != nil {
 		return err
 	}
 	for _, variant := range []string{"iptv", "noiptv"} {
