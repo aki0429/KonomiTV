@@ -35,12 +35,18 @@ func main() {
 	var (
 		listenAddress = flag.String("listen", "127.0.0.77:7002", "Go 版サーバーがリッスンするアドレス")
 		pythonBackend = flag.String("python-backend", "", "未移行 API の転送先 URL (省略時は http://127.0.0.77:<server.port+10>/)")
-		noProxy       = flag.Bool("no-proxy", false, "Python 版サーバーへのプロキシを無効化する (完全移行後の検証用)")
+		noProxy       = flag.Bool("no-proxy", true, "Python 版サーバーへのプロキシを無効化する (既定: 単独運用。旧構成は -no-proxy=false)")
 		serverDirFlag = flag.String("server-dir", "", "Python 版サーバーのディレクトリ (例: <repo>/server)。省略時は自動検出する")
 		debugLog      = flag.Bool("debug", false, "デバッグログを出力する (config.yaml の general.debug より優先)")
 		versionFlag   = flag.Bool("version", false, "バージョン情報を表示して終了する")
 	)
 	flag.Parse()
+	noProxyExplicit := false
+	flag.Visit(func(option *flag.Flag) {
+		if option.Name == "no-proxy" {
+			noProxyExplicit = true
+		}
+	})
 
 	if *versionFlag {
 		fmt.Printf("KonomiTV version %s (server-go)\n", constants.Version)
@@ -87,7 +93,8 @@ func main() {
 	// ***** プロキシ先の決定と自己転送の拒否 *****
 	// 誤設定は DB やバックグラウンド処理を開始する前に停止する。
 	backendURL := *pythonBackend
-	if *noProxy {
+	// 転送先の明示指定は旧構成への opt-in。明示的な -no-proxy=true はそれより優先する。
+	if *noProxy && (noProxyExplicit || *pythonBackend == "") {
 		backendURL = ""
 	} else if backendURL == "" {
 		backendURL = cfg.BackendAPIURL()
@@ -158,14 +165,6 @@ func main() {
 		DataDir: paths.DataDir,
 		Logger:  logger,
 	})
-	// 起動時に IPTV チャンネル一覧を取得しておく (Python 版 app.py の IPTVUtil.RefreshChannels() 相当)
-	// プレイリストの取得に時間がかかるため、サーバーの起動をブロックしないようにバックグラウンドで実行する
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		defer cancel()
-		iptvManager.Refresh(ctx, false)
-	}()
-
 	// シグナルを受信したらグレースフルシャットダウンする
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -197,6 +196,8 @@ func main() {
 		},
 		Logger: logger,
 	}))
+	// Python アプリを起動しなくてもチャンネル・EPG・IPTV の更新を継続する。
+	backgroundDone := server.StartBackgroundTasks(ctx)
 
 	httpServer := &http.Server{
 		Addr:              *listenAddress,
@@ -229,6 +230,12 @@ func main() {
 	defer cancel()
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("failed to shutdown server gracefully", slog.Any("error", err))
+	}
+	// DB を閉じる前に更新 worker のキャンセルを確認する。
+	select {
+	case <-backgroundDone:
+	case <-shutdownCtx.Done():
+		logger.Warn("Background updates did not stop within shutdown timeout.")
 	}
 	// EDCB バックエンドで起動したチューナー (EpgDataCap_Bon) を全て終了する (Python 版 EDCBTuner.closeAll() 相当)
 	stream.CloseAllEDCBTuners()

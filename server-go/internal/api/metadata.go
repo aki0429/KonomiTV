@@ -19,6 +19,12 @@ import (
 
 // newMetadataService は Server の DB・設定から録画メタデータ解析サービスを構築する。
 func (s *Server) newMetadataService() *metadata.Service {
+	s.metadataOnce.Do(func() { s.metadataService = s.createMetadataService() })
+	return s.metadataService
+}
+
+// createMetadataService は初回だけ構築する。録画中の状態をリクエスト間で失わない。
+func (s *Server) createMetadataService() *metadata.Service {
 	store := &metadata.Store{DB: s.db, WriteDB: s.writeDB}
 	analyzer := &metadata.Analyzer{
 		// FFprobe は KonomiTV 同梱のライブラリを使う (Python 版 MetadataAnalyzer と同じ引数で起動する) 。

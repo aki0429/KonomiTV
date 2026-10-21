@@ -650,6 +650,9 @@ func (t *VideoEncodingTask) startFeeder(state *encodingAttempt, file *os.File, t
 			return
 		}
 		chunkSize := packetSize * tsReadExChunkPackets
+		// collector と writer はこのループ内で同期的に消費するため、チャンクの
+		// バッファを再利用できる。約 1.8 MiB を読み込みごとに確保しない。
+		buffer := make([]byte, chunkSize)
 		for {
 			if t.isCancelled() {
 				return
@@ -658,7 +661,11 @@ func (t *VideoEncodingTask) startFeeder(state *encodingAttempt, file *os.File, t
 			if err != nil {
 				return
 			}
-			chunk := readFileChunk(file, chunkSize)
+			read, readErr := io.ReadFull(file, buffer)
+			if readErr != nil && !errors.Is(readErr, io.ErrUnexpectedEOF) && !errors.Is(readErr, io.EOF) {
+				return
+			}
+			chunk := buffer[:read]
 			if len(chunk) == 0 {
 				return
 			}
@@ -675,16 +682,6 @@ func (t *VideoEncodingTask) startFeeder(state *encodingAttempt, file *os.File, t
 			}
 		}
 	}()
-}
-
-// readFileChunk は file から最大 size バイトを読む (EOF で切れても読めた分を返す) 。
-func readFileChunk(file *os.File, size int) []byte {
-	buffer := make([]byte, size)
-	read, err := io.ReadFull(file, buffer)
-	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
-		return nil
-	}
-	return buffer[:read]
 }
 
 // writeAll は data をすべて書き込む (書き込めなければ false) 。

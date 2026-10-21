@@ -84,6 +84,27 @@ func (s *Store) ListAllVideoSummaries(ctx context.Context) ([]VideoSummary, erro
 	return summaries, nil
 }
 
+// ListVideoSummariesPage は id の keyset で最大 limit 件を読み、全件のコピーを保持しない。
+func (s *Store) ListVideoSummariesPage(ctx context.Context, afterID int64, limit int) ([]VideoSummary, error) {
+	if limit <= 0 || limit > 1024 {
+		limit = 256
+	}
+	rows, err := s.DB.QueryContext(ctx, `SELECT`+videoSummaryColumns+`FROM recorded_videos WHERE id > ? ORDER BY id LIMIT ?`, afterID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to page recorded videos: %w", err)
+	}
+	defer rows.Close()
+	result := make([]VideoSummary, 0, limit)
+	for rows.Next() {
+		row, err := scanVideoSummary(rows.Scan)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, *row)
+	}
+	return result, rows.Err()
+}
+
 // FindVideoSummariesByPaths は指定されたファイルパスの RecordedVideo サマリーを返す (最大 1 件) 。
 // 移植元: RecordedScanTask.processRecordedFile() の summary_rows 取得処理
 func (s *Store) FindVideoSummariesByPaths(ctx context.Context, paths []string) ([]VideoSummary, error) {

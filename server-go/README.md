@@ -1,8 +1,9 @@
 # server-go: KonomiTV サーバー Go 版
 
 KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行するためのサーバー実装です。
-未実装の API は既存の Python 版サーバーへリバースプロキシするため、Python 版と共存させたまま
-ルーター単位で少しずつ移行できます (ストラングラーパターン) 。
+既定では Python アプリへ転送せず単独起動します。旧構成との共存が必要な場合のみ
+`-no-proxy=false` または明示的な `-python-backend` で転送を有効にできます。
+全機能の同等性を宣言する段階ではありません。最新状況は [第2チェックポイント](STANDALONE_PHASE2.md) と [APIルート台帳](API_IMPLEMENTATION_AUDIT.md)、初回の変更は [実装台帳](STANDALONE_PROGRESS.md) を参照してください。
 
 ## 現在の移行状況
 
@@ -18,7 +19,7 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `PUT /api/users/me/icon` (アイコン更新、512x512 PNG へ変換) | ✅ Go 実装済み |
 | `POST`/`DELETE /api/users/me/account-links` (Twitter / Bluesky 紐付け) | ✅ Go 実装済み |
 | `GET /api/channels/{channel_id}` (チャンネル情報、現在/次の番組を含む) | ✅ Go 実装済み |
-| `GET /api/channels/{channel_id}/logo` (チャンネルロゴ) | ✅ Go 実装済み (IPTV 疑似チャンネルは Python 版へプロキシ) |
+| `GET /api/channels/{channel_id}/logo` (チャンネルロゴ) | ✅ Go 実装済み (IPTV 疑似チャンネルも Go のロゴ取得を使用) |
 | `GET /api/channels/{channel_id}/jikkyo` (ニコニコ実況 WebSocket URL) | ✅ Go 実装済み (ニコニコアカウント連携時のニコ生セッション取得・トークン更新含む) |
 | `GET /api/channels` (チャンネル一覧、現在/次の番組・IPTV 疑似チャンネル含む) | ✅ Go 実装済み |
 | `GET /api/programs/timetable` (番組表) | ✅ Go 実装済み (EDCB バックエンドの予約情報は未対応) |
@@ -35,7 +36,7 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `GET /api/streams/live/{display_channel_id}/{quality}/mpegts` (ライブ MPEG-TS ストリーム) | ✅ Go 実装済み |
 | `GET /api/streams/live/{display_channel_id}/{quality}/psi-archived-data` (PSI/SI アーカイブデータ) | ✅ Go 実装済み (EDCB / Mirakurun バックエンドのみ。IPTV では 500 を返す) |
 | `GET /api/streams/video/{video_id}/{quality}/playlist`・`PUT .../keep-alive`・`GET .../buffer` (録画 HLS プレイリスト・セッション維持・バッファ範囲 SSE) | ✅ Go 実装済み (セッション管理は `internal/videostream/session*.go`) |
-| `GET /api/streams/video/{video_id}/{quality}/segment` (録画 HLS セグメント) | 🚧 セッション制御は Go 実装済み。エンコーダー (VideoEncodingTask) 待ちのため、エンコーダー未登録の間は 500 を返す |
+| `GET /api/streams/video/{video_id}/{quality}/segment` (録画 HLS セグメント) | ✅ Go 実装・起動時登録済み (`internal/videostream/encoding_task*.go`) |
 | `GET /api/streams/video/{video_id}/{quality}/offline-stream` (オフライン保存) | ✅ Go 実装済み (`KTVODLP` 本体をネイティブ生成。proxy 有効時は検証後に Python 版へ転送) |
 | `GET /api/videos`・`GET /api/videos/search` (録画番組一覧・検索) | ✅ Go 実装済み (応答は Python 版と完全一致を検証済み) |
 | `GET /api/videos/{video_id}` (録画番組情報) | ✅ Go 実装済み |
@@ -43,19 +44,22 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `GET /api/videos/{video_id}/download` (録画ファイルのダウンロード、Range 対応) | ✅ Go 実装済み |
 | `GET /api/videos/{video_id}/jikkyo` (ニコニコ実況の過去ログコメント) | ✅ Go 実装済み |
 | `DELETE /api/videos/{video_id}` (録画ファイルの削除、管理者のみ) | ✅ Go 実装済み |
-| `POST /api/videos/{video_id}/reanalyze`・`/thumbnail/regenerate` | 🔁 Python 版へプロキシ |
+| `POST /api/videos/{video_id}/reanalyze`・`/thumbnail/regenerate` | ✅ Go 実装済み (`internal/metadata`)。解析互換性の残課題は実装台帳を参照 |
 | `GET /api/settings/client`・`PUT /api/settings/client` (クライアント設定の取得・更新) | ✅ Go 実装済み |
-| `GET /api/settings/server`・`PUT /api/settings/server` (サーバー設定の取得・更新) | ✅ Go 実装済み (PUT は config.yaml をコメントを保持したまま行単位で書き換える) |
+| `GET /api/settings/server`・`PUT /api/settings/server` (サーバー設定の取得・更新) | ✅ Go 実装済み (PUT は構造化 YAML 更新・再検証・一時ファイル置換) |
 | `GET /api/maintenance/logs/{log_type}` (サーバーログ・アクセスログの SSE 配信) | ✅ Go 実装済み |
 | `POST /api/maintenance/restart`・`POST /api/maintenance/shutdown` (再起動・終了) | ✅ Go 実装済み (ローカルホストからのアクセスは認証不要) |
-| `POST /api/maintenance/update-database` (データベース更新) | ✅ Go 実装済み (IPTV バックエンドはプレイリストの再取得、EDCB / Mirakurun は Python 版へプロキシ) |
-| `POST /api/maintenance/run-batch-scan`・`/run-background-analysis` | 🔁 Python 版へプロキシ |
+| `POST /api/maintenance/update-database` (データベース更新) | ✅ Go 実装済み (IPTV 再取得、EDCB / Mirakurun の native 更新。既定で起動時・定期更新) |
+| `POST /api/maintenance/run-batch-scan`・`/run-background-analysis` | ✅ Go 実装済み。常駐監視・録画完了/削除反映も追加 (大規模実機は未受入れ) |
 | `GET /api/captures`・`GET /api/captures/{filename}`・`POST /api/captures`・`DELETE /api/captures/{filename}` (キャプチャ一覧・取得・アップロード・削除) | ✅ Go 実装済み |
 | `GET`/`POST`/`PUT`/`DELETE /api/captures/folders` (キャプチャフォルダ管理) | ✅ Go 実装済み |
 | `GET`/`POST`/`DELETE /api/captures/folders/{folder_id}/captures` (フォルダ内キャプチャ操作) | ✅ Go 実装済み |
 | `/assets/*`・`/` (client/dist の静的配信、SPA フォールバック) | ✅ Go 実装済み |
 | CORS (Starlette 互換) | ✅ Go 実装済み |
-| その他の全 API | 🔁 Python 版へプロキシ |
+| 録画予約・自動予約条件・録画プリセット | ✅ Go 実装済み (EDCB TCP API) |
+| Bluesky・ニコニコ連携 | ✅ Go 実装あり (外部サービスとの実機互換性は個別検証) |
+| Twitter 連携 | 🚧 API 層のみ。ブラウザ backend が仮実装で通常操作は未完成 |
+| 未登録 API | 既定は 404。明示的な旧 proxy 構成でのみ Python へ転送 |
 
 ### EDCB 番組検索の完成候補 (PG3)
 
@@ -93,11 +97,11 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 
 ## 使い方
 
-Python 版サーバー (`server/` で `uv run task serve` / `uv run task dev`) を起動した状態で、
+Python 版アプリの起動は不要です。既存 DB と外部エンコーダー等を準備し、
 `server-go/` ディレクトリから実行します。
 
 ```powershell
-# 開発中の起動 (Python 版の 127.0.0.77:7010 へプロキシ)
+# 単独起動 (Python プロキシなし)
 go run ./cmd/konomitv-go
 
 # ビルドして実行
@@ -118,7 +122,7 @@ curl http://127.0.0.77:7002/api/version
 | --- | --- | --- |
 | `-listen` | `127.0.0.77:7002` | Go 版サーバーのリッスンアドレス |
 | `-python-backend` | `http://127.0.0.77:<server.port+10>/` | 未移行 API の転送先 |
-| `-no-proxy` | `false` | プロキシを無効化し、未実装 API は 404 を返す |
+| `-no-proxy` | `true` | 単独運用が既定。旧構成は `-no-proxy=false`。明示した `-python-backend` も旧構成への opt-in (明示的な `-no-proxy=true` が優先) |
 | `-server-dir` | 自動検出 | Python 版サーバーのディレクトリ (`<repo>/server`) |
 | `-debug` | `false` | デバッグログを出力 (config.yaml の `general.debug` より優先) |
 | `-version` | | バージョンを表示して終了 |
@@ -171,17 +175,17 @@ curl http://127.0.0.77:7002/api/version
   チューナーの確保 → チャンネル設定 (失敗時 0.5 秒間隔で最大 5 秒リトライ、`E-02E`) → 接続 (失敗時 `E-03E`) →
   読み取り → 終了処理 (切断・チューナー解放) の順に動作する。
 
-**未対応**: EDCB バックエンドの**名前付きパイプモード** (`edcb_url` に `edcb-namedpipe` を指定した場合) の
-放送波ストリーム受信。TCP モード (`RelayViewStream`) のみ実装しており、名前付きパイプモードでは
-チューナーの起動までは行うがストリーム接続でエラーになる (`E-03E`) 。
-(IPTV バックエンドと Mirakurun / mirakc バックエンドは従来どおり動作する) 。
+EDCB ローカルモードの受信は Windows 名前付きパイプと Linux FIFO に対応しました。
+制御通信は Windows overlapped pipe / Linux Unix socket を使います。OS の隔離パイプでテスト済みですが、実 EDCB の受入れは未実施です。
 
 ### サーバー設定 API
 
 `GET /api/settings/server` は `config.yaml` を Python 版 `ServerSettings` のデフォルト値で補完して返す
 (応答は Python 版と完全に一致することを検証済み) 。
 `PUT /api/settings/server` は Pydantic 相当のバリデーション (列挙値・数値の範囲・URL のスキーム) を行ったうえで、
-`config.yaml` を**コメントを保持したまま行単位で書き換える** (ruamel.yaml の代替) 。
+`config.yaml` を YAML ノードとして更新し、コメントと未知のキーを保持します。
+保存前に YAML と起動時の型・基本制約を検証し、同じディレクトリの固有一時ファイルへ保存・同期して置換します。
+複数行スカラーの旧継続行を残さず、検証・保存失敗時は以前のファイルを保持します。
 
 **未対応**: Python 版のカスタムバリデーターのうち、環境に依存する検証 (EDCB / Mirakurun への接続確認、
 ポートの使用状況、エンコーダーの対応状況) は Go 版では行わない。
@@ -202,9 +206,8 @@ curl http://127.0.0.77:7002/api/version
 - ニコニコ実況の過去ログコメントは過去ログ API から取得して DPlayer の形式に変換する
   (コメントの色・位置・サイズの解釈は Python 版と一致することをフィクスチャで検証済み) 。
 
-**未対応**: メタデータ再解析 (`POST /api/videos/{video_id}/reanalyze`) とサムネイル画像再生成
-(`POST /api/videos/{video_id}/thumbnail/regenerate`) は Go 版では未実装のため Python 版へプロキシする
-(FFmpeg / psisiarc を使った録画ファイルの解析処理が必要なため) 。
+再解析・サムネイル再生成・一括スキャン・背景解析は `metadata.go` が native ルートを登録します。
+FFprobe / FFmpeg と Go の TS 番組情報解析を使用します。常駐録画監視、I/O 制限、解析互換性の残課題は実装台帳に記録しています。
 また、MPEG-4 コンテナの録画番組で `.psc` ファイルがある場合のコメント時刻の補正は行わない。
 
 ### メンテナンス API (`/api/maintenance`)
@@ -222,11 +225,9 @@ curl http://127.0.0.77:7002/api/version
   どちらも管理者ユーザーまたは `Host: 127.0.0.77:<server.port + 10>` (内部ポート) からのアクセスで実行できる。
 - `POST /api/maintenance/update-database` は IPTV バックエンドではプレイリストを再取得するだけで、
   Python 版と同じくチャンネル情報・番組情報をデータベースに保存しない。
-  EDCB / Mirakurun バックエンドのチャンネル情報・番組情報の更新は Go 版では未実装のため Python 版へプロキシする。
+  EDCB / Mirakurun バックエンドでは Go の更新処理を使用する。旧 proxy を明示した場合は従来の転送を維持する。
 
-**未対応**: 録画フォルダの一括スキャン (`POST /api/maintenance/run-batch-scan`) と
-バックグラウンド解析 (`POST /api/maintenance/run-background-analysis`) は、
-録画ファイルのメタデータ解析・CM 区間検出・サムネイル生成が必要なため Python 版へプロキシする。
+一括スキャンと背景解析の手動 API は Go 実装です。自動監視は startup scan と独立に起動します (NAS/SMB 対応の5秒polling)。
 
 ### キャプチャ API (`/api/captures`)
 
@@ -352,9 +353,8 @@ go vet ./...
 実際のデータベースや設定ファイルが存在する環境では、それらを使った互換性テストも実行されます
 (存在しない場合は自動的にスキップされます) 。
 
-## 今後の予定
+## 単独運用の残課題
 
-1. ビデオストリーミング (`/api/streams/video`、録画番組の再生) の Go 化
-2. EDCB バックエンドのチューナー制御 (`EDCBTuner`) の Go 化
-3. 残りの書き込み系 API (予約・Twitter / Bluesky / ニコニコ連携・キャプチャなど) の移行
-4. 完全移行後に `-listen 127.0.0.77:7010` で Python 版を置き換え
+Twitter ブラウザ backend、録画監視の追加互換性監査、解析互換性・実機検証を継続します。
+既存 DB の初期化・インストーラーは別作業のため、この変更には含めません。
+詳細と実測結果は [STANDALONE_PROGRESS.md](STANDALONE_PROGRESS.md) を参照してください。

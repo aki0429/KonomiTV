@@ -499,7 +499,7 @@ func (t *liveEncodingTask) runOnce(ctx context.Context) {
 
 		// チューナーに接続する (放送波が送信される TCP ソケットを取得する) 。
 		t.liveStream.SetStatus("Standby", "チューナーに接続しています…", false)
-		reader, connectErr := tuner.Connect(t.liveStream.ID)
+		reader, connectErr := tuner.ConnectContext(ctx, t.liveStream.ID)
 
 		// チューナーへの接続に失敗した。
 		if reader == nil {

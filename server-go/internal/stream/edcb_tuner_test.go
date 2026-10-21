@@ -1,8 +1,11 @@
 package stream
 
 import (
+	"context"
 	"errors"
+	"io"
 	"net"
+	"strings"
 	"sync"
 	"testing"
 
@@ -371,12 +374,18 @@ func TestEDCBTunerCloseFailureKeepsResult(t *testing.T) {
 	}
 }
 
-// TestEDCBTunerNamedPipeUnsupported は名前付きパイプモードでは connect が未対応のエラーを返すことを検証する。
-func TestEDCBTunerNamedPipeUnsupported(t *testing.T) {
+// TestEDCBTunerNamedPipe は TCP relay を使用せずローカルパイプを受信することを検証する。
+func TestEDCBTunerNamedPipe(t *testing.T) {
 	resetEDCBTunerPool()
 	ctrl := &fakeEDCBCtrlCmd{setChFunc: func() (int, bool) { return 9000, true }}
 	backend := fakeEDCBTunerBackend(ctrl)
 	backend.NamedPipe = true
+	backend.OpenPipeStream = func(ctx context.Context, pid int) (io.ReadCloser, error) {
+		if pid != 9000 {
+			t.Errorf("process id = %d", pid)
+		}
+		return io.NopCloser(strings.NewReader("synthetic MPEG-TS")), nil
+	}
 	tuner := GetOrCreateEDCBTuner("stream-a", backend)
 	defer tuner.Close("stream-a", true)
 
@@ -384,11 +393,15 @@ func TestEDCBTunerNamedPipeUnsupported(t *testing.T) {
 		t.Fatalf("SetChannel() = false, want true")
 	}
 	reader, err := tuner.Connect("stream-a")
-	if reader != nil || err == nil {
-		t.Errorf("Connect() in named pipe mode = (%v, %v), want (nil, error)", reader, err)
+	if reader == nil || err != nil {
+		t.Fatalf("Connect() = (%v, %v)", reader, err)
 	}
-	if tuner.GetState() != EDCBTunerIdle {
-		t.Errorf("state = %q, want Idle", tuner.GetState())
+	data, err := io.ReadAll(reader)
+	if err != nil || string(data) != "synthetic MPEG-TS" {
+		t.Fatalf("stream = %q err=%v", data, err)
+	}
+	if !tuner.IsDisconnected() {
+		t.Fatal("EOF was not detected")
 	}
 }
 

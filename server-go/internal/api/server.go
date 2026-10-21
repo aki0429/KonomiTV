@@ -18,6 +18,7 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/epgupdate"
 	"github.com/aki0429/KonomiTV/server-go/internal/iptv"
 	"github.com/aki0429/KonomiTV/server-go/internal/jikkyo"
+	"github.com/aki0429/KonomiTV/server-go/internal/metadata"
 	"github.com/aki0429/KonomiTV/server-go/internal/stream"
 	"github.com/aki0429/KonomiTV/server-go/internal/videostream"
 )
@@ -47,6 +48,9 @@ type Server struct {
 	// jikkyoChannels は実況チャンネルの対応表 (初回アクセス時に読み込む) 。
 	jikkyoChannels     *jikkyo.ChannelMap
 	jikkyoChannelsOnce sync.Once
+	// 録画の成長・完了状態を手動 API と常駐監視で共有する。
+	metadataOnce    sync.Once
+	metadataService *metadata.Service
 	// updateDatabaseMu は update-database の EDCB 更新を直列化する (SQLite の書き込み競合を避ける) 。
 	updateDatabaseMu sync.Mutex
 	// jikkyoStatuses は実況チャンネルごとの最新の実況勢い (Python: JikkyoClient のクラス変数) 。

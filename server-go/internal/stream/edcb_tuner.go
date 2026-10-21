@@ -1,7 +1,7 @@
 package stream
 
 import (
-	"fmt"
+	"context"
 	"io"
 	"net"
 	"sync"
@@ -75,6 +75,8 @@ type EDCBTunerBackend struct {
 	NewCtrlCmd func() (EDCBCtrlCmd, error)
 	// NamedPipe は名前付きパイプモードで動作しているかどうか (真の場合は TCP モードではない) 。
 	NamedPipe bool
+	// OpenPipeStream はローカル TS パイプを開く。nil は OS 別の標準実装を使う。
+	OpenPipeStream func(context.Context, int) (io.ReadCloser, error)
 }
 
 // EDCBTuner は EDCB バックエンドのチューナーを制御する。
@@ -101,6 +103,9 @@ type EDCBTuner struct {
 	edcbProcessID *int
 	// streamConn はチューナーとのストリーミング接続 (未接続時は nil) 。
 	streamConn *edcbStreamConn
+	// connectCancel は接続待ちを handoff/disconnect/close で解除する。
+	connectCancel     context.CancelFunc
+	connectGeneration uint64
 	// state はこのチューナーの利用状態。
 	state EDCBTunerState
 	// ownerLiveStreamID はこのチューナーの制御権限を持つライブストリーム ID (空文字は未割り当て) 。
@@ -292,67 +297,6 @@ func (t *EDCBTuner) SetChannel(networkID int, serviceID int, transportStreamID i
 	return true
 }
 
-// Connect はチューナーに接続し、放送波を受け取るためのストリームを返す。
-//
-// 移植元: EDCBTuner.connect()
-// 接続できなかった場合は nil を返す (Python 版は None を返す) 。
-// 返された io.ReadCloser はそのまま放送波の MPEG2-TS ストリームになる。
-func (t *EDCBTuner) Connect(ownerLiveStreamID string) (io.ReadCloser, error) {
-	t.mu.Lock()
-	// 制御権限が一致していない場合、キャンセル中の場合は処理しない。
-	if !t.isOwner(ownerLiveStreamID) || t.state == EDCBTunerCancelling {
-		t.mu.Unlock()
-		return nil, nil
-	}
-	// プロセス ID が取得できている (チューナーが起動している) ことが前提。
-	processID := t.edcbProcessID
-	namedPipe := t.backend.NamedPipe
-	creator := t.backend.NewCtrlCmd
-	t.mu.Unlock()
-
-	if processID == nil {
-		return nil, nil
-	}
-
-	// 名前付きパイプモードは Go 版では未対応 (放送波ストリームの取得は TCP モードのみ) 。
-	if namedPipe {
-		t.setIdleAfterFailedConnect()
-		return nil, fmt.Errorf("edcb: named pipe streaming is not supported")
-	}
-
-	if creator == nil {
-		t.setIdleAfterFailedConnect()
-		return nil, fmt.Errorf("edcb: ctrl cmd client is not configured")
-	}
-	client, err := creator()
-	if err != nil {
-		t.setIdleAfterFailedConnect()
-		return nil, fmt.Errorf("edcb: failed to create the ctrl cmd client: %w", err)
-	}
-
-	// EpgDataCap_Bon で受信した放送波を受け取るための TCP 接続を取得する。
-	connection, err := client.RelayViewStream(*processID)
-	if err != nil {
-		t.setIdleAfterFailedConnect()
-		return nil, fmt.Errorf("edcb: failed to connect to the tuner: %w", err)
-	}
-
-	// 接続を保持して、接続済みとして状態を更新する。
-	streamConn := &edcbStreamConn{Conn: connection}
-	t.mu.Lock()
-	t.streamConn = streamConn
-	t.state = EDCBTunerActive
-	t.mu.Unlock()
-	return streamConn, nil
-}
-
-// setIdleAfterFailedConnect は接続失敗時に状態を Idle に戻す (Python 版 connect() の失敗時と同じ) 。
-func (t *EDCBTuner) setIdleAfterFailedConnect() {
-	t.mu.Lock()
-	t.state = EDCBTunerIdle
-	t.mu.Unlock()
-}
-
 // Disconnect はチューナーとのストリーミング接続を閉じる。
 //
 // 移植元: EDCBTuner.disconnect()
@@ -365,6 +309,9 @@ func (t *EDCBTuner) Disconnect(ownerLiveStreamID string) {
 		return
 	}
 	connection := t.streamConn
+	if t.connectCancel != nil {
+		t.connectCancel()
+	}
 	t.streamConn = nil
 	// 切断済みとして状態を更新する。
 	// Cancelling 状態の場合は handoff シーケンスの途中であるため、状態を維持する。
@@ -434,6 +381,9 @@ func (t *EDCBTuner) Handoff(currentOwnerLiveStreamID string, nextOwnerLiveStream
 		return false
 	}
 	// 再利用可能な状態に戻す。
+	if t.connectCancel != nil {
+		t.connectCancel()
+	}
 	t.state = EDCBTunerIdle
 	t.locked = false
 	// 制御権限を移譲する。
@@ -455,6 +405,9 @@ func (t *EDCBTuner) Close(ownerLiveStreamID string, force bool) bool {
 	}
 	// プールからの削除と再利用の競合を防ぐため、close 処理中にする。
 	t.closing = true
+	if t.connectCancel != nil {
+		t.connectCancel()
+	}
 	creator := t.backend.NewCtrlCmd
 	networkTVID := t.networkTVID
 	connection := t.streamConn
@@ -492,14 +445,14 @@ func (t *EDCBTuner) Close(ownerLiveStreamID string, force bool) bool {
 // 相手側からの切断 (読み取りの EOF) や自分からの close を検出できるように net.Conn をラップする。
 // Python 版の StreamWriter.is_closing() に相当する判定に使う。
 type edcbStreamConn struct {
-	net.Conn
+	io.ReadCloser
 	// disconnected は接続が切断されたかどうか。
 	disconnected atomic.Bool
 }
 
 // Read はストリームから読み取り、エラー (EOF を含む) が発生したら切断済みとして記録する。
 func (c *edcbStreamConn) Read(buffer []byte) (int, error) {
-	read, err := c.Conn.Read(buffer)
+	read, err := c.ReadCloser.Read(buffer)
 	if err != nil {
 		c.disconnected.Store(true)
 	}
@@ -509,7 +462,7 @@ func (c *edcbStreamConn) Read(buffer []byte) (int, error) {
 // Close はストリームを閉じ、切断済みとして記録する。
 func (c *edcbStreamConn) Close() error {
 	c.disconnected.Store(true)
-	return c.Conn.Close()
+	return c.ReadCloser.Close()
 }
 
 // isDisconnected は接続が切断されているかどうかを返す。

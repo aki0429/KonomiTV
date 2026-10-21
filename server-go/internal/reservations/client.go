@@ -7,7 +7,6 @@ import (
 	"io"
 	"net"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
@@ -138,6 +137,10 @@ func NewClientFromURLContext(ctx context.Context, edcbURL string) (*Client, erro
 		transport.Context = ctx
 		transport.legacyResponseSizes = false
 	}
+	if transport, ok := client.transport.(*pipeTransport); ok {
+		transport.Context = ctx
+		transport.legacyResponseSizes = false
+	}
 	return client, nil
 }
 
@@ -159,9 +162,11 @@ func readFull(connection net.Conn, buffer []byte) (int, error) {
 // Python 版の名前付きパイプモード (EDCB の edcb_url に edcb-namedpipe を指定した場合) に対応する。
 // 実機の EDCB がない環境では検証できていないため、動作確認は未実施。
 type pipeTransport struct {
-	Path    string
-	Name    string
-	Timeout time.Duration
+	Path                string
+	Name                string
+	Timeout             time.Duration
+	Context             context.Context
+	legacyResponseSizes bool
 }
 
 // namedPipePath は Python 版 CtrlCmdUtil の既定パスと同じ値を返す。
@@ -178,43 +183,6 @@ func namedPipeName(name string) string {
 		return name
 	}
 	return strings.ReplaceAll(name, "NoWait", "")
-}
-
-// SendAndReceive は名前付きパイプ / UNIX ドメインソケット経由で送受信する。
-func (t *pipeTransport) SendAndReceive(request []byte) (Response, error) {
-	timeout := t.Timeout
-	if timeout <= 0 {
-		timeout = defaultConnectTimeout
-	}
-	path := t.Path + t.Name
-	file, err := os.OpenFile(path, os.O_RDWR, 0)
-	if err != nil {
-		return Response{}, err
-	}
-	defer func() { _ = file.Close() }()
-	if err := file.SetDeadline(time.Now().Add(timeout)); err != nil {
-		// 名前付きパイプ経由の SetDeadline は環境によっては未対応のため、失敗しても続行する
-		_ = err
-	}
-	if _, err := file.Write(request); err != nil {
-		return Response{}, err
-	}
-	header := make([]byte, 8)
-	if _, err := file.Read(header); err != nil {
-		return Response{}, err
-	}
-	code := int(int32(binary.LittleEndian.Uint32(header[0:4])))
-	size := int(int32(binary.LittleEndian.Uint32(header[4:8])))
-	if size < 0 {
-		return Response{}, fmt.Errorf("edcb: invalid response size %d", size)
-	}
-	payload := make([]byte, size)
-	if size > 0 {
-		if _, err := file.Read(payload); err != nil {
-			return Response{}, err
-		}
-	}
-	return Response{Code: code, Data: payload}, nil
 }
 
 // Client は EDCB の CtrlCmd インターフェースのクライアント。
@@ -260,9 +228,10 @@ func NewClientFromURL(edcbURL string) (*Client, error) {
 	}
 	if host == "edcb-namedpipe" {
 		return &Client{transport: &pipeTransport{
-			Path:    namedPipePath(),
-			Name:    namedPipeName("EpgTimerSrvNoWaitPipe"),
-			Timeout: defaultConnectTimeout,
+			Path:                namedPipePath(),
+			Name:                namedPipeName("EpgTimerSrvNoWaitPipe"),
+			Timeout:             defaultConnectTimeout,
+			legacyResponseSizes: true,
 		}}, nil
 	}
 	port := parsed.Port()

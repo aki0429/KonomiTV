@@ -20,6 +20,10 @@ var (
 	streamInfCodecsPattern = regexp.MustCompile(`CODECS="([^"]+)"`)
 )
 
+// qualityCacheLimit は配信 URL の入れ替わりによる無制限の蓄積を防ぐ。
+// 約 1.1 万件の通常一覧を保持し、追い出した URL は次回必要時に再検出する。
+const qualityCacheLimit = 16384
+
 // ParseHLSQualities は HLS のマスタープレイリストから、配信されている画質 (バリアント) の一覧を抽出する。
 //
 // メディアプレイリスト (バリアントを含まないもの) の場合は空の一覧を返す。
@@ -129,7 +133,19 @@ func (m *Manager) DetectChannelQualities(ctx context.Context, channel *Channel) 
 	}
 
 	m.qualityMutex.Lock()
-	m.qualityCache[channel.URL] = result
+	// キャンセルで未取得になった結果を恒久キャッシュしない。
+	if ctx.Err() == nil {
+		if _, exists := m.qualityCache[channel.URL]; !exists {
+			if len(m.qualityCacheOrder) < qualityCacheLimit {
+				m.qualityCacheOrder = append(m.qualityCacheOrder, channel.URL)
+			} else {
+				delete(m.qualityCache, m.qualityCacheOrder[m.qualityCacheNext])
+				m.qualityCacheOrder[m.qualityCacheNext] = channel.URL
+				m.qualityCacheNext = (m.qualityCacheNext + 1) % qualityCacheLimit
+			}
+		}
+		m.qualityCache[channel.URL] = result
+	}
 	m.qualityMutex.Unlock()
 	return result
 }
@@ -138,23 +154,34 @@ func (m *Manager) DetectChannelQualities(ctx context.Context, channel *Channel) 
 //
 // すべての検出が完了するまで待つが、1つのチャンネルの失敗が他に影響しないようにする。
 func (m *Manager) DetectChannelsQualities(ctx context.Context, channels []*Channel) map[string]*QualityResult {
-	semaphore := make(chan struct{}, QualityDetectionConcurrency)
-	detected := map[string]*QualityResult{}
+	detected := make(map[string]*QualityResult, len(channels))
 	var mutex sync.Mutex
 	var waitGroup sync.WaitGroup
-
-	for _, channel := range channels {
+	// リクエスト数だけでなく待機 goroutine も制限する。1 万チャンネルの一覧でも
+	// 全件分のスタックを先に確保せず、同じ並列数の worker が順次処理する。
+	jobs := make(chan *Channel)
+	for range min(QualityDetectionConcurrency, len(channels)) {
 		waitGroup.Add(1)
-		go func(channel *Channel) {
+		go func() {
 			defer waitGroup.Done()
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-			result := m.DetectChannelQualities(ctx, channel)
-			mutex.Lock()
-			detected[channel.ID] = result
-			mutex.Unlock()
-		}(channel)
+			for channel := range jobs {
+				result := m.DetectChannelQualities(ctx, channel)
+				mutex.Lock()
+				detected[channel.ID] = result
+				mutex.Unlock()
+			}
+		}()
 	}
+	for _, channel := range channels {
+		select {
+		case jobs <- channel:
+		case <-ctx.Done():
+			close(jobs)
+			waitGroup.Wait()
+			return detected
+		}
+	}
+	close(jobs)
 	waitGroup.Wait()
 	return detected
 }

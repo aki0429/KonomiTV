@@ -63,8 +63,10 @@ type Manager struct {
 
 	// qualityMutex は画質の検出結果のキャッシュを保護する。
 	qualityMutex sync.Mutex
-	// qualityCache はストリームの URL → 検出結果 (プロセスが生きている間は再利用する) 。
-	qualityCache map[string]*QualityResult
+	// qualityCache は URL → 検出結果。qualityCacheLimit 件を超えると古い挿入順に解放する。
+	qualityCache      map[string]*QualityResult
+	qualityCacheOrder []string
+	qualityCacheNext  int
 }
 
 // New は Manager を生成する。

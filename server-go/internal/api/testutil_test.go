@@ -3,12 +3,20 @@ package api
 import (
 	"database/sql"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/aki0429/KonomiTV/server-go/internal/auth"
 	"github.com/aki0429/KonomiTV/server-go/internal/constants"
 )
+
+// 同じ固定テストパスワードを各ケースで再ハッシュしない。bcryptのコスト12や本体実装は変更せず、
+// 認証用fixtureの生成だけを共有する。HashPassword自体の検証はauthパッケージで行う。
+var testPasswordHashes = struct {
+	sync.Mutex
+	values map[string]string
+}{values: make(map[string]string)}
 
 // testJWTSecret はテストで使う JWT シークレット。
 // python-jose で生成したフィクスチャトークン (pythonJoseAccessToken) と一致させている。
@@ -218,7 +226,16 @@ func createTestDatabase(t *testing.T) *sql.DB {
 // createTestUser はテスト用のユーザーを作成し、ID を返す。
 func createTestUser(t *testing.T, db *sql.DB, name string, password string, isAdmin bool) int64 {
 	t.Helper()
-	hash, err := auth.HashPassword(password)
+	testPasswordHashes.Lock()
+	hash, cached := testPasswordHashes.values[password]
+	var err error
+	if !cached {
+		hash, err = auth.HashPassword(password)
+		if err == nil {
+			testPasswordHashes.values[password] = hash
+		}
+	}
+	testPasswordHashes.Unlock()
 	if err != nil {
 		t.Fatal(err)
 	}
