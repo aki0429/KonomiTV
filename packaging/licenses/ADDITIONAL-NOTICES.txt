@@ -1,0 +1,50 @@
+pwa-install-handler 2.6.5
+Author: Filip Chalupa (as declared in the distributed package.json)
+Source: https://github.com/FilipChalupa/pwa-install-handler
+Package: https://registry.npmjs.org/pwa-install-handler/-/pwa-install-handler-2.6.5.tgz
+The package.json and README explicitly declare the ISC license. The upstream
+package/repository omit the referenced LICENSE file. The standard ISC terms
+below accompany that declaration and author attribution.
+
+ISC License
+Copyright (c) Filip Chalupa
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+Go source availability
+The exact unmodified module paths/versions are listed in go-modules.txt, and
+their license/notice files are in go/. Source can be obtained through the Go
+module proxy (https://proxy.golang.org) or the projects' source repositories.
+For modernc.org/sqlite and its modernc.org dependencies, the corresponding
+module source archives are available at:
+https://proxy.golang.org/modernc.org/sqlite/@v/v1.60.1.zip
+https://proxy.golang.org/modernc.org/libc/@v/v1.77.1.zip
+https://proxy.golang.org/modernc.org/memory/@v/v1.12.1.zip
+https://proxy.golang.org/modernc.org/mathutil/@v/v1.7.1.zip
+No changes are made to those module sources. Each component keeps its own
+license; the application MIT license does not replace third-party licenses.
+
+Client source availability
+The release source contains client/package.json and client/yarn.lock with
+exact package versions, resolved source URLs and integrity values. Existing
+forked modules include mpeg2toh264 (MIT, copyright 2026 otya), mpegts.js,
+DPlayer, aribb24.js and web-bml. Their retained notices are in client/.
+The browser transcoder's package.json omits a license field, but its included
+LICENSE explicitly grants MIT terms; that LICENSE is bundled unchanged.
+
+Runtime tools downloaded separately
+The installers fetch pinned official KonomiTV thirdparty artifacts, verify
+their SHA256 before extraction, and retain their license files. FFmpeg and
+the other runtime programs retain their respective licenses. They are not
+embedded or republished in this installer. See INSTALLATION.md for the pinned
+build workflow/source commit, download URLs, checksums and expiration behavior.
