@@ -21,9 +21,9 @@ import (
 
 // newTwitterBackendFactory は Twitter アカウントごとのブラウザ Backend を生成する。
 //
-// Go 版のヘッドレスブラウザ駆動は未実装のため、既定では UnavailableBackend を使う。
+// Go CDP backend で専用 Chromium を駆動する。
 // テストではフェイク Backend を返すファクトリに差し替えてエンドポイントを検証する。
-var newTwitterBackendFactory twitter.BackendFactory = twitter.NewUnavailableBackend
+var newTwitterBackendFactory twitter.BackendFactory = twitter.NewBrowserBackend
 
 // twitterProxyUserAgent は Twitter 動画プロキシで送信する User-Agent
 // (constants.py の API_REQUEST_HEADERS['User-Agent'] 相当) 。
@@ -174,6 +174,17 @@ func (s *Server) twitterAccountToModel(record twitterAccountRecord) *twitter.Acc
 	}
 	if record.CookieBrowserInfo != nil {
 		account.CookieBrowserInfo = *record.CookieBrowserInfo
+	}
+	account.LoadCookies = func() (string, error) {
+		if !strings.HasPrefix(record.AccessTokenSecret, twitterCookieEncryptionPrefix) {
+			return record.AccessTokenSecret, nil
+		}
+		secret, err := auth.LoadOrCreateSecret(filepath.Join(s.paths.DataDir, "jwt_secret.dat"))
+		if err != nil {
+			return "", err
+		}
+		plain, err := twitter.NewFernetFromSecret(secret).Decrypt(strings.TrimPrefix(record.AccessTokenSecret, twitterCookieEncryptionPrefix))
+		return string(plain), err
 	}
 	// Cookie が更新されたら暗号化して DB へ保存する
 	account.PersistCookies = func(ctx context.Context, cookiesTxt string) error {

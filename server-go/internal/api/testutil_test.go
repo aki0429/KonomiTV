@@ -12,7 +12,7 @@ import (
 )
 
 // 同じ固定テストパスワードを各ケースで再ハッシュしない。bcryptのコスト12や本体実装は変更せず、
-// 認証用fixtureの生成だけを共有する。HashPassword自体の検証はauthパッケージで行う。
+// 認証用fixtureの生成だけを共有する。本体のハッシュ生成・照合とユーザー作成APIのテストは維持する。
 var testPasswordHashes = struct {
 	sync.Mutex
 	values map[string]string
@@ -216,10 +216,19 @@ func createTestDatabase(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(testDatabaseSchema); err != nil {
+	t.Cleanup(func() { _ = db.Close() })
+	// 空fixtureの各DDLで個別fsyncしない。初期スキーマ全体を一括確定し、準備中のDBを公開しない。
+	tx, err := db.Begin()
+	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = db.Close() })
+	defer func() { _ = tx.Rollback() }()
+	if _, err := tx.Exec(testDatabaseSchema); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
 	return db
 }
 

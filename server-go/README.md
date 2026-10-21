@@ -58,7 +58,7 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | CORS (Starlette 互換) | ✅ Go 実装済み |
 | 録画予約・自動予約条件・録画プリセット | ✅ Go 実装済み (EDCB TCP API) |
 | Bluesky・ニコニコ連携 | ✅ Go 実装あり (外部サービスとの実機互換性は個別検証) |
-| Twitter 連携 | 🚧 API 層のみ。ブラウザ backend が仮実装で通常操作は未完成 |
+| Twitter 連携 | Go CDP backend 追加。Chrome/Brave が必要。モック/隔離 CDP 検証済み、実 Twitter Web App は未検証 |
 | 未登録 API | 既定は 404。明示的な旧 proxy 構成でのみ Python へ転送 |
 
 ### EDCB 番組検索の完成候補 (PG3)
@@ -355,6 +355,6 @@ go vet ./...
 
 ## 単独運用の残課題
 
-Twitter ブラウザ backend、録画監視の追加互換性監査、解析互換性・実機検証を継続します。
+Twitter の実 Web App 互換性、録画監視の追加互換性監査、解析互換性・実機検証を継続します。第3チェックポイントは [STANDALONE_PHASE3.md](STANDALONE_PHASE3.md) を参照してください。
 既存 DB の初期化・インストーラーは別作業のため、この変更には含めません。
 詳細と実測結果は [STANDALONE_PROGRESS.md](STANDALONE_PROGRESS.md) を参照してください。

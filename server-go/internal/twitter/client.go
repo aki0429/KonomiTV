@@ -114,9 +114,18 @@ func RebindInstance(previousAccountID *int64, account *Account, factory BackendF
 
 // ResetInstances は登録済みインスタンスを全て破棄する (テスト用) 。
 func ResetInstances() {
+	ShutdownAll(context.Background())
+}
+
+// ShutdownAll はサーバー終了時に所有ブラウザを回収する。
+func ShutdownAll(ctx context.Context) {
 	instancesMu.Lock()
+	previous := instances
 	instances = map[int64]*GraphQLClient{}
 	instancesMu.Unlock()
+	for _, client := range previous {
+		_ = client.backend.Shutdown(ctx)
+	}
 }
 
 // SetNowForTesting はテスト用に現在時刻取得関数を差し替える。

@@ -72,6 +72,11 @@ only after checking your retained data.
 ## Dependencies / provenance
 
 Requires Windows 10/11 with built-in `tar`, or Linux with `tar` and `xz`.
+The optional Go Twitter backend requires an existing Chrome/Chromium/Brave
+installation (`KONOMITV_BROWSER_PATH` can select its executable). The installer
+does not install a browser, use an existing browser profile, or authenticate any
+external account. Browser-backed Twitter behavior is tested with synthetic CDP
+peers; real account/login/post compatibility remains unverified.
 Official dependency archive URLs are fixed to upstream Actions run
 `39397337417`, source commit `4eece4f4b8ec410a06a3f2c016965f1e86d04a8c`:
 

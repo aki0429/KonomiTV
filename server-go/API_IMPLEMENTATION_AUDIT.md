@@ -1,7 +1,7 @@
-# API ルート実装台帳 (第2チェックポイント)
+# API ルート実装台帳 (第3チェックポイント)
 
 Python Router の115 routeとGoの登録先を照合。ルート登録は完全な動作互換性の証明ではない。
-個々の正常系・実機の受入れは残作業。Twitter backend未完成を含め、全機能完成とはしない。
+個々の正常系・実機の受入れは残作業。Twitter は Go CDP を追加しモックと localhost Chromium を検証。実 Twitter Web App は未検証。全機能完成とはしない。
 
 | Route | Go 登録先 | 状態・主依存 |
 | --- | --- | --- |
@@ -17,8 +17,8 @@ Python Router の115 routeとGoの登録先を照合。ルート登録は完全�
 | `DELETE /api/recording/conditions/{reservation_condition_id}` | `reservation_conditions.go:handleReservationConditionDelete` | Go native。EDCB CtrlCmd。実機予約/検索の受入れ未実施 |
 | `DELETE /api/recording/reservations/{reservation_id}` | `reservations.go:handleReservationDelete` | Go native。EDCB CtrlCmd。実機予約/検索の受入れ未実施 |
 | `DELETE /api/twitter/accounts/{screen_name}` | `twitter.go:handleTwitterAccountDelete` | Go native。SQLite・認証・静的asset |
-| `DELETE /api/twitter/accounts/{screen_name}/tweets/{tweet_id}/favorite` | `twitter.go:handleTwitterFavoriteCancel` | Go native。SQLite・認証・静的asset |
-| `DELETE /api/twitter/accounts/{screen_name}/tweets/{tweet_id}/retweet` | `twitter.go:handleTwitterRetweetCancel` | Go native。SQLite・認証・静的asset |
+| `DELETE /api/twitter/accounts/{screen_name}/tweets/{tweet_id}/favorite` | `twitter.go:handleTwitterFavoriteCancel` | Go API + CDP。Chrome/Brave・Twitter Web App・本人 Cookie が必要。API モック/隔離 CDP 検証、実サービス未検証 |
+| `DELETE /api/twitter/accounts/{screen_name}/tweets/{tweet_id}/retweet` | `twitter.go:handleTwitterRetweetCancel` | Go API + CDP。Chrome/Brave・Twitter Web App・本人 Cookie が必要。API モック/隔離 CDP 検証、実サービス未検証 |
 | `DELETE /api/users/{username}` | `server.go:handleSpecifiedUserDelete` | Go native。SQLite・認証・静的asset |
 | `DELETE /api/users/me` | `server.go:handleUserDelete` | Go native。SQLite・認証・静的asset |
 | `DELETE /api/users/me/account-links/{link_id}` | `server.go:handleAccountLinkDelete` | Go native。SQLite・認証・静的asset |
@@ -66,8 +66,8 @@ Python Router の115 routeとGoの登録先を照合。ルート登録は完全�
 | `GET /api/streams/video/{video_id}/{quality}/offline-stream` | `server.go:handleVideoStreamOffline` | Go native。FFmpeg/HWEncC・tsreadex・psisimux。HLS実録画/保存合成を検証 |
 | `GET /api/streams/video/{video_id}/{quality}/playlist` | `server.go:handleVideoStreamPlaylist` | Go native。FFmpeg/HWEncC・tsreadex・psisimux。HLS実録画/保存合成を検証 |
 | `GET /api/streams/video/{video_id}/{quality}/segment` | `server.go:handleVideoStreamSegment` | Go native。FFmpeg/HWEncC・tsreadex・psisimux。HLS実録画/保存合成を検証 |
-| `GET /api/twitter/accounts/{screen_name}/search` | `twitter.go:handleTwitterSearch` | 未完成: 既定 browser backend は UnavailableBackend。CDP作業を別保存 |
-| `GET /api/twitter/accounts/{screen_name}/timeline` | `twitter.go:handleTwitterTimeline` | 未完成: 既定 browser backend は UnavailableBackend。CDP作業を別保存 |
+| `GET /api/twitter/accounts/{screen_name}/search` | `twitter.go:handleTwitterSearch` | Go API + CDP。Chrome/Brave・Twitter Web App・本人 Cookie が必要。API モック/隔離 CDP 検証、実サービス未検証 |
+| `GET /api/twitter/accounts/{screen_name}/timeline` | `twitter.go:handleTwitterTimeline` | Go API + CDP。Chrome/Brave・Twitter Web App・本人 Cookie が必要。API モック/隔離 CDP 検証、実サービス未検証 |
 | `GET /api/twitter/video-proxy` | `twitter.go:handleTwitterVideoProxy` | Go native。SQLite・認証・静的asset |
 | `GET /api/users` | `server.go:handleUsers` | Go native。SQLite・認証・静的asset |
 | `GET /api/users/{username}` | `server.go:handleSpecifiedUser` | Go native。SQLite・認証・静的asset |
@@ -99,9 +99,9 @@ Python Router の115 routeとGoの登録先を照合。ルート登録は完全�
 | `POST /api/programs/search` | `server.go:handleProgramSearch` | Go native。EDCB CtrlCmd。実機予約/検索の受入れ未実施 |
 | `POST /api/recording/conditions` | `reservation_conditions.go:handleReservationConditionAdd` | Go native。EDCB CtrlCmd。実機予約/検索の受入れ未実施 |
 | `POST /api/recording/reservations` | `reservations.go:handleReservationAdd` | Go native。EDCB CtrlCmd。実機予約/検索の受入れ未実施 |
-| `POST /api/twitter/accounts/{screen_name}/keep-alive` | `twitter.go:handleTwitterKeepAlive` | 未完成: 既定 browser backend は UnavailableBackend。CDP作業を別保存 |
-| `POST /api/twitter/accounts/{screen_name}/tweets` | `twitter.go:handleTwitterTweet` | 未完成: 既定 browser backend は UnavailableBackend。CDP作業を別保存 |
-| `POST /api/twitter/auth` | `twitter.go:handleTwitterCookieAuth` | 未完成: 既定 browser backend は UnavailableBackend。CDP作業を別保存 |
+| `POST /api/twitter/accounts/{screen_name}/keep-alive` | `twitter.go:handleTwitterKeepAlive` | Go API + CDP。Chrome/Brave・Twitter Web App・本人 Cookie が必要。API モック/隔離 CDP 検証、実サービス未検証 |
+| `POST /api/twitter/accounts/{screen_name}/tweets` | `twitter.go:handleTwitterTweet` | Go API + CDP。Chrome/Brave・Twitter Web App・本人 Cookie が必要。API モック/隔離 CDP 検証、実サービス未検証 |
+| `POST /api/twitter/auth` | `twitter.go:handleTwitterCookieAuth` | Go API + CDP。Chrome/Brave・Twitter Web App・本人 Cookie が必要。API モック/隔離 CDP 検証、実サービス未検証 |
 | `POST /api/users` | `server.go:handleUserCreate` | Go native。SQLite・認証・静的asset |
 | `POST /api/users/me/account-links` | `server.go:handleAccountLinkCreate` | Go native。SQLite・認証・静的asset |
 | `POST /api/users/token` | `server.go:handleUserAccessToken` | Go native。SQLite・認証・静的asset |
@@ -115,8 +115,8 @@ Python Router の115 routeとGoの登録先を照合。ルート登録は完全�
 | `PUT /api/settings/client` | `server.go:handleClientSettingsUpdate` | Go native。SQLite・認証・静的asset |
 | `PUT /api/settings/server` | `server.go:handleServerSettingsUpdate` | Go native。SQLite・認証・静的asset |
 | `PUT /api/streams/video/{video_id}/{quality}/keep-alive` | `server.go:handleVideoStreamKeepAlive` | Go native。FFmpeg/HWEncC・tsreadex・psisimux。HLS実録画/保存合成を検証 |
-| `PUT /api/twitter/accounts/{screen_name}/tweets/{tweet_id}/favorite` | `twitter.go:handleTwitterFavorite` | 未完成: 既定 browser backend は UnavailableBackend。CDP作業を別保存 |
-| `PUT /api/twitter/accounts/{screen_name}/tweets/{tweet_id}/retweet` | `twitter.go:handleTwitterRetweet` | 未完成: 既定 browser backend は UnavailableBackend。CDP作業を別保存 |
+| `PUT /api/twitter/accounts/{screen_name}/tweets/{tweet_id}/favorite` | `twitter.go:handleTwitterFavorite` | Go API + CDP。Chrome/Brave・Twitter Web App・本人 Cookie が必要。API モック/隔離 CDP 検証、実サービス未検証 |
+| `PUT /api/twitter/accounts/{screen_name}/tweets/{tweet_id}/retweet` | `twitter.go:handleTwitterRetweet` | Go API + CDP。Chrome/Brave・Twitter Web App・本人 Cookie が必要。API モック/隔離 CDP 検証、実サービス未検証 |
 | `PUT /api/users/{username}` | `server.go:handleSpecifiedUserUpdate` | Go native。SQLite・認証・静的asset |
 | `PUT /api/users/me` | `server.go:handleUserUpdate` | Go native。SQLite・認証・静的asset |
 | `PUT /api/users/me/icon` | `server.go:handleUserUpdateIcon` | Go native。SQLite・認証・静的asset |

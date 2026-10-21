@@ -1,7 +1,6 @@
 // konomitv-go は KonomiTV サーバーの Go 版エントリーポイント。
 //
-// 段階的な移行のため、未実装の API は Python 版サーバー (uvicorn) へリバースプロキシする。
-// Python 版サーバーは server.port + 10 (デフォルト: 7010) で 127.0.0.77 にリッスンしている。
+// 既定では Go 単独で起動する。旧 Python プロキシは明示指定した場合だけ使用する。
 package main
 
 import (
@@ -28,6 +27,7 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/iptv"
 	"github.com/aki0429/KonomiTV/server-go/internal/logging"
 	"github.com/aki0429/KonomiTV/server-go/internal/stream"
+	"github.com/aki0429/KonomiTV/server-go/internal/twitter"
 	"github.com/aki0429/KonomiTV/server-go/internal/videostream"
 )
 
@@ -239,6 +239,7 @@ func main() {
 	}
 	// EDCB バックエンドで起動したチューナー (EpgDataCap_Bon) を全て終了する (Python 版 EDCBTuner.closeAll() 相当)
 	stream.CloseAllEDCBTuners()
+	twitter.ShutdownAll(shutdownCtx)
 	logger.Info("server stopped")
 }
 

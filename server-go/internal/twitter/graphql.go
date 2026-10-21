@@ -109,6 +109,8 @@ type Account struct {
 	CookieBrowserInfo string
 	// PlainCookies は未保存 (Temporary) アカウント用の平文 Cookie。
 	PlainCookies string
+	// LoadCookies は保存済み Cookie を API 層で復号する。秘密はログへ出さない。
+	LoadCookies func() (string, error)
 	// PersistCookies は Cookie を暗号化して DB に保存するコールバック (internal/api が設定する) 。
 	PersistCookies func(ctx context.Context, cookiesTxt string) error
 }
