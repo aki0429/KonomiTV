@@ -281,7 +281,7 @@ func installDependencies(ctx context.Context, root string, d Dependency, archive
 	if runtime.GOOS == "windows" {
 		ext = ".exe"
 	}
-	for _, n := range []string{"FFmpeg/ffmpeg", "FFmpeg/ffprobe", "tsreadex/tsreadex", "psisiarc/psisiarc"} {
+	for _, n := range []string{"FFmpeg/ffmpeg", "FFmpeg/ffprobe", "tsreadex/tsreadex", "psisiarc/psisiarc", "psisimux/psisimux"} {
 		p := filepath.Join(root, "server", "thirdparty", filepath.FromSlash(n)+ext)
 		if info, e := os.Stat(p); e != nil || !info.Mode().IsRegular() {
 			return fmt.Errorf("required dependency missing: %s", n)
