@@ -1144,12 +1144,19 @@ def Installer(version: str) -> None:
 
     elif platform_type == 'Linux':
 
+        # PM2 サービス名
+        ## 本家のインストーラーは 'KonomiTV' 固定だが、同じマシンの別フォルダに2つ目のインスタンスを入れると
+        ## pm2 上でサービス名が重複し、pm2 restart <サービス名> が意図しないインスタンスにも作用してしまう
+        ## そこで、インストール先フォルダの名前をそのままサービス名にする
+        ## (既定のインストール先 /opt/KonomiTV では従来どおり 'KonomiTV' になるため、既存の運用と互換)
+        pm2_service_name = install_path.name
+
         # PM2 サービスをインストール
         ## インストーラーは強制的に root 権限で実行されるので、ここで実行する PM2 も root ユーザーとして動いているものになる
         ## Mirakurun や EPGStation 同様、PM2 はユーザー権限よりも root 権限で動かしたほうが何かとよさそう
         result = RunSubprocess(
             'PM2 サービスをインストールしています…',
-            ['/usr/bin/env', 'pm2', 'start', '.venv/bin/python', '--name', 'KonomiTV', '--', 'KonomiTV.py'],
+            ['/usr/bin/env', 'pm2', 'start', '.venv/bin/python', '--name', pm2_service_name, '--', 'KonomiTV.py'],
             cwd = install_path / 'server/',  # カレントディレクトリを KonomiTV サーバーのベースディレクトリに設定
             error_message = 'PM2 サービスのインストール中に予期しないエラーが発生しました。',
             error_log_name = 'PM2 のエラーログ',
@@ -1183,7 +1190,7 @@ def Installer(version: str) -> None:
         # PM2 サービスを起動
         result = RunSubprocess(
             'PM2 サービスを起動しています…',
-            ['/usr/bin/env', 'pm2', 'start', 'KonomiTV'],
+            ['/usr/bin/env', 'pm2', 'start', pm2_service_name],
             cwd = install_path / 'server/',  # カレントディレクトリを KonomiTV サーバーのベースディレクトリに設定
             error_message = 'PM2 サービスの起動中に予期しないエラーが発生しました。',
             error_log_name = 'PM2 のエラーログ',
