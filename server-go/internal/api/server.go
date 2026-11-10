@@ -5,6 +5,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"io"
 	"log/slog"
@@ -37,6 +38,8 @@ type Server struct {
 	offlineSlots   chan struct{}                     // 通常視聴の余裕を残す三枠の保存上限
 	proxy          http.Handler                      // nil の場合はプロキシ無効
 	latestVersion  *latestVersionCache
+	// lifecycleContext は手動スキャンなどを HTTP 接続ではなくサーバーの終了に結び付ける。
+	lifecycleContext context.Context
 	// accessLogWriters はアクセスログの出力先 (標準出力とログファイル) 。
 	accessLogWriters []io.Writer
 	// shutdown はサーバーを終了するための関数 (main.go から設定する) 。
@@ -61,12 +64,14 @@ type Server struct {
 
 // Options は Server の生成に必要な依存関係。
 type Options struct {
-	Config  *config.Config
-	Paths   constants.Paths
-	DB      *sql.DB
-	WriteDB *sql.DB
-	Auth    *auth.Manager
-	Logger  *slog.Logger
+	// LifecycleContext はサーバーの終了時にバックグラウンド処理を止める。nil はテスト向けに Background を使う。
+	LifecycleContext context.Context
+	Config           *config.Config
+	Paths            constants.Paths
+	DB               *sql.DB
+	WriteDB          *sql.DB
+	Auth             *auth.Manager
+	Logger           *slog.Logger
 	// IPTV は IPTV チャンネル一覧のマネージャー。nil の場合は内部で生成する。
 	IPTV *iptv.Manager
 	// LiveStreams はライブストリームのマネージャー。nil の場合は内部で生成する。
@@ -114,7 +119,12 @@ func New(options Options) (*Server, error) {
 		IPTV:   iptvManager,
 		DB:     options.DB,
 	})
+	lifecycleContext := options.LifecycleContext
+	if lifecycleContext == nil {
+		lifecycleContext = context.Background()
+	}
 	return &Server{
+		lifecycleContext: lifecycleContext,
 		config:           options.Config,
 		paths:            options.Paths,
 		db:               options.DB,

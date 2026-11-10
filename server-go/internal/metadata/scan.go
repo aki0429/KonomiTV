@@ -274,6 +274,8 @@ var ErrBatchScanRunning = fmt.Errorf("batch scan of recording folders is already
 
 // ProcessOptions は ProcessRecordedFile のオプション。
 type ProcessOptions struct {
+	// MetadataOnly は一覧への登録を先行し、重いサムネイル・CM 解析を別キューへ委譲する。
+	MetadataOnly bool
 	// OriginalPath はシンボリックリンクなどで取得した元のファイルパス。
 	OriginalPath string
 	// ExistingDBRecordedVideos は既に DB に永続化されている録画ファイルのサマリー (nil の場合は DB から取得) 。
@@ -441,7 +443,7 @@ func (s *Service) ProcessRecordedFile(ctx context.Context, filePath string, opti
 	// 録画完了後のバックグラウンド解析タスクを開始
 	// Python 版は asyncio.create_task() で非同期に実行するが、Go 版は HDD への同時アクセスを避けるため
 	// ProcessRecordedFile 内で直列に実行する (外部から見た最終状態は同じ) 。
-	if program.Video.Status == "Recorded" {
+	if program.Video.Status == "Recorded" && !options.MetadataOnly {
 		s.runBackgroundAnalysis(ctx, filePath, program.Video.Duration)
 	}
 	return nil

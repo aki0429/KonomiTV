@@ -148,6 +148,7 @@ func main() {
 	defer stop()
 
 	server, err := api.New(api.Options{
+		LifecycleContext: ctx,
 		Config:           cfg,
 		Paths:            paths,
 		DB:               db,
@@ -164,6 +165,17 @@ func main() {
 	if err != nil {
 		logger.Error("failed to initialize server", slog.Any("error", err))
 		os.Exit(1)
+	}
+
+	// Python 版を併走させる移行モードでは二重監視を避け、Go 単独運転時だけ開始する。
+	monitorDone := make(chan struct{})
+	if *noProxy {
+		go func() {
+			defer close(monitorDone)
+			server.RunRecordedFolderMonitoring(ctx)
+		}()
+	} else {
+		close(monitorDone)
 	}
 
 	// 録画視聴 (HLS) のエンコーダーを登録する (VideoEncodingTask 相当)
@@ -206,6 +218,12 @@ func main() {
 	defer cancel()
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("failed to shutdown server gracefully", slog.Any("error", err))
+	}
+	// DB 接続を閉じる前に、録画監視と外部プロセスのキャンセル完了を待つ。
+	select {
+	case <-monitorDone:
+	case <-shutdownCtx.Done():
+		logger.Warn("Recorded folder monitoring did not stop before shutdown timeout.")
 	}
 	// EDCB バックエンドで起動したチューナー (EpgDataCap_Bon) を全て終了する (Python 版 EDCBTuner.closeAll() 相当)
 	stream.CloseAllEDCBTuners()

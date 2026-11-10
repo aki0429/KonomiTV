@@ -1,9 +1,12 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"sync"
+	"time"
 
 	"github.com/aki0429/KonomiTV/server-go/internal/metadata"
 )
@@ -51,6 +54,30 @@ func (s *Server) newMetadataService() *metadata.Service {
 		},
 		Logger: s.logger,
 	}
+}
+
+// RunRecordedFolderMonitoring は録画一覧の継続更新と、低優先度のサムネイル解析を実行する。
+// HTTP リクエストと切り離し、サーバー終了時にはすべての worker が停止するまで待つ。
+func (s *Server) RunRecordedFolderMonitoring(ctx context.Context) {
+	service := s.newMetadataService()
+	var workers sync.WaitGroup
+	workers.Go(func() { service.RunRecordingMonitor(ctx, 10*time.Second) })
+	workers.Go(func() {
+		// 一覧への取り込みを先行させる。重い画像生成が次の録画登録を塞がないよう別 worker とする。
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if err := service.RunBackgroundAnalysis(ctx); err != nil && ctx.Err() == nil {
+					s.logger.Error("Failed to analyze recorded files in background.", "error", err)
+				}
+			}
+		}
+	})
+	workers.Wait()
 }
 
 // registerMetadataRoutes は録画メタデータ解析系の 4 ルートを mux に登録する。
@@ -111,7 +138,8 @@ func (s *Server) handleMetadataVideoThumbnailRegenerate(w http.ResponseWriter, r
 // 移植元: MaintenanceRouter.BatchScanAPI()
 func (s *Server) handleMetadataBatchScan(w http.ResponseWriter, r *http.Request) {
 	service := s.newMetadataService()
-	_, err := service.RunBatchScan(r.Context())
+	// ブラウザーの切断・タイムアウトで録画登録が中途停止しないよう、サーバーの生存期間を使う。
+	_, err := service.RunBatchScan(s.lifecycleContext)
 	if err == metadata.ErrBatchScanRunning {
 		writeError(w, http.StatusTooManyRequests, "Batch scan of recording folders is already running")
 		return
