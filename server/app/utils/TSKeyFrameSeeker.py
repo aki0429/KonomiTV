@@ -171,6 +171,13 @@ class TSKeyFrameSeeker:
     PCR_SEARCH_WINDOW_BYTES = 2 * 1024 * 1024
     KEYFRAME_BACKTRACK_BYTES = 8 * 1024 * 1024
     MAX_KEYFRAME_SCAN_BYTES = 96 * 1024 * 1024
+    # 録画中ファイルの追いかけ再生で、ファイル末尾から読み直して「書き込まれた範囲」を測る際の初回スキャン幅
+    ## 1 PES (約1GOP) ぶんのデータが必ず収まる程度の幅を確保する
+    TAIL_SCAN_INITIAL_BYTES = 8 * 1024 * 1024
+    # 末尾スキャン幅を拡張する際の倍率 (1 PES が極端に大きい TS 向け)
+    TAIL_SCAN_EXPANSION_FACTOR = 4
+    # 末尾スキャンを試行する最大回数 (この回数だけ幅を拡張して見つからなければ打ち切る)
+    TAIL_SCAN_MAX_ATTEMPTS = 4
 
 
     @staticmethod
@@ -349,6 +356,129 @@ class TSKeyFrameSeeker:
             source_file_position = keyframe.offset,
             source_start_dts = keyframe.dts,
         )
+
+
+    @staticmethod
+    def findAvailableDuration(path: Path, stream_info: TSStreamInfo, source_base_dts: int) -> float:
+        """
+        録画ファイルに現在書き込まれている範囲の長さ (秒) を、末尾の映像 PES の DTS から求める
+        録画中のファイルを追いかけ再生する際に、「どこまでのセグメントが完全なデータを持つか」の判定に使う
+
+        末尾 PCR ではなく映像 PES の DTS を基準にするのは、PCR を持たない TS (加工済みの TS や
+        一部の録画ファイル) でも測定できるようにするため
+        測定対象は「最後に完全な形で書き込まれた映像 PES」なので、追いかけ再生で完全なデータを持つ
+        セグメントだけをプレイリストへ追加するという要件と一致する
+
+        Args:
+            path (Path): TS コンテナの録画ファイルパス
+            stream_info (TSStreamInfo): 対象映像 PID などのストリーム情報
+            source_base_dts (int): 録画先頭キーフレームの DTS (90kHz, seek() に渡すものと同じ座標系)
+
+        Returns:
+            float: 録画先頭から現在のファイル末尾までの秒数 (測定できない場合は 0.0)
+        """
+
+        last_pes_dts = TSKeyFrameSeeker.__readLastWrittenVideoDTS(path, stream_info)
+        if last_pes_dts is None:
+            return 0.0
+
+        # 33bit の DTS は wrap するため、録画先頭の基準 DTS に寄せてから差分を取る
+        available_ticks = TSKeyFrameSeeker.unwrapNear(last_pes_dts, source_base_dts) - source_base_dts
+
+        # 先頭より前まで遡った位置から測定を始めた場合など、負の値はあり得ない
+        return max(0.0, available_ticks / ts.HZ)
+
+
+    @staticmethod
+    def __readLastWrittenVideoDTS(path: Path, stream_info: TSStreamInfo) -> int | None:
+        """
+        録画ファイルの末尾付近で、最後に完全な形で書き込まれた映像 PES の DTS (90kHz) を返す
+
+        末尾スキャン幅の中に映像 PES の開始が2つ未満しかない場合は、幅を拡張して再挑戦する
+        (1 PES より小さい幅では「最後の完全 PES」を確定できない)
+
+        Args:
+            path (Path): TS コンテナの録画ファイルパス
+            stream_info (TSStreamInfo): 対象映像 PID などのストリーム情報
+
+        Returns:
+            int | None: 最後の完全な映像 PES の DTS (見つからない場合は None)
+        """
+
+        file_size = path.stat().st_size
+        scan_bytes = TSKeyFrameSeeker.TAIL_SCAN_INITIAL_BYTES
+        for _ in range(TSKeyFrameSeeker.TAIL_SCAN_MAX_ATTEMPTS):
+            # スキャン開始位置はパケット境界に揃える (途中から読み始めると同期が取れない)
+            start_offset = max(0, ((file_size - scan_bytes) // stream_info.packet_size) * stream_info.packet_size)
+            last_pes_dts = TSKeyFrameSeeker.__scanLastCompletePESDTS(path, stream_info, start_offset)
+            if last_pes_dts is not None:
+                return last_pes_dts
+            # 映像 PES の開始が2つ見つからなかった場合は、幅を拡張して再度挑戦する
+            scan_bytes *= TSKeyFrameSeeker.TAIL_SCAN_EXPANSION_FACTOR
+        return None
+
+
+    @staticmethod
+    def __scanLastCompletePESDTS(path: Path, stream_info: TSStreamInfo, start_offset: int) -> int | None:
+        """
+        指定位置以降の範囲から、最後に完全な形で書き込まれた映像 PES の DTS (90kHz) を返す
+
+        先頭から末尾まで PES をパースすると録画ファイル全体を読む必要があるため、
+        まず映像 PES の開始位置だけを集め、そのうち最後から2番目の PES を1つ分だけパースして DTS を取り出す
+        (PESParser は「次の PES の開始」を見た時点で前の PES を返すので、2つ目の開始位置が必要になる)
+
+        Args:
+            path (Path): TS コンテナの録画ファイルパス
+            stream_info (TSStreamInfo): 対象映像 PID などのストリーム情報
+            start_offset (int): スキャンを開始するファイル位置
+
+        Returns:
+            int | None: 最後の完全な映像 PES の DTS (見つからない場合は None)
+        """
+
+        packet_size = stream_info.packet_size
+        video_pid = stream_info.video_pid
+
+        # 映像 PES の開始位置だけを先に集める (ここでは PES の中身をパースしない)
+        pes_start_offsets: list[int] = []
+        with path.open('rb') as file:
+            file.seek(start_offset)
+            while True:
+                file_offset = file.tell()
+                raw_packet = file.read(packet_size)
+                if len(raw_packet) < packet_size:
+                    break  # ファイル末尾 (録画中の不完全なパケットもここで打ち切る)
+                packet = TSKeyFrameSeeker.normalizePacket(raw_packet, packet_size)
+                if packet is None:
+                    continue
+                if ts.pid(packet) == video_pid and ts.payload_unit_start_indicator(packet) is True:
+                    pes_start_offsets.append(file_offset)
+
+        # 「最後の完全な PES」を取り出すには、最後から2番目の PES 開始位置が必要
+        if len(pes_start_offsets) < 2:
+            return None
+        parse_start_offset = pes_start_offsets[-2]
+
+        # 最後から2番目の PES 開始位置から1つ分だけパースし、最初に返った PES の DTS を取る
+        parser = TSKeyFrameSeeker.createPESParser(stream_info.codec)
+        with path.open('rb') as file:
+            file.seek(parse_start_offset)
+            while True:
+                raw_packet = file.read(packet_size)
+                if len(raw_packet) < packet_size:
+                    break
+                packet = TSKeyFrameSeeker.normalizePacket(raw_packet, packet_size)
+                if packet is None or ts.pid(packet) != video_pid:
+                    continue
+                parser.push(packet)
+                for pes in parser:
+                    # DTS がなければ PTS で代用する (B フレームを持たないストリーム向け)
+                    dts_value = pes.dts()
+                    raw_dts = dts_value if dts_value is not None else pes.pts()
+                    if raw_dts is None:
+                        continue
+                    return raw_dts
+        return None
 
 
     @staticmethod

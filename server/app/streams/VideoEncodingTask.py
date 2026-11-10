@@ -80,6 +80,11 @@ class VideoEncodingTask:
         # エンコードタスクを完了済みかどうか
         self._is_finished: bool = False
 
+        # 録画中のファイルの追いかけ再生で、録画ファイル末尾のデータ到着を待っている開始時刻 (秒)
+        ## FeedTSStream() のワーカースレッドが書き込み、__isWaitingForLiveInput() がイベントループ側から読む
+        ## 待機に入っていないときは None。単一の読み書きしか行わないため、ロックは不要
+        self._live_input_waiting_since: float | None = None
+
         # 破棄されているかどうか
         self._is_cancelled: bool = False
 
@@ -841,11 +846,14 @@ class VideoEncodingTask:
                 try:
                     # MPEG-TS を処理する場合で、直前に PAT/PMT を抽出できた場合
                     # PAT/PMT を先頭に加えて tsreadex に入力する
-                    if initial_pat_pmt_data is not None:
+                    # 録画中のファイルの追いかけ再生では、tsreadex が録画ファイルを直接開く経路だと
+                    # ファイル末尾で入力が打ち切られて追いかけ再生ができないため、必ずパイプ経由でデータを供給する
+                    if initial_pat_pmt_data is not None or self.video_stream.is_live_recording is True:
                         # PAT/PMT を先頭に加えた TS データ用の読み込み用パイプと書き込み用パイプを作成
                         tsreadex_stdin_read, tsreadex_stdin_write = os.pipe()
                         tsreadex_stdin_write_generation_token = self.__registerTSReadExInputPipe(tsreadex_stdin_write)
-                        pat_pmt_data: bytes = initial_pat_pmt_data
+                        # 録画中の追いかけ再生では PAT/PMT を抽出できない場合もあるので、そのときは空データから始める
+                        pat_pmt_data: bytes = initial_pat_pmt_data if initial_pat_pmt_data is not None else b''
                         # FeedTSStream() はワーカースレッドで動くため、クロージャ経由で参照する値をここでキャプチャしておく
                         feed_start_source_dts = current_segment.source_start_dts
                         feed_ts_stream_info = self.video_stream.ts_stream_info
@@ -888,6 +896,9 @@ class VideoEncodingTask:
                                 assert file is not None
                                 packet_size = feed_ts_stream_info.packet_size if feed_ts_stream_info is not None else ts.PACKET_SIZE
                                 chunk_size = packet_size * 10000  # 10000 パケットずつ読み込む
+                                # 録画中のファイルの追いかけ再生で、ファイル末尾の待機に入った時刻
+                                ## 待機に入っていないときは None、データを読み込めたら None に戻す
+                                live_tail_wait_started_at: float | None = None
                                 while True:
                                     # tsreadex プロセス終了時は速やかにループを抜ける
                                     if (
@@ -903,7 +914,34 @@ class VideoEncodingTask:
                                     chunk_file_offset = file.tell()
                                     chunk = file.read(chunk_size)
                                     if not chunk:
-                                        break
+                                        # 録画中のファイルは追いかけ再生として、次のデータが書き込まれるまで待つ
+                                        ## ここでループを抜けると tsreadex への入力が止まり、最後の不完全なセグメントを
+                                        ## 分割前に確定させてしまうため、プレイリストの長さと実データの長さが一致しなくなる
+                                        if live_tail_wait_started_at is None:
+                                            live_tail_wait_started_at = time.time()
+                                            # エンコーダー出力側の読み取りタイムアウトを延長するため、入力待ちに入った時刻を共有する
+                                            self._live_input_waiting_since = live_tail_wait_started_at
+                                            logging.debug(
+                                                f'{self.video_stream.log_prefix}[Segment {current_sequence}] '
+                                                f'Reached the end of the recording file. Waiting for new recorded data...'
+                                            )
+                                        # 録画が終わったと判断された場合や、待ちすぎの場合は追いかけ再生を打ち切る
+                                        if (
+                                            self.video_stream.is_live_recording is False or
+                                            (time.time() - live_tail_wait_started_at) >=
+                                            self.video_stream.LIVE_TAIL_MAX_DATA_WAIT_SECONDS
+                                        ):
+                                            logging.debug(
+                                                f'{self.video_stream.log_prefix}[Segment {current_sequence}] '
+                                                f'Stopped waiting for new recorded data.'
+                                            )
+                                            break
+                                        # 録画データが追加されるまでポーリング間隔を空けて待つ
+                                        time.sleep(self.video_stream.LIVE_TAIL_POLL_INTERVAL_SECONDS)
+                                        continue
+                                    # 新しいデータを読み込めたので、待機状態は解除する
+                                    live_tail_wait_started_at = None
+                                    self._live_input_waiting_since = None
                                     # tsreadex に渡すチャンクを TSKeyFrameCollector にも通し、入力 TS 上のキーフレーム位置を収集する
                                     ## 見つかったキーフレームはイベントループ側の FlushCollectedSegmentMap() で segment_map に変換される
                                     if input_keyframe_collector is not None:
@@ -1076,8 +1114,13 @@ class VideoEncodingTask:
                     # エンコーダーの出力読み取りタイムアウトをチェック
                     current_time = asyncio.get_running_loop().time()
                     if current_time - last_read_time > read_timeout:
-                        logging.warning(f'{self.video_stream.log_prefix}[Segment {current_sequence}] Encoder output read timeout.')
-                        break
+                        # 録画中のファイルの追いかけ再生では、次の録画データの入力を待っている間は
+                        ## エンコーダーの出力も止まるため、入力待ちと判定できる間はタイムアウトを延長して待ち続ける
+                        if self.__isWaitingForLiveInput() is True:
+                            last_read_time = current_time
+                        else:
+                            logging.warning(f'{self.video_stream.log_prefix}[Segment {current_sequence}] Encoder output read timeout.')
+                            break
 
                     # 同期バイトを探す
                     isEOF = False
@@ -1248,10 +1291,22 @@ class VideoEncodingTask:
 
                                     # 最終セグメントの場合はループを抜ける
                                     if current_sequence >= len(self.video_stream.segments):
-                                        # 最終セグメント完了時は残りのキーフレーム情報をまとめて保存する
-                                        await FlushCollectedSegmentMap()
-                                        logging.info(f'{self.video_stream.log_prefix} Reached the final segment.')
-                                        break
+                                        # 録画中の追いかけ再生では、セグメントリストは録画ファイルの成長に応じて
+                                        ## 後から増えていくため、次のセグメントが利用可能になるまで待ってから続ける
+                                        ## (ここで打ち切ると、録画が進んでもプレイリストが終端として扱われてしまう)
+                                        is_next_segment_available = False
+                                        if self.video_stream.is_live_recording is True:
+                                            is_next_segment_available = await self.video_stream.waitForNextLiveSegment(current_sequence)
+                                            if is_next_segment_available is True:
+                                                logging.info(
+                                                    f'{self.video_stream.log_prefix}[Segment {current_sequence}] '
+                                                    f'A new segment became available for live tail playback. Continuing...'
+                                                )
+                                        if is_next_segment_available is False:
+                                            # 最終セグメント完了時は残りのキーフレーム情報をまとめて保存する
+                                            await FlushCollectedSegmentMap()
+                                            logging.info(f'{self.video_stream.log_prefix} Reached the final segment.')
+                                            break
 
                                     # 新しいセグメント用のデータと状態を初期化
                                     ## ここで encoded_segment は空の bytearray にリセットされる
@@ -1716,3 +1771,25 @@ class VideoEncodingTask:
                 )
         except OSError:
             pass
+
+
+    def __isWaitingForLiveInput(self) -> bool:
+        """
+        録画中のファイルの追いかけ再生のために、録画ファイル末尾のデータ到着を待っている最中かどうかを返す
+
+        FeedTSStream() のワーカースレッドが入力待ちに入った時刻を基準に、待ちすぎではないかを判定する
+        エンコーダー出力側の読み取りタイムアウトを延長するかどうかの判断に使う
+
+        Returns:
+            bool: 録画中のファイルの次のデータを待っている最中と判断できる場合は True
+        """
+
+        if self.video_stream.is_live_recording is False:
+            return False
+
+        waiting_since = self._live_input_waiting_since
+        if waiting_since is None:
+            return False
+
+        # 入力側が保険上限を超えて待つ状態なら、待ち続けても復帰しないため False として扱う
+        return (time.time() - waiting_since) < self.video_stream.LIVE_TAIL_MAX_DATA_WAIT_SECONDS

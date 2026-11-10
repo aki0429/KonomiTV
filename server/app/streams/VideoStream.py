@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar, Literal
 
+import anyio
 from biim.mpeg2ts import ts
 from fastapi import HTTPException, status
 from tortoise import transactions
@@ -84,6 +85,21 @@ class VideoStream:
     # 録画視聴セッションが再生されていない場合にタイムアウトするまでの時間 (秒)
     # この時間が経過すると、録画視聴セッションのインスタンスは自動的に破棄される
     SESSION_TIMEOUT: ClassVar[float] = float(10)  # 10 秒
+
+    # 録画中のファイルを追いかけ再生する際に、録画ファイルの成長を監視してセグメントリストを拡張する間隔 (秒)
+    LIVE_TAIL_POLL_INTERVAL_SECONDS: ClassVar[float] = 1.0
+
+    # 録画中のファイルを追いかけ再生する際に、ファイルサイズがこの秒数だけ変化しなければ録画完了と判断するまでの秒数
+    ## RecordedScanTask.RECORDING_COMPLETE_SECONDS (15秒) と同じ間隔を空け、スキャン側の完了判定より先に打ち切らないようにする
+    LIVE_TAIL_NO_GROWTH_SECONDS: ClassVar[float] = 15.0
+
+    # 録画中のファイルを追いかけ再生する際に、エンコーダーが次のセグメントのデータ到着を待つ最大秒数
+    ## 1セグメント分の録画が進むまでの時間より長めに取り、待ちすぎによるエンコーダー停止は防ぐ
+    LIVE_TAIL_WAIT_SEGMENT_TIMEOUT_SECONDS: ClassVar[float] = 45.0
+
+    # 録画中のファイルを追いかけ再生する際に、ファイル末尾で次の録画データを待つ最大秒数
+    ## 録画が停止した場合は LIVE_TAIL_NO_GROWTH_SECONDS 側で検知するため、ここは入力待ちの保険上限として使う
+    LIVE_TAIL_MAX_DATA_WAIT_SECONDS: ClassVar[float] = 30.0
 
     # 一度でも読み取られた HLS セグメントの最大保持数
     MAX_READED_SEGMENTS: ClassVar[int] = 10
@@ -188,6 +204,27 @@ class VideoStream:
             # destroy() の開始後に待機中のセグメント要求や生存期限更新がセッションを再始動しないよう、破棄済みかどうかを共有する
             instance._is_destroyed = False
 
+            # 録画中のファイルを追いかけ再生するかどうか
+            ## 録画ステータスが Recording で MPEG-TS コンテナのときだけ有効 (MPEG-4 は moov が末尾に無いと解析できない)
+            instance._is_live_recording = (
+                recorded_program.recorded_video.status == 'Recording' and
+                recorded_program.recorded_video.container_format == 'MPEG-TS'
+            )
+            # 追いかけ再生で最後に測定した、録画ファイルに書き込まれている範囲の長さ (秒)
+            instance._live_available_duration = 0.0
+            # 追いかけ再生の録画完了判定に使う、最後にファイルサイズを確認した値とその時刻
+            ## 録画が停止してもファイルサイズはすぐには変わらないため、変化しない時間で録画完了を判断する
+            instance._live_last_checked_size = 0
+            instance._live_size_changed_at = 0.0
+            # 追いかけ再生を終えると判断した時刻と、最後の不完全なセグメントまで確定して VOD 化したかどうか
+            ## RecordedScanTask の録画完了判定と live tail 側の判定はほぼ同時に成立するため、
+            ## 先に終わった側は DB の status が Recorded になるまで待ってから最後のセグメントを追加する
+            instance._live_tail_ended_at = None
+            instance._live_finalized = False
+            # セグメントリストを録画ファイルの成長に合わせて拡張し続けるタスクへの参照
+            ## asyncio-dangling-task を避けるため、明示的な強参照として保持する
+            instance._live_tail_task_ref = None
+
             # キャンセルされない限り SESSION_TIMEOUT 秒後にインスタンスを破棄するタイマー
             # cancel_destroy_timer() を呼び出すことでタイマーをキャンセルできる
             instance._cancel_destroy_timer = SetTimeout(lambda: asyncio.create_task(instance.destroy()), cls.SESSION_TIMEOUT)
@@ -196,6 +233,9 @@ class VideoStream:
             cls.__instances[session_id] = instance
 
             logging.info(f'{instance.log_prefix} Streaming Session Started.')
+
+            # 録画中のファイルを追いかけ再生する場合は、ここからセグメントリストの監視を始める
+            instance.__startLiveTailLoop()
 
         else:
             # 既存のインスタンスを取得
@@ -268,6 +308,13 @@ class VideoStream:
         self._video_encoding_task_lock: asyncio.Lock
         self._video_encoding_task_ref: asyncio.Task[None] | None
         self._detached_video_encoding_task_refs: set[asyncio.Task[None]]
+        self._is_live_recording: bool
+        self._live_available_duration: float
+        self._live_last_checked_size: int
+        self._live_size_changed_at: float
+        self._live_tail_ended_at: float | None
+        self._live_finalized: bool
+        self._live_tail_task_ref: asyncio.Task[None] | None
         self._cancel_destroy_timer: Callable[[], None]
 
 
@@ -393,6 +440,250 @@ class VideoStream:
         self._cancel_destroy_timer = SetTimeout(lambda: asyncio.create_task(self.destroy()), self.SESSION_TIMEOUT)
 
 
+    @property
+    def is_live_recording(self) -> bool:
+        """
+        録画中のファイルを追いかけ再生しているかどうか (False になった時点で録画完了として扱う)
+        """
+
+        return self._is_live_recording
+
+
+    async def updateLiveSegmentList(self) -> None:
+        """
+        録画中のファイルの追いかけ再生に向けて、現在ファイルに書き込まれている範囲からセグメントリストを更新する
+
+        録画ファイルは再生中も育ち続けるため、仮想 HLS M3U8 プレイリストのセグメントリストは
+        録画時間とフレームレートから作るのではなく、ファイル末尾の映像 PES から「今どこまで書けているか」を測って決める
+        完全なデータを持つセグメントのみを追加し、最後の不完全なセグメントは録画完了まで追加しない
+        (途中で追加すると EXTINF と実データの長さが一致しなくなり、シークバーや字幕同期が崩れる)
+        """
+
+        recorded_video = self.recorded_program.recorded_video
+
+        # MPEG-4 は moov が末尾に無いと解析できず追いかけ再生できないので、追いかけ再生を打ち切る
+        if recorded_video.container_format != 'MPEG-TS':
+            self._is_live_recording = False
+            return
+
+        # 録画途中のファイルサイズを確認する
+        # サイズ取得は同期 I/O なので anyio.Path 側の stat() を使う
+        recorded_file_path = anyio.Path(recorded_video.file_path)
+        try:
+            current_size = (await recorded_file_path.stat()).st_size
+        except OSError as ex:
+            # 録画ファイルが見当たない場合はそれ以上待っても意味が無いので、追いかけ再生を打ち切る
+            logging.warning(f'{self.log_prefix} Failed to stat the recording file for live tail playback: {ex}')
+            self._is_live_recording = False
+            return
+
+        # 前回確認時からファイルサイズが変化しているかどうかを記録する
+        # 録画が終了してもファイルサイズはすぐには変わらないため、一定時間変化しないことを録画完了の判定に使う
+        current_time = time.monotonic()
+        if current_size != self._live_last_checked_size:
+            self._live_last_checked_size = current_size
+            self._live_size_changed_at = current_time
+            # 録画が一時的に止まっていただけで、また録画が再開した場合は追いかけ再生を継続する
+            ## (最後のセグメントを確定したあとは VOD として扱うので、再生をやり直さない)
+            if self._is_live_recording is False and self._live_finalized is False:
+                logging.info(f'{self.log_prefix} The recording file has grown again. Resuming live tail playback.')
+                self._is_live_recording = True
+                self._live_tail_ended_at = None
+                self._live_size_changed_at = current_time
+        if (current_time - self._live_size_changed_at) >= self.LIVE_TAIL_NO_GROWTH_SECONDS:
+            if self._is_live_recording is True:
+                logging.info(
+                    f'{self.log_prefix} The recording file has stopped growing for '
+                    f'{self.LIVE_TAIL_NO_GROWTH_SECONDS:.1f}s. Ending live tail playback.'
+                )
+                self._is_live_recording = False
+                self._live_tail_ended_at = current_time
+
+        # 録画ファイルに現在書き込まれている範囲の長さ (秒) を求める
+        available_duration = self._live_available_duration
+        try:
+            await self.ensureTSKeyFrameContext()
+            if self._ts_stream_info is None or self._ts_source_base_dts is None:
+                raise ValueError('Failed to read stream info from the recording file.')
+            available_duration = await asyncio.to_thread(
+                TSKeyFrameSeeker.findAvailableDuration,
+                Path(recorded_video.file_path),
+                self._ts_stream_info,
+                self._ts_source_base_dts,
+            )
+        except Exception as ex:
+            logging.warning(f'{self.log_prefix} Failed to measure the recorded duration for live tail playback:', exc_info=ex)
+
+        # 測った録画時間をセグメントリストへ反映する
+        ## 録画中は完全なデータを持つセグメントのみを対象とし、最後の不完全なセグメントは録画完了後に追加する
+        self._live_available_duration = max(available_duration, 0.0)
+        self.__rebuildLiveSegments()
+
+        # 録画が完了したかどうかと、完了時の録画時間は DB の方が正しいので、録画ファイルの成長が止まってから取得する
+        ## RecordedScanTask は一定時間ファイルサイズが変化しないと status を Recorded にするため、
+        ## 追いかけ再生側のファイルサイズ判定が先に終わっても DB 側の更新を待って最後のセグメントを補正する
+        ## 毎 Poll で DB を読むと SQLite への負荷が増えるため、録画完了の可能性が出てからに絞る
+        if self._is_live_recording is False and self._live_finalized is False:
+            try:
+                await recorded_video.refresh_from_db(fields = ['status', 'duration'])
+            except Exception as ex:
+                logging.warning(f'{self.log_prefix} Failed to refresh the recorded video for live tail playback:', exc_info=ex)
+
+            # DB 側の録画完了を待つ時間にも上限を設ける
+            ## 録画ファイルの成長が止まった以上、待ち続けてもセグメントは増えないため
+            db_recorded_seconds = (current_time - self._live_tail_ended_at) if self._live_tail_ended_at else 0.0
+            is_db_completed = recorded_video.status != 'Recording'
+            if is_db_completed is True or db_recorded_seconds >= self.LIVE_TAIL_NO_GROWTH_SECONDS * 2:
+                # DB に録画時間が登録されている場合は、測定値より DB の値を優先する
+                recorded_duration = recorded_video.duration if recorded_video.duration > 0 else self._live_available_duration
+                self.__rebuildLiveSegments(final_duration = max(recorded_duration, self._live_available_duration))
+                self._live_finalized = True
+                logging.info(
+                    f'{self.log_prefix} Live tail playback finalized as VOD. '
+                    f'[segments: {len(self._segments)}, duration: {recorded_duration:.3f}s]'
+                )
+                # セグメントリストが空のままの場合は、DB の録画時間から通常の VOD と同じセグメントリストを作る
+                if len(self._segments) == 0:
+                    segment_count = max(1, math.ceil(recorded_duration / self._segment_duration_seconds))
+                    for segment_sequence in range(segment_count):
+                        playlist_start_seconds = segment_sequence * self._segment_duration_seconds
+                        remaining_duration = recorded_duration - playlist_start_seconds
+                        duration_seconds = min(self._segment_duration_seconds, max(remaining_duration, 0.001))
+                        self._segments.append(VideoStreamSegment(
+                            sequence_index = segment_sequence,
+                            playlist_start_seconds = playlist_start_seconds,
+                            source_file_position = None,
+                            source_start_dts = None,
+                            duration_seconds = duration_seconds,
+                            encode_status = 'Pending',
+                            encoded_segment_ts_future = asyncio.Future(),
+                        ))
+
+
+    def __rebuildLiveSegments(self, final_duration: float | None = None) -> None:
+        """
+        録画中ファイルの追いかけ再生において、測定した録画時間からセグメントリストを作り直す
+
+        Args:
+            final_duration (float | None): 録画完了時の録画時間 (None の場合は録画中として扱う)
+        """
+
+        if final_duration is not None:
+            # 録画完了時は最後の不完全なセグメントを含めて確定させる
+            target_segment_count = max(1, math.ceil(final_duration / self._segment_duration_seconds))
+        else:
+            # 録画中は完全なセグメントのみを追加し、最後の不完全なセグメントは録画完了まで待つ
+            target_segment_count = int(self._live_available_duration / self._segment_duration_seconds)
+
+        # 作るべきセグメント数を下回る場合のみ追加する (既存セグメントの状態はそのまま維持する)
+        if target_segment_count <= len(self._segments):
+            return
+
+        for segment_sequence in range(len(self._segments), target_segment_count):
+            playlist_start_seconds = segment_sequence * self._segment_duration_seconds
+            if final_duration is not None:
+                # 録画完了時の最後のセグメントは、録画時間の端数に合わせて長さを詰める
+                remaining_duration = final_duration - playlist_start_seconds
+                segment_duration_seconds = min(self._segment_duration_seconds, max(remaining_duration, 0.001))
+            else:
+                # 録画中のセグメントは固定長になるまで増やさない
+                segment_duration_seconds = self._segment_duration_seconds
+            self._segments.append(VideoStreamSegment(
+                sequence_index = segment_sequence,
+                playlist_start_seconds = playlist_start_seconds,
+                source_file_position = None,
+                source_start_dts = None,
+                duration_seconds = segment_duration_seconds,
+                encode_status = 'Pending',
+                encoded_segment_ts_future = asyncio.Future(),
+            ))
+
+        logging.info(
+            f'{self.log_prefix} Total {len(self._segments)} virtual segments '
+            f'(segment_duration: {self._segment_duration_seconds:.6f}s).'
+        )
+
+
+    async def waitForNextLiveSegment(self, segment_sequence: int) -> bool:
+        """
+        録画中のファイルの追いかけ再生で、指定シーケンスのセグメントがデータとして利用可能になるまで待機する
+
+        Args:
+            segment_sequence (int): 待機対象セグメントのシーケンス番号
+
+        Returns:
+            bool: セグメントが利用可能になった場合は True (録画完了・タイムアウトで諦めた場合は False)
+        """
+
+        wait_start_time = time.monotonic()
+        while self._is_destroyed is False:
+            if segment_sequence < len(self._segments):
+                return True
+
+            # 録画ファイルの成長を監視してセグメントリストを更新する
+            await self.updateLiveSegmentList()
+            if segment_sequence < len(self._segments):
+                return True
+
+            # 録画が完了したがセグメントが無い場合は、これ以上待っても意味が無い
+            if self._is_live_recording is False:
+                return False
+
+            if (time.monotonic() - wait_start_time) >= self.LIVE_TAIL_WAIT_SEGMENT_TIMEOUT_SECONDS:
+                logging.info(
+                    f'{self.log_prefix} Timed out waiting for segment {segment_sequence} '
+                    f'in live tail playback.'
+                )
+                return False
+
+            await asyncio.sleep(self.LIVE_TAIL_POLL_INTERVAL_SECONDS)
+
+        return False
+
+
+    def __startLiveTailLoop(self) -> None:
+        """
+        録画中のファイルの追いかけ再生で、セグメントリストを録画ファイルの成長に合わせて拡張し続けるタスクを起動する
+        asyncio-dangling-task を避けるため、タスクへの強参照を保持する
+        """
+
+        if self._is_live_recording is False:
+            return
+
+        # 既に起動中の場合は何もしない
+        if self._live_tail_task_ref is not None and self._live_tail_task_ref.done() is False:
+            return
+
+        # 実行中のイベントループが必要なので、無い場合は何もしない
+        try:
+            self._live_tail_task_ref = asyncio.create_task(self.__liveTailLoop())
+        except RuntimeError as ex:
+            # イベントループが実行されていない状況なので、ここではタスクを作らずに通常の再生と同じ挙動にフォールバックする
+            logging.warning(f'{self.log_prefix} Failed to start the live tail loop:', exc_info=ex)
+
+
+    async def __liveTailLoop(self) -> None:
+        """
+        録画中のファイルの追いかけ再生で、録画ファイルの成長に合わせて HLS セグメントリストを拡張し続ける
+        クライアントからのプレイリスト要求を待たずに、最新のセグメントリストを常に反映させるために動かす
+        DB 側の録画完了確認を待って VOD 化するまで回し続ける
+        """
+
+        try:
+            while self._is_destroyed is False and (self._is_live_recording is True or self._live_finalized is False):
+                await self.updateLiveSegmentList()
+                await asyncio.sleep(self.LIVE_TAIL_POLL_INTERVAL_SECONDS)
+        except asyncio.CancelledError:
+            # セッション破棄時のキャンセルは想定内なのでそのまま伝播する
+            raise
+        except Exception as ex:
+            logging.error(f'{self.log_prefix} The live tail loop raised an exception:', exc_info=ex)
+        finally:
+            current_task = asyncio.current_task()
+            if self._live_tail_task_ref is not None and self._live_tail_task_ref is current_task:
+                self._live_tail_task_ref = None
+
+
     def getBufferRange(self) -> tuple[float, float]:
         """
         エンコード完了済みの HLS セグメントのバッファ範囲 (秒) を返す
@@ -433,7 +724,9 @@ class VideoStream:
         self.keepAlive()
 
         # まだ HLS セグメントリストが空なら、録画時間とフレームレートから仮想セグメントを作成する
-        if len(self._segments) == 0:
+        # 録画中の追いかけ再生では録画ファイルの成長に応じて updateLiveSegmentList() がセグメントリストを
+        # 作成するため、ここでは録画時間からの作成を行わない (録画時間は録画完了まで確定しない)
+        if len(self._segments) == 0 and self._is_live_recording is False:
             segment_count = max(1, math.ceil(self.recorded_program.recorded_video.duration / self._segment_duration_seconds))
             for segment_sequence in range(segment_count):
                 playlist_start_seconds = segment_sequence * self._segment_duration_seconds
@@ -462,10 +755,19 @@ class VideoStream:
         virtual_playlist = ''
         virtual_playlist += '#EXTM3U\n'
         virtual_playlist += '#EXT-X-VERSION:6\n'
-        virtual_playlist += '#EXT-X-PLAYLIST-TYPE:VOD\n'
+
+        # 録画中の追いかけ再生では EVENT 型のプレイリストとして、セグメントが増えていくことを示す
+        ## EVENT 型にしておくことで、hls.js 側は最後のセグメントまで再生し終えても定期的にプレイリストを再取得し、
+        ## 録画が進んで追加された新しいセグメントをそのまま再生し続けられる
+        ## 録画が完了するまで #EXT-X-ENDLIST は出力せず、完了後にまとめて VOD 型へ切り替える
+        if self._is_live_recording is True:
+            virtual_playlist += '#EXT-X-PLAYLIST-TYPE:EVENT\n'
+        else:
+            virtual_playlist += '#EXT-X-PLAYLIST-TYPE:VOD\n'
 
         # HLS セグメントの実時間の最大値を指定する (小数点以下は切り上げ)
-        target_duration = max(s.duration_seconds for s in self._segments)
+        ## 録画開始直後でセグメントが1本も無い間は、セグメント長を仮の値として出力する
+        target_duration = max((s.duration_seconds for s in self._segments), default = self._segment_duration_seconds)
         virtual_playlist += f'#EXT-X-TARGETDURATION:{math.ceil(target_duration)}\n'
 
         # 事前に算出したセグメントをすべて記述する
@@ -476,7 +778,9 @@ class VideoStream:
             audio_query = '&audio=secondary' if audio == 'secondary' else ''
             virtual_playlist += f'segment?session_id={self.session_id}&sequence={segment.sequence_index}&cache_key={cache_key}{audio_query}\n'
 
-        virtual_playlist += '#EXT-X-ENDLIST\n'
+        # 録画中の追いかけ再生では終端を出力しない (録画が終わっていないのでまだ続きがある)
+        if self._is_live_recording is False:
+            virtual_playlist += '#EXT-X-ENDLIST\n'
         return virtual_playlist
 
 
@@ -778,6 +1082,12 @@ class VideoStream:
             return None
 
         # セグメントのシーケンス番号が不正な場合は None を返す
+        # 録画中の追いかけ再生ではセグメントリストは録画ファイルの成長に応じて後から増えるため、
+        # 範囲外だと判断する前に1度だけセグメントリストを最新化する
+        ## プレイリスト経由で参照できるセグメントは既存のはずなので、ここではメディアダウンロード中の
+        ## 追いかけ再生を待たずに、現在の録画状況に合わせて要求できる範囲だけを広げる
+        if self._is_live_recording is True and segment_sequence >= len(self._segments):
+            await self.updateLiveSegmentList()
         if segment_sequence < 0 or segment_sequence >= len(self._segments):
             return None
 
@@ -978,6 +1288,15 @@ class VideoStream:
             # 起動中のエンコードタスクがあればキャンセルする
             # この時点ですでにエンコードを完了して終了している場合もある
             await self.__cancelVideoEncodingTask()
+
+            # 録画中の追いかけ再生で動かしている、セグメントリストの監視タスクもキャンセルする
+            live_tail_task_ref = self._live_tail_task_ref
+            if live_tail_task_ref is not None:
+                live_tail_task_ref.cancel()
+                # タスク内のクリーンアップまで待つ (例外は握りつぶす)
+                await asyncio.gather(live_tail_task_ref, return_exceptions = True)
+                if self._live_tail_task_ref is live_tail_task_ref:
+                    self._live_tail_task_ref = None
 
             # セグメントの完成を待つリクエストも、セッション終了に伴う取得中断として解放する
             for segment in self._segments:
