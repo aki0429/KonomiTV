@@ -42,18 +42,41 @@
                             </v-text-field>
                         </div>
                         <!-- グループフィルタ (選択中の国のグループのみ) -->
-                        <div class="iptv__group-chips" v-if="groups.length > 0">
-                            <v-chip class="iptv__chip" variant="elevated"
-                                :color="selected_group === null ? 'primary' : undefined"
-                                @click="onGroupChange(null)">
-                                すべて
-                            </v-chip>
-                            <v-chip class="iptv__chip" variant="elevated" v-for="group in groups" :key="group.name"
-                                :color="selected_group === group.name ? 'primary' : undefined"
-                                @click="onGroupChange(group.name)">
-                                {{ group.name }}
-                                <span class="iptv__chip-count">{{ group.count }}</span>
-                            </v-chip>
+                        <!-- グループは数百件になることがあるため、通常は件数の多い順に一部だけを表示し、
+                             展開時のみスクロール可能な枠内にすべて表示する (チャンネル一覧が画面外へ押し出されないようにする) -->
+                        <div class="iptv__groups" v-if="groups.length > 0">
+                            <v-text-field class="iptv__group-search" v-if="is_groups_expanded" color="primary"
+                                bg-color="background-lighten-1" variant="solo" density="compact" hide-details clearable
+                                prepend-inner-icon="fluent:search-20-regular" placeholder="グループ名で絞り込み"
+                                v-model="group_filter_query">
+                            </v-text-field>
+                            <div class="iptv__group-chips" :class="{'iptv__group-chips--expanded': is_groups_expanded}">
+                                <v-chip class="iptv__chip" variant="elevated"
+                                    :color="selected_group === null ? 'primary' : undefined"
+                                    @click="onGroupChange(null)">
+                                    すべて
+                                </v-chip>
+                                <v-chip class="iptv__chip" variant="elevated" v-for="group in visible_groups" :key="group.name"
+                                    :color="selected_group === group.name ? 'primary' : undefined"
+                                    @click="onGroupChange(group.name)">
+                                    {{ group.name }}
+                                    <span class="iptv__chip-count">{{ group.count }}</span>
+                                </v-chip>
+                                <div class="iptv__group-empty" v-if="is_groups_expanded && visible_groups.length === 0">
+                                    一致するグループがありません
+                                </div>
+                                <v-chip class="iptv__chip iptv__chip--toggle" variant="outlined"
+                                    v-if="is_groups_expanded === false && hidden_group_count > 0"
+                                    @click="is_groups_expanded = true">
+                                    他 {{ hidden_group_count }} 件
+                                    <Icon icon="fluent:chevron-down-20-regular" width="16px" class="ml-1" />
+                                </v-chip>
+                            </div>
+                            <v-btn class="iptv__group-collapse" v-if="is_groups_expanded" variant="text" size="small"
+                                @click="collapseGroups()">
+                                <Icon icon="fluent:chevron-up-20-regular" width="16px" class="mr-1" />
+                                折りたたむ
+                            </v-btn>
                         </div>
                     </div>
                     <!-- 取得エラーがある場合の警告 -->
@@ -119,16 +142,17 @@
                                         {{ channel.source_name }}
                                     </span>
                                 </div>
-                            </div>
-                            <!-- 画質の選択 (元配信の画質に応じた選択肢を提示する) -->
-                            <div class="iptv-channel-card__quality" @click.stop>
-                                <span class="iptv-channel-card__quality-label">画質</span>
-                                <v-select class="iptv-channel-card__quality-select" color="primary"
-                                    bg-color="background" variant="solo" density="compact" hide-details
-                                    :items="qualityOptions(channel)" item-title="title" item-value="value"
-                                    :model-value="selectedQuality(channel)"
-                                    @update:model-value="setSelectedQuality(channel, $event)">
-                                </v-select>
+                                <!-- 画質の選択 (元配信の画質に応じた選択肢を提示する) -->
+                                <!-- チャンネル名の表示幅を確保するため、カードの右側ではなく情報欄の下段に配置する -->
+                                <div class="iptv-channel-card__quality" @click.stop>
+                                    <span class="iptv-channel-card__quality-label">画質</span>
+                                    <v-select class="iptv-channel-card__quality-select" color="primary"
+                                        bg-color="background" variant="solo" density="compact" hide-details flat
+                                        :items="qualityOptions(channel)" item-title="title" item-value="value"
+                                        :model-value="selectedQuality(channel)"
+                                        @update:model-value="setSelectedQuality(channel, $event)">
+                                    </v-select>
+                                </div>
                             </div>
                             <!-- テレビ視聴 UI で開くアイコン -->
                             <div class="iptv-channel-card__open">
@@ -272,6 +296,47 @@ const selected_country = ref<string | null>(null);
 const groups = ref<IIPTVGroup[]>([]);
 const selected_group = ref<string | null>(null);
 const search_query = ref('');
+
+// 折りたたみ時に表示するグループの最大数 (件数の多い順)
+const COLLAPSED_GROUP_COUNT = 12;
+
+// グループ一覧を展開しているかどうか
+const is_groups_expanded = ref(false);
+
+// 展開時のグループ名の絞り込みキーワード
+const group_filter_query = ref('');
+
+// 表示するグループ
+// 折りたたみ時は先頭の一部のみ (選択中のグループが範囲外にある場合は見失わないよう先頭に加える)
+// 展開時は絞り込みキーワードに一致するすべてのグループ
+const visible_groups = computed(() => {
+    if (is_groups_expanded.value === true) {
+        const query = (group_filter_query.value ?? '').trim().toLowerCase();
+        if (query === '') {
+            return groups.value;
+        }
+        return groups.value.filter((group) => group.name.toLowerCase().includes(query));
+    }
+    const head = groups.value.slice(0, COLLAPSED_GROUP_COUNT);
+    if (selected_group.value !== null && head.some((group) => group.name === selected_group.value) === false) {
+        const selected = groups.value.find((group) => group.name === selected_group.value);
+        if (selected !== undefined) {
+            return [selected, ...head];
+        }
+    }
+    return head;
+});
+
+// 折りたたみ時に表示されていないグループの数
+const hidden_group_count = computed(() => groups.value.length - visible_groups.value.length);
+
+/**
+ * グループ一覧を折りたたむ
+ */
+function collapseGroups(): void {
+    is_groups_expanded.value = false;
+    group_filter_query.value = '';
+}
 
 // 国選択の選択肢 (先頭に「すべての国」を追加する)
 const country_items = computed(() => {
@@ -730,14 +795,49 @@ onMounted(async () => {
     }
 }
 
+.iptv__groups {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.iptv__group-search {
+    width: 100%;
+    max-width: 360px;
+    @include smartphone-vertical {
+        max-width: 100%;
+    }
+}
+
 .iptv__group-chips {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    width: 100%;
+
+    // 展開時はグループが数百件あってもチャンネル一覧を押し出さないよう、枠内でスクロールさせる
+    &--expanded {
+        max-height: 232px;
+        padding: 12px;
+        border-radius: 12px;
+        background: rgb(var(--v-theme-background-lighten-1));
+        overflow-y: auto;
+    }
+}
+
+.iptv__group-empty {
+    padding: 4px 0;
+    font-size: 12px;
+    color: rgb(var(--v-theme-gray));
 }
 
 .iptv__chip {
     cursor: pointer;
+
+    &--toggle {
+        color: rgb(var(--v-theme-gray));
+    }
 }
 
 .iptv__chip-count {
@@ -757,7 +857,7 @@ onMounted(async () => {
 
 .iptv__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 16px;
     @include smartphone-vertical {
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -905,10 +1005,9 @@ onMounted(async () => {
 
 .iptv-channel-card__quality {
     display: flex;
-    flex-shrink: 0;
     align-items: center;
-    gap: 4px;
-    width: 132px;
+    gap: 6px;
+    margin-top: 2px;
     @include smartphone-vertical {
         display: none;
     }
@@ -917,14 +1016,23 @@ onMounted(async () => {
 .iptv-channel-card__quality-label {
     flex-shrink: 0;
     font-size: 11px;
-    opacity: 0.7;
+    color: rgb(var(--v-theme-gray));
 }
 
 .iptv-channel-card__quality-select {
-    width: 100%;
+    flex: 0 0 auto;
+    width: 104px;
 
     :deep(.v-field) {
         font-size: 12px;
+        --v-input-control-height: 28px;
+        --v-field-padding-start: 10px;
+        --v-field-padding-end: 4px;
+    }
+    :deep(.v-field__input) {
+        min-height: 28px;
+        padding-top: 0;
+        padding-bottom: 0;
     }
 }
 
