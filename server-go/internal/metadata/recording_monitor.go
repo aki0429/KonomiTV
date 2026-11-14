@@ -38,6 +38,19 @@ func (s *Service) RunRecordingMonitor(ctx context.Context, interval time.Duratio
 		interval = 10 * time.Second
 	}
 	var workers sync.WaitGroup
+	// 別の手動スキャンが保留した移動も、通知の有無にかかわらず継続確認する。
+	workers.Go(func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				s.retryPendingMoves(ctx)
+			}
+		}
+	})
 	roots := map[string]bool{}
 	for _, folder := range s.Config.RecordedFolders {
 		folder = filepath.Clean(folder)
@@ -305,6 +318,7 @@ func (s *Service) monitorRecordedFolder(ctx context.Context, folder string, inte
 				return nil
 			}
 			seen[resolved] = true
+			s.rememberRecordedAlias(path, resolved)
 			observation := recordingObservation{size: info.Size(), modified: info.ModTime(), stable: now.Sub(info.ModTime()) >= time.Duration(RecordingCompleteSeconds)*time.Second}
 			mu.Lock()
 			aliases[recordedPathKey(path)] = resolved

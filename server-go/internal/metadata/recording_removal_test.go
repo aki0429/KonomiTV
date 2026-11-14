@@ -163,9 +163,9 @@ func TestRecordingMonitorUnavailableRootAndWatchRecreation(t *testing.T) {
 	if err != nil || len(rows) != 1 || rows[0].Status != "Recorded" {
 		t.Fatalf("unavailable root hid recording: %+v %v", rows, err)
 	}
-	if err := os.Remove(root); err != nil {
-		t.Fatal(err)
-	}
+	// Windows の巡回中はディレクトリの列挙ハンドルが一瞬残るため、
+	// 保存先の交換は上と同じ共有違反だけ再試行する改名で行う。
+	renameRemovalFolder(t, root, filepath.Join(parent, "empty"))
 	renameRemovalFolder(t, offline, root)
 	// 戻った保存先の watch を張り直した後、最後のファイルの削除を検出する。
 	time.Sleep(150 * time.Millisecond)

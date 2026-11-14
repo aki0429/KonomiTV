@@ -76,6 +76,11 @@ func (g *ThumbnailGenerator) GenerateAndSave(ctx context.Context, filePath strin
 	if err != nil {
 		return err
 	}
+	return g.generateAndSave(ctx, filePath, fileHash, durationSec)
+}
+
+// generateAndSave は選択した内容ハッシュを固定し、移動中に別の録画の画像名を再取得しない。
+func (g *ThumbnailGenerator) generateAndSave(ctx context.Context, filePath, fileHash string, durationSec float64) error {
 	layout := CalculateThumbnailLayout(durationSec)
 	candidateOffsets := CalculateCandidateOffsets(durationSec, layout)
 	candidateRanges := CandidateTimeRanges(durationSec, 0, 0)

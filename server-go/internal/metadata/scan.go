@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -69,6 +70,8 @@ type Service struct {
 	Thumbnails *ThumbnailGenerator
 	// Logger はログ出力先。
 	Logger *slog.Logger
+	// Moves は監視・手動スキャン間で共有する移動の保留状態。未指定ならこの Service 専用に生成する。
+	Moves *RecordingMoves
 
 	mu             sync.Mutex
 	recordingFiles map[string]*FileRecordingInfo
@@ -250,14 +253,17 @@ func (s *Service) ProcessRecordedFile(ctx context.Context, filePath string, opti
 	}
 
 	if !isRegularFile(filePath) {
+		s.forgetPendingMove(filePath)
 		s.logger().Warn("File does not exist after acquiring lock! ignored.", "file_path", filePath)
 		return nil
 	}
+	s.rememberRecordedAlias(originalPath, filePath)
 
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to stat file: %w", err)
 	}
+	_ = os.SameFile(fileInfo, fileInfo)
 	now := s.now()
 	fileSize := fileInfo.Size()
 	rawCreatedAt := fileCreationTime(fileInfo)
@@ -356,12 +362,20 @@ func (s *Service) ProcessRecordedFile(ctx context.Context, filePath string, opti
 		}
 	}
 
+	// 重い解析の前に、本家と同じサイズ・日時・内容ハッシュで移動を照合する。
+	// コピー途中のレコードがある場合も、元の番組 ID を保ったまま置き換える。
+	if !options.ForceUpdate && (existing == nil || existing.Status == "Recording" || existing.Status == "Recorded" || existing.Status == "Missing") {
+		if handled, err := s.reconcileRecordedMove(ctx, filePath, fileInfo, fileCreatedAt, fileModifiedAt); err != nil || handled {
+			return err
+		}
+	}
+
 	// メタデータを解析
 	program, err := s.Analyzer.Analyze(ctx, filePath)
 	if err != nil {
 		s.logger().Error("Error analyzing metadata.", "file_path", filePath, "error", err)
 		if existing != nil {
-			if err := s.Store.UpdateVideoStatus(ctx, existing.ID, "AnalysisFailed"); err != nil {
+			if err := s.Store.failVideoAnalysis(ctx, *existing); err != nil {
 				s.logger().Error("Failed to update status.", "file_path", filePath, "error", err)
 			}
 		}
@@ -371,7 +385,7 @@ func (s *Service) ProcessRecordedFile(ctx context.Context, filePath string, opti
 	if program == nil {
 		s.logger().Error("Failed to analyze metadata.", "file_path", filePath)
 		if existing != nil {
-			if err := s.Store.UpdateVideoStatus(ctx, existing.ID, "AnalysisFailed"); err != nil {
+			if err := s.Store.failVideoAnalysis(ctx, *existing); err != nil {
 				s.logger().Error("Failed to update status.", "file_path", filePath, "error", err)
 			}
 		}
@@ -383,6 +397,10 @@ func (s *Service) ProcessRecordedFile(ctx context.Context, filePath string, opti
 	if program.Video.Duration < MinimumRecordingSeconds {
 		s.logger().Debug("This file is too short. Skipped.",
 			"file_path", filePath, "duration", program.Video.Duration)
+		return nil
+	}
+	// 解析中に他の保存先へ移った実体を、古いパスへ新規登録し直さない。
+	if current, err := os.Stat(filePath); err != nil || !current.Mode().IsRegular() || !os.SameFile(fileInfo, current) {
 		return nil
 	}
 
@@ -433,7 +451,14 @@ func (s *Service) ProcessRecordedFile(ctx context.Context, filePath string, opti
 	}
 
 	// DB に永続化
-	if _, err := s.Store.SaveRecordedMetadata(ctx, program, existingProgramID); err != nil {
+	var expected []VideoSummary
+	if existing != nil {
+		expected = []VideoSummary{*existing}
+	}
+	if _, err := s.Store.SaveRecordedMetadata(ctx, program, existingProgramID, expected...); err != nil {
+		if errors.Is(err, ErrRecordingChanged) {
+			return nil
+		}
 		return err
 	}
 	s.logger().Info("Saved metadata to DB.", "file_path", filePath, "status", program.Video.Status)
@@ -460,16 +485,21 @@ func (s *Service) forgetRecordingFile(filePath string) {
 // 移植元: RecordedScanTask.__runBackgroundAnalysis()
 func (s *Service) runBackgroundAnalysis(ctx context.Context, filePath string, durationSec float64) {
 	s.logger().Info("Starting background analysis task...", "file_path", filePath)
+	rows, err := s.Store.FindVideoSummariesByPaths(ctx, []string{filePath})
+	if err != nil || len(rows) == 0 {
+		return
+	}
+	row := VideoRow{ID: rows[0].ID, FilePath: filePath, FileHash: rows[0].FileHash}
 
 	// CM 区間検出: チャプターファイルから取得して DB に保存する
 	sections := detectCMSections(filePath, durationSec)
-	if err := s.Store.UpdateCMSections(ctx, filePath, sections); err != nil {
+	if err := s.Store.updateVideoCMSections(ctx, row, sections); err != nil {
 		s.logger().Error("Failed to save CM sections.", "file_path", filePath, "error", err)
 	}
 
 	// サムネイル生成
 	if s.Thumbnails != nil {
-		if err := s.Thumbnails.GenerateAndSave(ctx, filePath, durationSec); err != nil {
+		if err := s.Thumbnails.generateAndSave(ctx, filePath, row.FileHash, durationSec); err != nil {
 			s.logger().Error("Failed to generate thumbnails.", "file_path", filePath, "error", err)
 		}
 	}
@@ -513,12 +543,18 @@ func (s *Service) RunBackgroundAnalysis(ctx context.Context) error {
 				return err
 			}
 			defer unlock()
+			// 一覧取得からロック取得までにパスが移ったりコピーが完成していることがある。
+			current, err := s.Store.backgroundVideo(ctx, row.ID, row.FilePath)
+			if err != nil || current == nil {
+				return err
+			}
+			row = *current
 			rowFailed := false
 			// CM 区間情報が未解析 (NULL) の場合のみ検出する。
 			// cm_sections が [] の場合は「解析済みだが CM 区間がなかった」ことを表す。
 			if row.CMSections == nil {
 				sections := detectCMSections(row.FilePath, row.Duration)
-				if err := s.Store.UpdateCMSections(ctx, row.FilePath, sections); err != nil {
+				if err := s.Store.updateVideoCMSections(ctx, row, sections); err != nil {
 					s.logger().Error("Failed to save CM sections.", "file_path", row.FilePath, "error", err)
 					rowFailed = true
 				}
@@ -528,7 +564,7 @@ func (s *Service) RunBackgroundAnalysis(ctx context.Context) error {
 			if s.Thumbnails != nil {
 				tilePath, representativePath := ThumbnailPaths(s.Config.ThumbnailsDir, row.FileHash)
 				if !isRegularFile(tilePath) || !isRegularFile(representativePath) {
-					if err := s.Thumbnails.GenerateAndSave(ctx, row.FilePath, row.Duration); err != nil {
+					if err := s.Thumbnails.generateAndSave(ctx, row.FilePath, row.FileHash, row.Duration); err != nil {
 						s.logger().Error("Failed to generate thumbnails.", "file_path", row.FilePath, "error", err)
 						rowFailed = true
 					}

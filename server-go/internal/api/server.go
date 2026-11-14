@@ -34,6 +34,7 @@ type Server struct {
 	writeDB           *sql.DB         // 書き込み用 (SQLite の書き込みを直列化するため別接続)
 	captureCatalog    *captureCatalog // キャプチャ画像の登録・保存場所の同期
 	vacuumState       maintenanceVacuumState
+	recordingMoves    metadata.RecordingMoves           // 手動スキャンと常駐監視で共有する移動保留
 	thumbnailRenderer *metadata.FFMpegThumbnailRenderer // 自動生成とキャプチャ差し替えの画像出力
 	auth              *auth.Manager
 	logger            *slog.Logger

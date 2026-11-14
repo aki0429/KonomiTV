@@ -56,6 +56,9 @@ type VideoSummary struct {
 // ErrVideoNotFound は録画ファイルに対応する RecordedVideo が存在しない場合のエラー。
 var ErrVideoNotFound = errors.New("recorded video not found")
 
+// ErrRecordingChanged は解析中に移動元のレコードが別の状態へ変化したことを表す。
+var ErrRecordingChanged = errors.New("recording changed during metadata analysis")
+
 // videoSummaryColumns は VideoSummary の SELECT で使うカラム一覧。
 const videoSummaryColumns = `
 	id, file_path, created_at, recorded_program_id, status,
@@ -194,6 +197,41 @@ func (s *Store) UpdateCMSections(ctx context.Context, filePath string, sections 
 	return nil
 }
 
+// backgroundVideo はパスロックの待機中に移動・上書きされたスナップショットを破棄する。
+func (s *Store) backgroundVideo(ctx context.Context, id int64, path string) (*VideoRow, error) {
+	var row VideoRow
+	var sections sql.NullString
+	err := s.DB.QueryRowContext(ctx, `SELECT id,recorded_program_id,file_path,file_hash,duration,cm_sections FROM recorded_videos WHERE id=? AND file_path=? AND status='Recorded'`, id, path).Scan(&row.ID, &row.RecordedProgramID, &row.FilePath, &row.FileHash, &row.Duration, &sections)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if sections.Valid {
+		row.CMSections = &sections.String
+	}
+	return &row, nil
+}
+
+// updateVideoCMSections は移動後に同じパスへ作られた別の録画へ古い解析結果を書き込まない。
+func (s *Store) updateVideoCMSections(ctx context.Context, row VideoRow, sections []CMSection) error {
+	_, err := s.writeDB().ExecContext(ctx, `UPDATE recorded_videos SET cm_sections=?,updated_at=? WHERE id=? AND file_path=? AND file_hash=? AND status='Recorded'`, CMSectionsJSON(sections), database.FormatDBTime(s.now()), row.ID, row.FilePath, row.FileHash)
+	if err != nil {
+		return fmt.Errorf("failed to update video cm_sections: %w", err)
+	}
+	return nil
+}
+
+// failVideoAnalysis は解析中に移動・再解析された別の状態を AnalysisFailed に巻き戻さない。
+func (s *Store) failVideoAnalysis(ctx context.Context, row VideoSummary) error {
+	_, err := s.writeDB().ExecContext(ctx, `UPDATE recorded_videos SET status='AnalysisFailed',updated_at=? WHERE id=? AND file_path=? AND file_hash=? AND status=? AND file_size=?`, database.FormatDBTime(s.now()), row.ID, row.FilePath, row.FileHash, row.Status, row.FileSize)
+	if err != nil {
+		return fmt.Errorf("failed to mark video analysis failure: %w", err)
+	}
+	return nil
+}
+
 // UpdateThumbnailInfo は指定されたファイルパスの RecordedVideo の thumbnail_info を更新する。
 // 移植元: ThumbnailGenerator.__saveThumbnailInfoToDB()
 func (s *Store) UpdateThumbnailInfo(ctx context.Context, filePath string, fileHash string, info ThumbnailInfo) error {
@@ -315,7 +353,8 @@ func (s *Store) ListRecordedVideoHashes(ctx context.Context) ([]string, error) {
 // 移植元: RecordedScanTask.__saveRecordedMetadataToDB()
 //
 // existingProgramID が 0 の場合は RecordedProgram を新規作成し、それ以外は既存の録画番組を更新する。
-func (s *Store) SaveRecordedMetadata(ctx context.Context, program *RecordedProgram, existingProgramID int64) (int64, error) {
+// expected を指定した場合は、書き込み権の取得後も同じ録画であると確認できる場合だけ保存する。
+func (s *Store) SaveRecordedMetadata(ctx context.Context, program *RecordedProgram, existingProgramID int64, expected ...VideoSummary) (int64, error) {
 	writeDB := s.writeDB()
 	tx, err := writeDB.BeginTx(ctx, nil)
 	if err != nil {
@@ -326,6 +365,19 @@ func (s *Store) SaveRecordedMetadata(ctx context.Context, program *RecordedProgr
 	// Channel の保存 (まだ当該チャンネルが DB に存在しない場合のみ)
 	if _, err := tx.ExecContext(ctx, `UPDATE recorded_videos SET id=id WHERE 0`); err != nil {
 		return 0, err
+	}
+	if len(expected) > 0 {
+		snapshot := expected[0]
+		current, err := scanVideoSummary(tx.QueryRowContext(ctx, `SELECT `+videoSummaryColumns+` FROM recorded_videos WHERE id=?`, snapshot.ID).Scan)
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, ErrRecordingChanged
+		}
+		if err != nil {
+			return 0, err
+		}
+		if !sameRecordedSnapshot(*current, snapshot) || current.FileHash != snapshot.FileHash {
+			return 0, ErrRecordingChanged
+		}
 	}
 	var channelID *string
 	if program.Channel != nil {

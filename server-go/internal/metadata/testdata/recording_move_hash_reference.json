@@ -1,0 +1,71 @@
+{
+  "upstream_commit": "687b904bb0a2cbb329596fd7b0368c09afe19a6c",
+  "source_sha256": "d5c742cb7aa69e41daddd7b158d8dbce8dbd190ed7ad97848a6518e2c4d0c47d",
+  "packet_size": 188,
+  "cases": [
+    {
+      "name": "pattern/full",
+      "recipe": "pattern",
+      "hash": "7f2750e16b76e6a78e790ac94b27bd57",
+      "matches": true,
+      "size": 4194304,
+      "effective_end": null
+    },
+    {
+      "name": "pattern/wrong",
+      "recipe": "pattern",
+      "hash": "00000000000000000000000000000000",
+      "matches": false,
+      "size": 4194304,
+      "effective_end": null
+    },
+    {
+      "name": "short/wrong",
+      "recipe": "short",
+      "hash": "00000000000000000000000000000000",
+      "matches": false,
+      "size": 1024,
+      "effective_end": null
+    },
+    {
+      "name": "padded-ts/full",
+      "recipe": "padded-ts",
+      "hash": "3bbe0d53b9f7da8e96e622fdcb3c66fb",
+      "matches": true,
+      "size": 8706304,
+      "effective_end": 4512000
+    },
+    {
+      "name": "padded-ts/wrong",
+      "recipe": "padded-ts",
+      "hash": "00000000000000000000000000000000",
+      "matches": false,
+      "size": 8706304,
+      "effective_end": 4512000
+    },
+    {
+      "name": "padded-ts/effective",
+      "recipe": "padded-ts",
+      "hash": "0545f5c246fbb869f734e363ae4b31e8",
+      "matches": true,
+      "size": 8706304,
+      "effective_end": 4512000
+    },
+    {
+      "name": "padded-without-pcr/full",
+      "recipe": "padded-without-pcr",
+      "hash": "fab0caa6104ffd147d5579712362f32c",
+      "matches": true,
+      "size": 8706304,
+      "effective_end": null
+    },
+    {
+      "name": "padded-without-pcr/wrong",
+      "recipe": "padded-without-pcr",
+      "hash": "00000000000000000000000000000000",
+      "matches": false,
+      "size": 8706304,
+      "effective_end": null
+    }
+  ]
+}

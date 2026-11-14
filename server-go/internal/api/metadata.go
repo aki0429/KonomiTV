@@ -33,6 +33,7 @@ func (s *Server) newMetadataService() *metadata.Service {
 	}
 	return &metadata.Service{
 		Store: store,
+		Moves: &s.recordingMoves,
 		Config: metadata.ServiceConfig{
 			RecordedFolders:  s.config.Video.RecordedFolders,
 			ExcludeScanPaths: s.config.Video.ExcludeScanPaths,
