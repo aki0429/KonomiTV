@@ -170,7 +170,7 @@ CREATE TABLE recorded_videos (
     cm_sections JSON,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    thumbnail_info JSON,
+    thumbnail_info JSON, missing_since TIMESTAMP,
     segment_map JSON NOT NULL DEFAULT '[]',
     has_video_stream_changes INT NOT NULL DEFAULT 0
 );

@@ -73,7 +73,7 @@ CREATE TABLE recorded_videos (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     thumbnail_info JSON, segment_map JSON NOT NULL DEFAULT '[]',
-    has_video_stream_changes INT NOT NULL DEFAULT 0
+    has_video_stream_changes INT NOT NULL DEFAULT 0, missing_since TIMESTAMP
 );
 `
 
@@ -502,7 +502,7 @@ func TestProcessRecordedFileAndRunBatchScan(t *testing.T) {
 		t.Errorf("title was re-analyzed unexpectedly: %q", title)
 	}
 
-	// ファイルを削除すると、対応するレコードも削除される
+	// 保存先に録画が一件も見えない場合は、未マウントの可能性があるため情報を保持する。
 	if err := os.Remove(filePath); err != nil {
 		t.Fatalf("failed to remove file: %v", err)
 	}
@@ -510,8 +510,8 @@ func TestProcessRecordedFileAndRunBatchScan(t *testing.T) {
 		t.Fatalf("third RunBatchScan returned error: %v", err)
 	}
 	summaries, _ = store.ListAllVideoSummaries(ctx)
-	if len(summaries) != 0 {
-		t.Errorf("expected records to be deleted, got %d", len(summaries))
+	if len(summaries) != 1 || summaries[0].Status != "Recorded" {
+		t.Errorf("empty recording folder should preserve its records: %#v", summaries)
 	}
 }
 

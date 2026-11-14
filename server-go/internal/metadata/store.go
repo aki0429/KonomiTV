@@ -215,7 +215,7 @@ func (s *Store) UpdateThumbnailInfo(ctx context.Context, filePath string, info T
 // 移植元: RecordedScanTask.processRecordedFile() の AnalysisFailed 更新
 func (s *Store) UpdateVideoStatus(ctx context.Context, id int64, status string) error {
 	_, err := s.writeDB().ExecContext(ctx,
-		`UPDATE recorded_videos SET status = ?, updated_at = ? WHERE id = ?`,
+		`UPDATE recorded_videos SET status = ?, missing_since=NULL, updated_at = ? WHERE id = ?`,
 		status, database.FormatDBTime(s.now()), id,
 	)
 	if err != nil {
@@ -320,6 +320,9 @@ func (s *Store) SaveRecordedMetadata(ctx context.Context, program *RecordedProgr
 	defer func() { _ = tx.Rollback() }()
 
 	// Channel の保存 (まだ当該チャンネルが DB に存在しない場合のみ)
+	if _, err := tx.ExecContext(ctx, `UPDATE recorded_videos SET id=id WHERE 0`); err != nil {
+		return 0, err
+	}
 	var channelID *string
 	if program.Channel != nil {
 		id, err := s.saveChannel(ctx, tx, program.Channel)
@@ -394,7 +397,7 @@ func (s *Store) SaveRecordedMetadata(ctx context.Context, program *RecordedProgr
 				video_frame_rate = ?, video_resolution_width = ?, video_resolution_height = ?, has_video_stream_changes = ?,
 				primary_audio_codec = ?, primary_audio_channel = ?, primary_audio_sampling_rate = ?,
 				secondary_audio_codec = ?, secondary_audio_channel = ?, secondary_audio_sampling_rate = ?,
-				key_frames = '[]', segment_map = '[]', cm_sections = NULL,
+				key_frames = '[]', segment_map = '[]', cm_sections = NULL, missing_since=NULL,
 				updated_at = ?
 			WHERE id = ?`,
 			programID, video.Status, video.FileHash, video.FileSize,

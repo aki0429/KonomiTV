@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -63,6 +64,11 @@ func (s *Server) RunRecordedFolderMonitoring(ctx context.Context) {
 	var workers sync.WaitGroup
 	workers.Go(func() { service.RunRecordingMonitor(ctx, 10*time.Second) })
 	workers.Go(func() {
+		if _, err := service.RunBatchScan(ctx); err != nil && !errors.Is(err, metadata.ErrBatchScanRunning) && ctx.Err() == nil {
+			s.logger.Error("Initial recording folder scan failed.", "error", err)
+		}
+	})
+	workers.Go(func() {
 		// 一覧への取り込みを先行させる。重い画像生成が次の録画登録を塞がないよう別 worker とする。
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
@@ -71,9 +77,10 @@ func (s *Server) RunRecordedFolderMonitoring(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				if err := service.RunBackgroundAnalysis(ctx); err != nil && ctx.Err() == nil {
-					s.logger.Error("Failed to analyze recorded files in background.", "error", err)
-				}
+			case <-metadata.BackgroundAnalysisRequests():
+			}
+			if err := service.RunBackgroundAnalysis(ctx); err != nil && !errors.Is(err, metadata.ErrBackgroundAnalysisRunning) && ctx.Err() == nil {
+				s.logger.Error("Failed to analyze recorded files in background.", "error", err)
 			}
 		}
 	})
@@ -87,6 +94,10 @@ func (s *Server) registerMetadataRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/videos/{video_id}/thumbnail/regenerate", s.handleMetadataVideoThumbnailRegenerate)
 	mux.HandleFunc("POST /api/maintenance/run-batch-scan", s.handleMetadataBatchScan)
 	mux.HandleFunc("POST /api/maintenance/run-background-analysis", s.handleMetadataBackgroundAnalysis)
+	mux.HandleFunc("POST /api/maintenance/batch-scan/run", s.handleMetadataBatchScan)
+	mux.HandleFunc("GET /api/maintenance/batch-scan/status", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, metadata.BatchScanStatus()) })
+	mux.HandleFunc("POST /api/maintenance/background-analysis/run", s.handleMetadataBackgroundAnalysis)
+	mux.HandleFunc("GET /api/maintenance/background-analysis/status", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, metadata.BackgroundAnalysisStatus()) })
 }
 
 // handleMetadataVideoReanalyze は録画番組メタデータ再解析 API を処理する。
@@ -156,7 +167,15 @@ func (s *Server) handleMetadataBatchScan(w http.ResponseWriter, r *http.Request)
 // 移植元: MaintenanceRouter.BackgroundAnalysisAPI()
 func (s *Server) handleMetadataBackgroundAnalysis(w http.ResponseWriter, r *http.Request) {
 	service := s.newMetadataService()
-	if err := service.RunBackgroundAnalysis(r.Context()); err != nil {
+	if err := service.RunBackgroundAnalysis(s.lifecycleContext); err != nil {
+		if errors.Is(err, metadata.ErrBackgroundAnalysisRunning) {
+			writeError(w, 429, "Background analysis task is already running")
+			return
+		}
+		if errors.Is(err, metadata.ErrBackgroundAnalysisFailed) {
+			writeError(w, 500, "Background analysis failed for some recorded files")
+			return
+		}
 		s.logger.Error("[BackgroundAnalysisAPI] Failed to run background analysis.", "error", err)
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to run background analysis: %v", err))
 		return

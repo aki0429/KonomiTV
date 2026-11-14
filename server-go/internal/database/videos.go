@@ -43,7 +43,7 @@ func ListRecordedProgramDetails(
 	}
 
 	// WHERE 句を構築する
-	conditions := []string{"1=1"}
+	conditions := []string{"rv.status != 'Missing'"}
 	args := []any{}
 	if len(options.IDs) > 0 {
 		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(options.IDs)), ",")
@@ -233,7 +233,7 @@ func CountRecordedPrograms(
 	searchCondition string,
 	searchParams []any,
 ) (int64, error) {
-	query := `SELECT COUNT(*) FROM recorded_programs rp LEFT JOIN channels ch ON rp.channel_id = ch.id WHERE 1=1`
+	query := `SELECT COUNT(*) FROM recorded_programs rp JOIN recorded_videos rv ON rv.recorded_program_id=rp.id LEFT JOIN channels ch ON rp.channel_id = ch.id WHERE rv.status != 'Missing'`
 	args := []any{}
 	if len(ids) > 0 {
 		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")

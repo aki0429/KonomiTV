@@ -99,6 +99,7 @@ func (s *Service) now() time.Time {
 var (
 	batchScanGuardMu      sync.Mutex
 	batchScanGuardRunning bool
+	batchScanProgress     TaskStatus
 )
 
 // RunBatchScan は録画フォルダ以下の一括スキャンと DB への同期を実行する。
@@ -113,10 +114,12 @@ func (s *Service) RunBatchScan(ctx context.Context) (bool, error) {
 		return false, ErrBatchScanRunning
 	}
 	batchScanGuardRunning = true
+	batchScanProgress = TaskStatus{Running: true}
 	batchScanGuardMu.Unlock()
 	defer func() {
 		batchScanGuardMu.Lock()
 		batchScanGuardRunning = false
+		batchScanProgress.Running = false
 		batchScanGuardMu.Unlock()
 	}()
 
@@ -167,70 +170,11 @@ func (s *Service) RunBatchScan(ctx context.Context) (bool, error) {
 	// 保持すると判断されたレコードのみを使い、ファイルパスを正規化する
 	existingDBRecordedVideos := map[string]VideoSummary{}
 	for _, video := range videosToKeep {
-		video.FilePath = ResolveRecordedPath(video.FilePath)
-		existingDBRecordedVideos[video.FilePath] = video
+		existingDBRecordedVideos[ResolveRecordedPath(video.FilePath)] = video
 	}
-
-	excludeScanPaths := normalizeExcludePaths(s.Config.ExcludeScanPaths)
-
-	// 各録画フォルダをスキャン
-	s.logger().Info("Scanning recorded folders...")
-	processed := map[string]bool{}
-	for _, folder := range s.Config.RecordedFolders {
-		err := filepath.WalkDir(folder, func(path string, entry os.DirEntry, walkErr error) error {
-			if walkErr != nil {
-				// 権限エラーなどは該当エントリのみスキップする
-				return nil
-			}
-			if strings.HasPrefix(entry.Name(), "._") {
-				return nil
-			}
-			// 除外パターンのチェック (シンボリックリンク解決前)
-			if isExcluded(normalizePathForPrefixMatch(path), excludeScanPaths) {
-				return nil
-			}
-			// シンボリックリンクを含むパスは実体に解決して処理する
-			canonical := ResolveRecordedPath(path)
-			// 除外パターンのチェック (シンボリックリンク解決後)
-			if isExcluded(normalizePathForPrefixMatch(canonical), excludeScanPaths) {
-				return nil
-			}
-			if entry.IsDir() {
-				return nil
-			}
-			if !isScanTarget(canonical) {
-				return nil
-			}
-			if !isRegularFile(canonical) {
-				return nil
-			}
-			if processed[canonical] {
-				return nil
-			}
-			processed[canonical] = true
-			if err := s.ProcessRecordedFile(ctx, canonical, ProcessOptions{
-				OriginalPath:             path,
-				ExistingDBRecordedVideos: existingDBRecordedVideos,
-			}); err != nil {
-				s.logger().Error("Failed to process recorded file.", "file_path", path, "error", err)
-			}
-			return nil
-		})
-		if err != nil {
-			s.logger().Error("Failed to walk recorded folder.", "folder", folder, "error", err)
-		}
-	}
-
-	// 存在しない録画ファイルに対応するレコードを一括削除
-	s.logger().Info("Deleting records for non-existent files...")
-	for filePath, summary := range existingDBRecordedVideos {
-		if !isRegularFile(filePath) {
-			if err := s.Store.DeleteRecordedProgram(ctx, summary.RecordedProgramID); err != nil {
-				s.logger().Error("Failed to delete record for non-existent file.", "file_path", filePath, "error", err)
-				continue
-			}
-			s.logger().Info("Deleted record for non-existent file.", "file_path", filePath)
-		}
+	updateBatchProgress(false, len(existingDBRecordedVideos))
+	if err := s.scanRecordedFolders(ctx, existingDBRecordedVideos); err != nil {
+		return false, err
 	}
 
 	// サムネイルフォルダ内の不要なファイルを削除
@@ -287,10 +231,21 @@ type ProcessOptions struct {
 // ProcessRecordedFile は指定された録画ファイルのメタデータを解析し、DB に永続化する。
 // 移植元: RecordedScanTask.processRecordedFile()
 func (s *Service) ProcessRecordedFile(ctx context.Context, filePath string, options ProcessOptions) error {
+	originalPath := filepath.Clean(filePath)
+	if absolute, err := filepath.Abs(originalPath); err == nil {
+		originalPath = absolute
+	}
 	filePath = ResolveRecordedPath(filePath)
-	originalPath := ""
+	unlock, err := acquireRecordedPath(ctx, filePath)
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	if options.OriginalPath != "" {
-		originalPath = ResolveRecordedPath(options.OriginalPath)
+		originalPath = filepath.Clean(options.OriginalPath)
+		if absolute, err := filepath.Abs(originalPath); err == nil {
+			originalPath = absolute
+		}
 	}
 
 	if !isRegularFile(filePath) {
@@ -304,26 +259,19 @@ func (s *Service) ProcessRecordedFile(ctx context.Context, filePath string, opti
 	}
 	now := s.now()
 	fileSize := fileInfo.Size()
-	fileCreatedAt := fileCreationTime(fileInfo)
-	fileModifiedAt := fileInfo.ModTime().In(constants.JST)
+	rawCreatedAt := fileCreationTime(fileInfo)
+	rawModifiedAt := fileInfo.ModTime().In(constants.JST)
+	fileCreatedAt := rawCreatedAt.Round(time.Microsecond)
+	fileModifiedAt := rawModifiedAt.Round(time.Microsecond)
 
 	if fileSize == 0 {
 		s.logger().Warn("File size is 0. ignored.", "file_path", filePath)
 		return nil
 	}
 
-	// 同じファイルパスの既存レコードのサマリーを取り出す
+	// ロック取得後に DB を読み直し、監視が更新した状態も反映する。
 	var existing *VideoSummary
-	if options.ExistingDBRecordedVideos != nil {
-		if summary, ok := options.ExistingDBRecordedVideos[filePath]; ok {
-			existing = &summary
-		} else if originalPath != "" {
-			if summary, ok := options.ExistingDBRecordedVideos[originalPath]; ok {
-				existing = &summary
-			}
-		}
-	}
-	if existing == nil {
+	{
 		queryPaths := []string{filePath}
 		if originalPath != "" && originalPath != filePath {
 			queryPaths = append(queryPaths, originalPath)
@@ -334,8 +282,39 @@ func (s *Service) ProcessRecordedFile(ctx context.Context, filePath string, opti
 		}
 		if len(rows) > 0 {
 			summary := rows[0]
-			summary.FilePath = filePath
-			existing = &summary
+			for _, row := range rows {
+				if row.FilePath == filePath {
+					summary = row
+					break
+				}
+			}
+			// 実体と同じファイルを指す旧パスは、ID を変えず実体のパスへ揃える。
+			if summary.FilePath != filePath {
+				if oldInfo, err := os.Stat(summary.FilePath); err == nil && os.SameFile(fileInfo, oldInfo) {
+					result, err := s.Store.writeDB().ExecContext(ctx, `UPDATE recorded_videos SET file_path=? WHERE id=? AND file_path=? AND NOT EXISTS(SELECT 1 FROM recorded_videos WHERE file_path=?)`, filePath, summary.ID, summary.FilePath, filePath)
+					if err != nil {
+						return err
+					}
+					changed, err := result.RowsAffected()
+					if err != nil {
+						return err
+					}
+					if changed > 0 {
+						summary.FilePath = filePath
+						existing = &summary
+					} else {
+						current, err := s.Store.FindVideoSummariesByPaths(ctx, []string{filePath})
+						if err != nil {
+							return err
+						}
+						if len(current) > 0 {
+							existing = &current[0]
+						}
+					}
+				}
+			} else {
+				existing = &summary
+			}
 		}
 	}
 
@@ -343,11 +322,20 @@ func (s *Service) ProcessRecordedFile(ctx context.Context, filePath string, opti
 	s.mu.Lock()
 	recordingInfo, isRecording := s.recordingFiles[filePath]
 	s.mu.Unlock()
-	if !options.ForceUpdate && existing != nil && existing.Status == "Recorded" &&
-		existing.FileCreatedAt.Equal(fileCreatedAt) &&
-		existing.FileModifiedAt.Equal(fileModifiedAt) &&
+	if !options.ForceUpdate && existing != nil && (existing.Status == "Recorded" || existing.Status == "Missing") &&
+		(existing.FileCreatedAt.Equal(fileCreatedAt) || existing.FileCreatedAt.Equal(rawCreatedAt.Truncate(time.Microsecond))) &&
+		(existing.FileModifiedAt.Equal(fileModifiedAt) || existing.FileModifiedAt.Equal(rawModifiedAt.Truncate(time.Microsecond))) &&
 		existing.FileSize == fileSize {
-		return nil
+		// 旧 Go 版の切り捨て日時を、本家と同じマイクロ秒丸めへ補正する。
+		if existing.Status == "Recorded" && existing.FileCreatedAt.Equal(fileCreatedAt) && existing.FileModifiedAt.Equal(fileModifiedAt) {
+			return nil
+		}
+		if restored, err := s.Store.restoreUnchangedVideo(ctx, *existing, fileCreatedAt, fileModifiedAt); err != nil {
+			return err
+		} else if restored {
+			requestBackgroundAnalysis()
+			return nil
+		}
 	}
 
 	// 現在録画中とマークされているファイルの処理
@@ -445,6 +433,8 @@ func (s *Service) ProcessRecordedFile(ctx context.Context, filePath string, opti
 	// ProcessRecordedFile 内で直列に実行する (外部から見た最終状態は同じ) 。
 	if program.Video.Status == "Recorded" && !options.MetadataOnly {
 		s.runBackgroundAnalysis(ctx, filePath, program.Video.Duration)
+	} else if program.Video.Status == "Recorded" {
+		requestBackgroundAnalysis()
 	}
 	return nil
 }
@@ -479,44 +469,90 @@ func (s *Service) runBackgroundAnalysis(ctx context.Context, filePath string, du
 // RunBackgroundAnalysis は CM 区間情報やサムネイルが未生成の録画ファイルに対して解析を実行する。
 // 移植元: MaintenanceRouter.BackgroundAnalysisAPI() の BackgroundAnalysis()
 func (s *Service) RunBackgroundAnalysis(ctx context.Context) error {
+	analysisProgressMu.Lock()
+	if analysisProgress.Running {
+		analysisProgressMu.Unlock()
+		return ErrBackgroundAnalysisRunning
+	}
+	analysisProgress = TaskStatus{Running: true}
+	analysisProgressMu.Unlock()
+	defer func() { analysisProgressMu.Lock(); analysisProgress.Running = false; analysisProgressMu.Unlock() }()
 	s.logger().Info("Manual background analysis has started.")
 	rows, err := s.Store.ListVideosForBackgroundAnalysis(ctx)
 	if err != nil {
 		return err
 	}
+	analysisProgressMu.Lock()
+	analysisProgress.Total = len(rows)
+	analysisProgressMu.Unlock()
+	failed := 0
 	for _, row := range rows {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		analysisProgressMu.Lock()
+		analysisProgress.Processed++
+		analysisProgressMu.Unlock()
 		if !isRegularFile(row.FilePath) {
 			s.logger().Warn("File not found. Skipping...", "file_path", row.FilePath)
 			continue
 		}
-		// CM 区間情報が未解析 (NULL) の場合のみ検出する。
-		// cm_sections が [] の場合は「解析済みだが CM 区間がなかった」ことを表す。
-		if row.CMSections == nil {
-			sections := detectCMSections(row.FilePath, row.Duration)
-			if err := s.Store.UpdateCMSections(ctx, row.FilePath, sections); err != nil {
-				s.logger().Error("Failed to save CM sections.", "file_path", row.FilePath, "error", err)
-				continue
+		rowErr := func() error {
+			unlock, err := acquireRecordedPath(ctx, ResolveRecordedPath(row.FilePath))
+			if err != nil {
+				return err
 			}
-		}
-
-		// サムネイルが未生成の場合は生成する
-		if s.Thumbnails != nil {
-			tilePath, representativePath := ThumbnailPaths(s.Config.ThumbnailsDir, row.FileHash)
-			if !isRegularFile(tilePath) || !isRegularFile(representativePath) {
-				if err := s.Thumbnails.GenerateAndSave(ctx, row.FilePath, row.Duration); err != nil {
-					s.logger().Error("Failed to generate thumbnails.", "file_path", row.FilePath, "error", err)
-					continue
+			defer unlock()
+			rowFailed := false
+			// CM 区間情報が未解析 (NULL) の場合のみ検出する。
+			// cm_sections が [] の場合は「解析済みだが CM 区間がなかった」ことを表す。
+			if row.CMSections == nil {
+				sections := detectCMSections(row.FilePath, row.Duration)
+				if err := s.Store.UpdateCMSections(ctx, row.FilePath, sections); err != nil {
+					s.logger().Error("Failed to save CM sections.", "file_path", row.FilePath, "error", err)
+					rowFailed = true
 				}
 			}
+
+			// サムネイルが未生成の場合は生成する
+			if s.Thumbnails != nil {
+				tilePath, representativePath := ThumbnailPaths(s.Config.ThumbnailsDir, row.FileHash)
+				if !isRegularFile(tilePath) || !isRegularFile(representativePath) {
+					if err := s.Thumbnails.GenerateAndSave(ctx, row.FilePath, row.Duration); err != nil {
+						s.logger().Error("Failed to generate thumbnails.", "file_path", row.FilePath, "error", err)
+						rowFailed = true
+					}
+				}
+			}
+			if rowFailed {
+				return ErrBackgroundAnalysisFailed
+			}
+			return nil
+		}()
+		if rowErr != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			failed++
 		}
+	}
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	if failed > 0 {
+		return fmt.Errorf("%w: %d", ErrBackgroundAnalysisFailed, failed)
 	}
 	s.logger().Info("Manual background analysis has finished processing all recorded files.")
 	return nil
 }
 
+var ErrBackgroundAnalysisRunning = fmt.Errorf("background analysis task is already running")
+var ErrBackgroundAnalysisFailed = fmt.Errorf("background analysis failed for some recorded files")
+
 // deleteOrphanedThumbnails は DB に存在しないハッシュのサムネイルファイルを削除する。
 // 移植元: RecordedScanTask.runBatchScan() の不要なサムネイル削除処理
 func (s *Service) deleteOrphanedThumbnails(ctx context.Context) error {
+	hashesGatheredAt := s.now()
 	hashes, err := s.Store.ListRecordedVideoHashes(ctx)
 	if err != nil {
 		return err
@@ -547,6 +583,14 @@ func (s *Service) deleteOrphanedThumbnails(ctx context.Context) error {
 			continue
 		}
 		path := filepath.Join(directory, entry.Name())
+		// 一覧の取得と並行して作られた画像を、古いハッシュ一覧だけで削除しない。
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if !info.ModTime().Before(hashesGatheredAt.Add(-time.Minute)) {
+			continue
+		}
 		if err := os.Remove(path); err != nil {
 			s.logger().Error("Error deleting orphaned thumbnail file.", "path", path, "error", err)
 			continue
