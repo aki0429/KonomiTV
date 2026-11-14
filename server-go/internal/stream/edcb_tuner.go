@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -8,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/aki0429/KonomiTV/server-go/internal/edcbpipe"
 	"github.com/aki0429/KonomiTV/server-go/internal/reservations"
 )
 
@@ -75,6 +77,8 @@ type EDCBTunerBackend struct {
 	NewCtrlCmd func() (EDCBCtrlCmd, error)
 	// NamedPipe は名前付きパイプモードで動作しているかどうか (真の場合は TCP モードではない) 。
 	NamedPipe bool
+	// OpenPipeStream はローカルパイプ受信の接続関数。未指定なら OS 標準の探索を行う。
+	OpenPipeStream func(context.Context, int) (io.ReadCloser, error)
 }
 
 // EDCBTuner は EDCB バックエンドのチューナーを制御する。
@@ -108,6 +112,9 @@ type EDCBTuner struct {
 	// closing は close 処理中かどうか (Go 版固有) 。
 	// プールからの削除と再利用の競合で、閉じかけのチューナーが再利用されないようにするためのガード。
 	closing bool
+	// connectGeneration は古い接続試行が新所有者の接続を上書きするのを防ぐ。
+	connectGeneration uint64
+	connectCancel     context.CancelFunc
 }
 
 // newEDCBTuner はチューナーインスタンスを初期化する。
@@ -210,6 +217,9 @@ func (t *EDCBTuner) GetState() EDCBTunerState {
 // SetState はチューナーの状態を設定する (制御権限のチェックは行わない) 。
 func (t *EDCBTuner) SetState(state EDCBTunerState) {
 	t.mu.Lock()
+	if state == EDCBTunerCancelling {
+		t.cancelConnectLocked()
+	}
 	t.state = state
 	t.mu.Unlock()
 }
@@ -298,59 +308,103 @@ func (t *EDCBTuner) SetChannel(networkID int, serviceID int, transportStreamID i
 // 接続できなかった場合は nil を返す (Python 版は None を返す) 。
 // 返された io.ReadCloser はそのまま放送波の MPEG2-TS ストリームになる。
 func (t *EDCBTuner) Connect(ownerLiveStreamID string) (io.ReadCloser, error) {
+	return t.ConnectContext(context.Background(), ownerLiveStreamID)
+}
+
+// ConnectContext はライブタスクのキャンセルをパイプ接続待ちに伝える。
+func (t *EDCBTuner) ConnectContext(ctx context.Context, ownerLiveStreamID string) (io.ReadCloser, error) {
 	t.mu.Lock()
 	// 制御権限が一致していない場合、キャンセル中の場合は処理しない。
-	if !t.isOwner(ownerLiveStreamID) || t.state == EDCBTunerCancelling {
+	if !t.isOwner(ownerLiveStreamID) || t.state == EDCBTunerCancelling || t.closing {
 		t.mu.Unlock()
 		return nil, nil
 	}
 	// プロセス ID が取得できている (チューナーが起動している) ことが前提。
-	processID := t.edcbProcessID
-	namedPipe := t.backend.NamedPipe
-	creator := t.backend.NewCtrlCmd
-	t.mu.Unlock()
-
-	if processID == nil {
+	if t.edcbProcessID == nil {
+		t.mu.Unlock()
 		return nil, nil
 	}
+	processID := *t.edcbProcessID
+	namedPipe := t.backend.NamedPipe
+	creator := t.backend.NewCtrlCmd
+	openPipe := t.backend.OpenPipeStream
+	t.cancelConnectLocked()
+	generation := t.connectGeneration
+	ctx, cancel := context.WithCancel(ctx)
+	t.connectCancel = cancel
+	t.mu.Unlock()
+	defer cancel()
 
-	// 名前付きパイプモードは Go 版では未対応 (放送波ストリームの取得は TCP モードのみ) 。
+	var connection io.ReadCloser
+	var err error
 	if namedPipe {
-		t.setIdleAfterFailedConnect()
-		return nil, fmt.Errorf("edcb: named pipe streaming is not supported")
+		if openPipe == nil {
+			openPipe = func(ctx context.Context, processID int) (io.ReadCloser, error) {
+				return edcbpipe.OpenStream(ctx, processID, "")
+			}
+		}
+		connection, err = openPipe(ctx, processID)
+	} else if creator == nil {
+		err = fmt.Errorf("edcb: ctrl cmd client is not configured")
+	} else {
+		var client EDCBCtrlCmd
+		client, err = creator()
+		if err == nil {
+			// TCP モードは CtrlCmd の転送接続、ローカルモードは SrvPipe を直接開く。
+			connection, err = client.RelayViewStream(processID)
+		}
+	}
+	if connection == nil && err == nil {
+		err = fmt.Errorf("edcb: tuner stream is not available")
 	}
 
-	if creator == nil {
-		t.setIdleAfterFailedConnect()
-		return nil, fmt.Errorf("edcb: ctrl cmd client is not configured")
+	t.mu.Lock()
+	// 接続中に Disconnect・Close・Handoff があれば、その結果を新しい所有者へ公開しない。
+	current := generation == t.connectGeneration && t.isOwner(ownerLiveStreamID) &&
+		!t.closing && t.state != EDCBTunerCancelling && t.edcbProcessID != nil && *t.edcbProcessID == processID
+	if !current || ctx.Err() != nil {
+		if current {
+			t.connectCancel = nil
+			t.state = EDCBTunerIdle
+		}
+		t.mu.Unlock()
+		if connection != nil {
+			_ = connection.Close()
+		}
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		return nil, context.Canceled
 	}
-	client, err := creator()
+	t.connectCancel = nil
 	if err != nil {
-		t.setIdleAfterFailedConnect()
-		return nil, fmt.Errorf("edcb: failed to create the ctrl cmd client: %w", err)
-	}
-
-	// EpgDataCap_Bon で受信した放送波を受け取るための TCP 接続を取得する。
-	connection, err := client.RelayViewStream(*processID)
-	if err != nil {
-		t.setIdleAfterFailedConnect()
+		t.state = EDCBTunerIdle
+		t.mu.Unlock()
+		if connection != nil {
+			_ = connection.Close()
+		}
 		return nil, fmt.Errorf("edcb: failed to connect to the tuner: %w", err)
 	}
 
 	// 接続を保持して、接続済みとして状態を更新する。
-	streamConn := &edcbStreamConn{Conn: connection}
-	t.mu.Lock()
+	streamConn := &edcbStreamConn{ReadCloser: connection}
+	previous := t.streamConn
 	t.streamConn = streamConn
 	t.state = EDCBTunerActive
 	t.mu.Unlock()
+	if previous != nil {
+		_ = previous.Close()
+	}
 	return streamConn, nil
 }
 
-// setIdleAfterFailedConnect は接続失敗時に状態を Idle に戻す (Python 版 connect() の失敗時と同じ) 。
-func (t *EDCBTuner) setIdleAfterFailedConnect() {
-	t.mu.Lock()
-	t.state = EDCBTunerIdle
-	t.mu.Unlock()
+// cancelConnectLocked は実行中の接続を無効にする (mu 保持中に呼ぶ) 。
+func (t *EDCBTuner) cancelConnectLocked() {
+	t.connectGeneration++
+	if t.connectCancel != nil {
+		t.connectCancel()
+		t.connectCancel = nil
+	}
 }
 
 // Disconnect はチューナーとのストリーミング接続を閉じる。
@@ -364,6 +418,7 @@ func (t *EDCBTuner) Disconnect(ownerLiveStreamID string) {
 		t.mu.Unlock()
 		return
 	}
+	t.cancelConnectLocked()
 	connection := t.streamConn
 	t.streamConn = nil
 	// 切断済みとして状態を更新する。
@@ -433,6 +488,7 @@ func (t *EDCBTuner) Handoff(currentOwnerLiveStreamID string, nextOwnerLiveStream
 	if !t.isOwner(currentOwnerLiveStreamID) {
 		return false
 	}
+	t.cancelConnectLocked()
 	// 再利用可能な状態に戻す。
 	t.state = EDCBTunerIdle
 	t.locked = false
@@ -455,6 +511,7 @@ func (t *EDCBTuner) Close(ownerLiveStreamID string, force bool) bool {
 	}
 	// プールからの削除と再利用の競合を防ぐため、close 処理中にする。
 	t.closing = true
+	t.cancelConnectLocked()
 	creator := t.backend.NewCtrlCmd
 	networkTVID := t.networkTVID
 	connection := t.streamConn
@@ -489,17 +546,17 @@ func (t *EDCBTuner) Close(ownerLiveStreamID string, force bool) bool {
 
 // edcbStreamConn はチューナーとのストリーミング接続。
 //
-// 相手側からの切断 (読み取りの EOF) や自分からの close を検出できるように net.Conn をラップする。
+// 相手側からの切断 (読み取りの EOF) や自分からの close を検出できるように受信元をラップする。
 // Python 版の StreamWriter.is_closing() に相当する判定に使う。
 type edcbStreamConn struct {
-	net.Conn
+	io.ReadCloser
 	// disconnected は接続が切断されたかどうか。
 	disconnected atomic.Bool
 }
 
 // Read はストリームから読み取り、エラー (EOF を含む) が発生したら切断済みとして記録する。
 func (c *edcbStreamConn) Read(buffer []byte) (int, error) {
-	read, err := c.Conn.Read(buffer)
+	read, err := c.ReadCloser.Read(buffer)
 	if err != nil {
 		c.disconnected.Store(true)
 	}
@@ -509,7 +566,7 @@ func (c *edcbStreamConn) Read(buffer []byte) (int, error) {
 // Close はストリームを閉じ、切断済みとして記録する。
 func (c *edcbStreamConn) Close() error {
 	c.disconnected.Store(true)
-	return c.Conn.Close()
+	return c.ReadCloser.Close()
 }
 
 // isDisconnected は接続が切断されているかどうかを返す。

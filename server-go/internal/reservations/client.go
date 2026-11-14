@@ -7,9 +7,10 @@ import (
 	"io"
 	"net"
 	"net/url"
-	"os"
 	"strings"
 	"time"
+
+	"github.com/aki0429/KonomiTV/server-go/internal/edcbpipe"
 )
 
 // このファイルは server/app/utils/edcb/CtrlCmdUtil.py の CtrlCmdUtil を移植したもの。
@@ -128,8 +129,7 @@ func (t *TCPTransport) SendAndReceive(request []byte) (Response, error) {
 	return Response{Code: code, Data: payload}, nil
 }
 
-// NewClientFromURLContext は HTTP のキャンセル/期限を TCP 検索と ChSet5 転送に伝える。
-// 名前付きパイプは既存 transport の制約を維持する (実機検証は未実施)。
+// NewClientFromURLContext は HTTP のキャンセル/期限を検索と ChSet5 転送に伝える。
 func NewClientFromURLContext(ctx context.Context, edcbURL string) (*Client, error) {
 	client, err := NewClientFromURL(edcbURL)
 	if err != nil {
@@ -138,6 +138,9 @@ func NewClientFromURLContext(ctx context.Context, edcbURL string) (*Client, erro
 	if transport, ok := client.transport.(*TCPTransport); ok {
 		transport.Context = ctx
 		transport.legacyResponseSizes = false
+	}
+	if transport, ok := client.transport.(*pipeTransport); ok {
+		transport.Context = ctx
 	}
 	return client, nil
 }
@@ -158,11 +161,11 @@ func readFull(connection net.Conn, buffer []byte) (int, error) {
 // pipeTransport は Windows の名前付きパイプ / 非 Windows の UNIX ドメインソケットで接続する Transport。
 //
 // Python 版の名前付きパイプモード (EDCB の edcb_url に edcb-namedpipe を指定した場合) に対応する。
-// 実機の EDCB がない環境では検証できていないため、動作確認は未実施。
 type pipeTransport struct {
 	Path    string
 	Name    string
 	Timeout time.Duration
+	Context context.Context
 }
 
 // namedPipePath は Python 版 CtrlCmdUtil の既定パスと同じ値を返す。
@@ -187,21 +190,36 @@ func (t *pipeTransport) SendAndReceive(request []byte) (Response, error) {
 	if timeout <= 0 {
 		timeout = defaultConnectTimeout
 	}
+	parent := t.Context
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(parent, timeout)
+	defer cancel()
 	path := t.Path + t.Name
-	file, err := os.OpenFile(path, os.O_RDWR, 0)
+	file, err := edcbpipe.OpenCommand(ctx, path)
 	if err != nil {
 		return Response{}, err
 	}
 	defer func() { _ = file.Close() }()
-	if err := file.SetDeadline(time.Now().Add(timeout)); err != nil {
-		// 名前付きパイプ経由の SetDeadline は環境によっては未対応のため、失敗しても続行する
-		_ = err
-	}
-	if _, err := file.Write(request); err != nil {
+	stop := context.AfterFunc(ctx, func() { _ = file.Close() })
+	defer stop()
+	deadline, _ := ctx.Deadline()
+	if err := file.SetDeadline(deadline); err != nil {
 		return Response{}, err
 	}
+	for len(request) > 0 {
+		n, err := file.Write(request)
+		if err != nil {
+			return Response{}, err
+		}
+		if n == 0 {
+			return Response{}, io.ErrShortWrite
+		}
+		request = request[n:]
+	}
 	header := make([]byte, 8)
-	if _, err := file.Read(header); err != nil {
+	if _, err := io.ReadFull(file, header); err != nil {
 		return Response{}, err
 	}
 	code := int(int32(binary.LittleEndian.Uint32(header[0:4])))
@@ -209,11 +227,13 @@ func (t *pipeTransport) SendAndReceive(request []byte) (Response, error) {
 	if size < 0 {
 		return Response{}, fmt.Errorf("edcb: invalid response size %d", size)
 	}
-	payload := make([]byte, size)
-	if size > 0 {
-		if _, err := file.Read(payload); err != nil {
-			return Response{}, err
-		}
+	// 申告長だけで巨大な領域を確保せず、届いた本文に応じて確保する。
+	payload, err := io.ReadAll(io.LimitReader(file, int64(size)))
+	if err != nil {
+		return Response{}, err
+	}
+	if len(payload) != size {
+		return Response{}, io.ErrUnexpectedEOF
 	}
 	return Response{Code: code, Data: payload}, nil
 }

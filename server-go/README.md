@@ -204,10 +204,13 @@ curl http://127.0.0.77:7002/api/version
   チューナーの確保 → チャンネル設定 (失敗時 0.5 秒間隔で最大 5 秒リトライ、`E-02E`) → 接続 (失敗時 `E-03E`) →
   読み取り → 終了処理 (切断・チューナー解放) の順に動作する。
 
-**未対応**: EDCB バックエンドの**名前付きパイプモード** (`edcb_url` に `edcb-namedpipe` を指定した場合) の
-放送波ストリーム受信。TCP モード (`RelayViewStream`) のみ実装しており、名前付きパイプモードでは
-チューナーの起動までは行うがストリーム接続でエラーになる (`E-03E`) 。
-(IPTV バックエンドと Mirakurun / mirakc バックエンドは従来どおり動作する) 。
+EDCB のローカルモード (`edcb_url: tcp://edcb-namedpipe/`) は、Windows の
+`\\.\pipe\SendTSTCP_{port}_{processID}` と Linux の
+`/var/local/edcb/SendTSTCP_{port}_{processID}_{index}.fifo` を本家と同じ順番で探索する。
+Linux は `flock` で同時利用の index を選ぶ。接続待ちをキャンセルでき、切断で読み取り待ちも解除する。
+制御通信には Windows の双方向パイプと Linux の UNIX ドメインソケットを使う。
+独立した OS の実パイプで検証しており、実際の EDCB アプリとのローカル接続は未確認。
+稼働中の実機設定は TCP モードを維持している。
 
 ### クライアント設定 API
 

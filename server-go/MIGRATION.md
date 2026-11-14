@@ -3,6 +3,31 @@
 対象: `tsukumijima/KonomiTV` master `687b904bb0a2cbb329596fd7b0368c09afe19a6c` (2026-11-14)。
 完全移植は作業中。README の過去の「実装済み」は実機確認・現行本家との機能一致を保証しない。
 
+## EDCB のローカルパイプ受信
+
+本家の EDCBUtil.openPipeStream、PipeStreamReader、EDCBTuner.connect/disconnect と
+CtrlCmdUtil.__sendAndReceive を読み、Windows の名前付きパイプと Linux の FIFO を実装した。
+ポート 0〜29、Linux の index 0〜1、flock による排他と再試行間隔は本家に合わせた。
+index 0 が存在しなければ index 1 は調べず、両 index が使用中なら別ポートへ進まない。
+FIFO の writer がまだいない場合も期限・中止に応答し、接続確認で読んだ先頭バイトを保持する。
+Windows は OVERLAPPED ハンドルを Go の IOCP に登録し、Close で読み取り待ちを解除する。
+
+接続中の Disconnect / Handoff / Close / Cancelling とライブタスクの中止で、待機中の接続を無効にする。
+古い接続が遅れて完了しても閉じ、新所有者の接続・状態を上書きしない。
+制御通信の Linux 経路は誤って通常ファイルを開いていたため UNIX ドメインソケットへ修正した。
+Windows の制御パイプにも期限と中止を適用し、分割ヘッダー・本文を読み切る。申告長だけで巨大領域を確保しない。
+
+- Windows の独立した実名前付きパイプで、受信・EOF・Close・制御応答の分割・途中切断・中止・期限を確認した。
+- Linux 実機の独立した FIFO / UNIX ソケットと race 検査で同じ項目、排他・探索順・writer 接続待ちを確認した。
+  最終検査は edcbpipe 1.605秒、reservations 1.186秒、stream 7.072秒。
+  最終 Windows の `go build ./...`・`go vet ./...`・`go test ./...` も成功した。
+- 実機上の専用65秒 BDAV映像 10,166,016bytes を FIFO 経由で転送した。転送前後の SHA-256 は
+  `81fba087c48711a7dbb8bd41286fc40a6b3364ec511b6527da3d27befc8d1c7a` で一致し、実FFmpegで映像・音声をデコードした。
+- 実際の EDCB アプリとのローカルパイプ接続は未確認。稼働中の設定は既存の TCP モードを維持する。
+
+Twitter ブラウザーbackend、本家クライアントと導入手順、残りの実機検証は継続する。
+過去の各節に記載した未対応項目は当該リリース時点の記録であり、現在の進捗は冒頭の新しい節を優先する。
+
 ## BDAV と SIT の解析 (b14bbd4f)
 
 ソース `b14bbd4fadceda06a5d962fbb35e712f2d990b32` はGitHubへpushし、Linux実機へ導入した。

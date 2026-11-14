@@ -1,12 +1,17 @@
 package stream
 
 import (
+	"context"
 	"errors"
+	"io"
 	"net"
 	"sync"
 	"testing"
+	"time"
 
+	"github.com/aki0429/KonomiTV/server-go/internal/edcbpipe"
 	"github.com/aki0429/KonomiTV/server-go/internal/reservations"
+	"github.com/aki0429/KonomiTV/server-go/internal/testutil/edcbipc"
 )
 
 // このファイルは EDCBTuner の単体テスト。実機の EDCB には接続せず、
@@ -371,12 +376,17 @@ func TestEDCBTunerCloseFailureKeepsResult(t *testing.T) {
 	}
 }
 
-// TestEDCBTunerNamedPipeUnsupported は名前付きパイプモードでは connect が未対応のエラーを返すことを検証する。
-func TestEDCBTunerNamedPipeUnsupported(t *testing.T) {
+// TestEDCBTunerNamedPipe は OS の実パイプ経由で受信し、旧所有者からの切断を拒否することを検証する。
+func TestEDCBTunerNamedPipe(t *testing.T) {
 	resetEDCBTunerPool()
+	directory := edcbipc.Directory(t)
+	accept := edcbipc.StreamListener(t, edcbipc.StreamPath(directory, 3, 9000, 0))
 	ctrl := &fakeEDCBCtrlCmd{setChFunc: func() (int, bool) { return 9000, true }}
 	backend := fakeEDCBTunerBackend(ctrl)
 	backend.NamedPipe = true
+	backend.OpenPipeStream = func(ctx context.Context, processID int) (io.ReadCloser, error) {
+		return edcbpipe.OpenStream(ctx, processID, directory)
+	}
 	tuner := GetOrCreateEDCBTuner("stream-a", backend)
 	defer tuner.Close("stream-a", true)
 
@@ -384,11 +394,43 @@ func TestEDCBTunerNamedPipeUnsupported(t *testing.T) {
 		t.Fatalf("SetChannel() = false, want true")
 	}
 	reader, err := tuner.Connect("stream-a")
-	if reader != nil || err == nil {
-		t.Errorf("Connect() in named pipe mode = (%v, %v), want (nil, error)", reader, err)
+	if reader == nil || err != nil {
+		t.Fatalf("Connect() in named pipe mode = (%v, %v)", reader, err)
 	}
-	if tuner.GetState() != EDCBTunerIdle {
-		t.Errorf("state = %q, want Idle", tuner.GetState())
+	writer, err := accept()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer writer.Close()
+	tuner.Disconnect("stream-b")
+	if tuner.IsDisconnected() {
+		t.Fatal("another owner disconnected the pipe")
+	}
+	if _, err := writer.Write([]byte{0x47, 0, 0x10}); err != nil {
+		t.Fatal(err)
+	}
+	data := make([]byte, 3)
+	if _, err := io.ReadFull(reader, data); err != nil || data[0] != 0x47 {
+		t.Fatalf("stream read = %v, %v", data, err)
+	}
+	done := make(chan error, 1)
+	go func() { _, err := reader.Read(data); done <- err }()
+	select {
+	case err := <-done:
+		t.Fatalf("Read returned before Disconnect: %v", err)
+	case <-time.After(20 * time.Millisecond):
+	}
+	tuner.Disconnect("stream-a")
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("disconnected read succeeded")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Disconnect did not interrupt pipe read")
+	}
+	if !tuner.IsDisconnected() || tuner.GetState() != EDCBTunerIdle {
+		t.Fatal("disconnect state was not recorded")
 	}
 }
 
