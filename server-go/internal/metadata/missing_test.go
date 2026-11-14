@@ -241,3 +241,34 @@ func TestLegacyGoTimestampPrecisionIsNormalizedWithoutAnalysis(t *testing.T) {
 		t.Fatalf("precision repair %#v %v", rows, err)
 	}
 }
+
+func TestSameContentAnalysisRefreshesChangedFileTimes(t *testing.T) {
+	store := openTestDB(t)
+	folder := t.TempDir()
+	paths := seedRecordedFiles(t, store, folder, 1)
+	ctx := context.Background()
+	old := testFixedNow.Add(-48 * time.Hour)
+	if _, err := store.writeDB().Exec(`UPDATE recorded_videos SET file_created_at=?,file_modified_at=?`, database.FormatDBTime(old), database.FormatDBTime(old)); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := store.ListAllVideoSummaries(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	program := buildTestProgram(paths[0], 3600)
+	program.Title = "再解析で上書きしない"
+	program.Video.FileHash = rows[0].FileHash
+	program.Video.FileSize = rows[0].FileSize
+	service := &Service{Store: store, Analyzer: &fakeAnalyzer{program: program}, Logger: testLogger(t)}
+	if err := service.ProcessRecordedFile(ctx, paths[0], ProcessOptions{MetadataOnly: true}); err != nil {
+		t.Fatal(err)
+	}
+	service.Analyzer = &fakeAnalyzer{err: fmt.Errorf("same unchanged recording was analyzed repeatedly")}
+	if err := service.ProcessRecordedFile(ctx, paths[0], ProcessOptions{MetadataOnly: true}); err != nil {
+		t.Fatal(err)
+	}
+	var title string
+	if err := store.DB.QueryRow(`SELECT title FROM recorded_programs`).Scan(&title); err != nil || title != "テスト番組" {
+		t.Fatal("same-content refresh changed program metadata")
+	}
+}

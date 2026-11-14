@@ -2,12 +2,10 @@ package metadata
 
 import (
 	"context"
-	"hash/fnv"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
-	"time"
 )
 
 // TaskStatus は本家 MaintenanceTaskStatus と同じメモリ内の進捗情報。
@@ -18,10 +16,16 @@ type TaskStatus struct {
 	Registered bool `json:"has_registered_files"`
 }
 
-var recordedPathLocks [256]sync.Mutex
+type recordedPathEntry struct {
+	token chan struct{}
+	users int
+}
 
-// recordedPathLock は別の Service の手動解析・監視・欠落処理も同じパスで直列化する。
-func recordedPathLock(path string) *sync.Mutex {
+var recordedLocksMu sync.Mutex
+var recordedLocks = map[string]*recordedPathEntry{}
+
+// recordedPathKey は同じファイルに対する手動解析・監視・欠落処理のキーを揃える。
+func recordedPathKey(path string) string {
 	path = filepath.Clean(path)
 	if absolute, err := filepath.Abs(path); err == nil {
 		path = absolute
@@ -29,30 +33,42 @@ func recordedPathLock(path string) *sync.Mutex {
 	if runtime.GOOS == "windows" {
 		path = strings.ToLower(path)
 	}
-	hash := fnv.New32a()
-	_, _ = hash.Write([]byte(path))
-	return &recordedPathLocks[hash.Sum32()%uint32(len(recordedPathLocks))]
+	return path
 }
 
 func acquireRecordedPath(ctx context.Context, path string) (func(), error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	lock := recordedPathLock(path)
-	if lock.TryLock() {
-		return lock.Unlock, nil
+	key := recordedPathKey(path)
+	recordedLocksMu.Lock()
+	entry := recordedLocks[key]
+	if entry == nil {
+		entry = &recordedPathEntry{token: make(chan struct{}, 1)}
+		recordedLocks[key] = entry
 	}
-	ticker := time.NewTicker(10 * time.Millisecond)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-ticker.C:
-			if lock.TryLock() {
-				return lock.Unlock, nil
-			}
+	entry.users++
+	recordedLocksMu.Unlock()
+	// 待機者も参照数に含め、キャンセルや終了後には使わないパスを辞書から除く。
+	dropReference := func() {
+		recordedLocksMu.Lock()
+		entry.users--
+		if entry.users == 0 {
+			delete(recordedLocks, key)
 		}
+		recordedLocksMu.Unlock()
+	}
+	select {
+	case <-ctx.Done():
+		dropReference()
+		return nil, ctx.Err()
+	case entry.token <- struct{}{}:
+		unlock := func() { <-entry.token; dropReference() }
+		if err := ctx.Err(); err != nil {
+			unlock()
+			return nil, err
+		}
+		return unlock, nil
 	}
 }
 

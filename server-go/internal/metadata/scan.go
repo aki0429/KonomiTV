@@ -391,14 +391,23 @@ func (s *Service) ProcessRecordedFile(ctx context.Context, filePath string, opti
 	if originalPath != "" && originalPath != filePath {
 		queryPaths = append(queryPaths, originalPath)
 	}
-	if rows, err := s.Store.FindVideoSummariesByPaths(ctx, queryPaths); err == nil && len(rows) > 0 {
-		existingAfter = rows
+	existingAfter, err = s.Store.FindVideoSummariesByPaths(ctx, queryPaths)
+	if err != nil {
+		return err
 	}
 	var existingProgramID int64
 	if len(existingAfter) > 0 {
 		if !options.ForceUpdate && existingAfter[0].Status == "Recorded" &&
-			existingAfter[0].FileHash == program.Video.FileHash {
-			return nil
+			existingAfter[0].FileHash == program.Video.FileHash && existingAfter[0].FileSize == program.Video.FileSize {
+			// 内容が同じでも、コピー等で変わった日時を保存し、次回も同じ解析を繰り返さない。
+			stable, err := s.Store.restoreUnchangedVideo(ctx, existingAfter[0], fileCreatedAt, fileModifiedAt)
+			if err != nil {
+				return err
+			}
+			if stable {
+				return nil
+			}
+			return fmt.Errorf("recording changed during analysis")
 		}
 		existingProgramID = existingAfter[0].RecordedProgramID
 	}

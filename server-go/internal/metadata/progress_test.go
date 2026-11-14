@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,6 +15,47 @@ type taskTestRenderer func(context.Context, ThumbnailRenderParams) error
 
 func (f taskTestRenderer) Render(ctx context.Context, params ThumbnailRenderParams) error {
 	return f(ctx, params)
+}
+
+func TestRecordedPathsDoNotShareUnrelatedWaits(t *testing.T) {
+	folder := t.TempDir()
+	buckets := map[uint32]string{}
+	var first, second string
+	// 旧方式で同じ枠に入った二つの別ファイルを、確実に再現する。
+	for i := 0; i < 1024; i++ {
+		path := filepath.Join(folder, fmt.Sprintf("recording-%d.ts", i))
+		hash := fnv.New32a()
+		_, _ = hash.Write([]byte(recordedPathKey(path)))
+		bucket := hash.Sum32() % 256
+		if old, ok := buckets[bucket]; ok {
+			first, second = old, path
+			break
+		}
+		buckets[bucket] = path
+	}
+	if first == "" {
+		t.Fatal("failed to construct regression paths")
+	}
+	unlock, err := acquireRecordedPath(context.Background(), first)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unlock()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	otherUnlock, err := acquireRecordedPath(ctx, second)
+	if err != nil {
+		t.Fatal("unrelated thumbnail extraction blocked recording registration")
+	}
+	otherUnlock()
+	blocked, cancelBlocked := context.WithTimeout(context.Background(), 25*time.Millisecond)
+	defer cancelBlocked()
+	if release, err := acquireRecordedPath(blocked, first); !errors.Is(err, context.DeadlineExceeded) {
+		if release != nil {
+			release()
+		}
+		t.Fatalf("same-file exclusion failed: %v", err)
+	}
 }
 
 func TestBackgroundAnalysisProgressGuardAndPartialFailure(t *testing.T) {
