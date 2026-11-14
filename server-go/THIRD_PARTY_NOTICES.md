@@ -1,5 +1,24 @@
 # Third-party notices
 
+## Chrome for Testing
+
+The optional `browser-assets` command downloads Chrome for Testing 157.0.8103.78 directly
+from Google's official distribution. The browser is not embedded in this repository.
+The command verifies fixed SHA-256 digests before extraction and preserves the archive
+contents, including Google's `ABOUT` copyright notice. Chrome's bundled notices and
+terms are available at `chrome://credits` and `chrome://terms`.
+
+- Distribution: https://googlechromelabs.github.io/chrome-for-testing/
+- License information: https://www.google.com/chrome/terms/
+- Linux amd64 SHA-256: `9223832977a13db3646201b1341c1f9cf08afa3ceae92540116d7b0c062364fb`
+- Windows amd64 SHA-256: `5f6ec40206407112702e163bf694d07f9fdc8ccbd346c70ce61fa62f716493f9`
+- Linux arm64 SHA-256: `f354d666822a11d8fe99e923c44be77dd226fab2750c5b5947e6318818bf10f1`
+
+The optional Ubuntu dependency step uses the host's configured APT repositories to
+download `libasound2t64`, `libgbm1`, and `fonts-noto-cjk`. Packages are extracted into
+the application's browser directory. Their copyright and license documents are kept
+under `libraries/usr/share/doc/`; no OS packages or security policies are modified.
+
 ## OpenCV thumbnail image processing and face detection
 
 The Go thumbnail cascade evaluator, rectangle grouping, exact linear and area resize and

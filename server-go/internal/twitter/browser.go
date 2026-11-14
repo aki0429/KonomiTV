@@ -133,6 +133,9 @@ func findBrowser(binary, dataDir string) (string, error) {
 			filename = "chrome.exe"
 		}
 		candidates = append(candidates, filepath.Join(filepath.Dir(dataDir), "go-native", "Chrome", filename))
+		if runtime.GOOS == "windows" {
+			candidates = append(candidates, filepath.Join(filepath.Dir(dataDir), "go-native", "Chrome", "chrome-win64", "chrome.exe"))
+		}
 	}
 	for _, candidate := range candidates {
 		if path, err := exec.LookPath(candidate); err == nil {

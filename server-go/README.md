@@ -1,8 +1,8 @@
 # server-go: KonomiTV サーバー Go 版
 
-KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行するためのサーバー実装です。
-未実装の API は既存の Python 版サーバーへリバースプロキシするため、Python 版と共存させたまま
-ルーター単位で少しずつ移行できます (ストラングラーパターン) 。
+KonomiTV のバックエンドを Go で実装したサーバーです。
+Go単独運転では`-no-proxy`を指定します。実行時のPython、FastAPI、Zendriver、OpenCVは不要です。
+既存のPython版と並行して比較するためのプロキシモードも保持しています。
 
 ## 現在の移行状況
 
@@ -27,13 +27,14 @@ Python と併走する移行モードでは、型と保存先を検証し、使�
 | `POST`/`DELETE /api/users/me/account-links` (Twitter / Bluesky 紐付け) | ✅ Go 実装済み |
 | `/api/twitter/*` (Cookie認証・タイムライン・検索・投稿・画像・返信・いいね等) | Go実装。Chrome / Braveを直接操作する。実ブラウザーとローカル模擬ページで検証、実アカウントへの投稿は未実施 |
 | `GET /api/channels/{channel_id}` (チャンネル情報、現在/次の番組を含む) | ✅ Go 実装済み |
-| `GET /api/channels/{channel_id}/logo` (チャンネルロゴ) | ✅ Go 実装済み (IPTV 疑似チャンネルは Python 版へプロキシ) |
+| `GET /api/channels/{channel_id}/logo` (チャンネルロゴ) | ✅ Go 実装済み (IPTV の配信元ロゴも Go で取得) |
 | `GET /api/channels/{channel_id}/jikkyo` (ニコニコ実況 WebSocket URL) | ✅ Go 実装済み (ニコニコアカウント連携時のニコ生セッション取得・トークン更新含む) |
 | `GET /api/channels` (チャンネル一覧、現在/次の番組・IPTV 疑似チャンネル含む) | ✅ Go 実装済み |
 | `GET /api/programs/timetable` (番組表) | ✅ Go 実装済み (EDCB の録画中・無効・競合状態、EID 不一致時の時間照合、EDCB/Mirakurun の詳細文の継続を含む) |
 | `GET /api/programs/toru-counts`・`GET /api/programs/toru-ranking` | Go 実装済み (本家 TorneClient の合成実行結果と照合。初回 EPG 更新後と 3 時間ごとに取得) |
 | `/api/captures/tags`・`/api/captures/tags/{tag_id}`・`.../items`・`/api/captures/favorites` | Go 実装済み (本人のタグ CRUD、タグ付け、お気に入り。一括追加は全 ID 検証後に変更) |
-| `POST /api/programs/search` (番組検索) | 🚧 Go native 完成候補 (EDCB 以外は 422。`-no-proxy` 時は SearchPg 1025、有効時は既存 Python 転送を維持。実機・親受入れ未実施) |
+| `POST /api/programs/search` (番組検索) | Go 実装 (`-no-proxy` 時は EDCB SearchPg 1025、EDCB 以外は本家同様422。プロキシモードも保持) |
+| `/api/reservations`・`/api/reservation-conditions`・`/api/recording-presets` | Go 実装 (EDCBの予約・自動予約条件・録画設定) |
 | `GET /api/series`・`GET /api/series/search`・`GET /api/series/{series_id}` (シリーズ番組) | ✅ Go 実装済み (録画番組・録画ファイル・チャンネルまで展開) |
 | `GET /api/iptv/channels`・`/countries`・`/groups`・`/playlist.m3u` (IPTV チャンネル一覧・国・グループ・プレイリスト出力) | ✅ Go 実装済み (実データ 11152 チャンネルで Python 版と完全一致を検証済み) |
 | `GET`/`POST`/`DELETE /api/iptv/sources`・`POST /api/iptv/sources/enabled` (プレイリストソース管理・有効/無効切替) | ✅ Go 実装済み |
@@ -46,7 +47,7 @@ Python と併走する移行モードでは、型と保存先を検証し、使�
 | `GET /api/streams/live/{display_channel_id}/{quality}/mpegts` (ライブ MPEG-TS ストリーム) | ✅ Go 実装済み |
 | `GET /api/streams/live/{display_channel_id}/{quality}/psi-archived-data` (PSI/SI アーカイブデータ) | ✅ Go 実装済み (EDCB / Mirakurun バックエンドのみ。IPTV では 500 を返す) |
 | `GET /api/streams/video/{video_id}/{quality}/playlist`・`PUT .../keep-alive`・`GET .../buffer` (録画 HLS プレイリスト・セッション維持・バッファ範囲 SSE) | ✅ Go 実装済み (セッション管理は `internal/videostream/session*.go`) |
-| `GET /api/streams/video/{video_id}/{quality}/segment` (録画 HLS セグメント) | 🚧 セッション制御は Go 実装済み。エンコーダー (VideoEncodingTask) 待ちのため、エンコーダー未登録の間は 500 を返す |
+| `GET /api/streams/video/{video_id}/{quality}/segment` (録画 HLS セグメント) | Go 実装。サーバー起動時に同梱FFmpeg/QSVEncC等のエンコーダーを登録する |
 | `GET /api/streams/video/{video_id}/{quality}/offline-stream` (オフライン保存) | ✅ Go 実装済み (`KTVODLP` 本体をネイティブ生成。proxy 有効時は検証後に Python 版へ転送) |
 | `GET /api/videos`・`GET /api/videos/search` (録画番組一覧・検索) | ✅ Go 実装済み (応答は Python 版と完全一致を検証済み) |
 | `GET /api/videos/{video_id}` (録画番組情報) | ✅ Go 実装済み |
@@ -55,21 +56,23 @@ Python と併走する移行モードでは、型と保存先を検証し、使�
 | `GET /api/videos/{video_id}/download` (録画ファイルのダウンロード、Range 対応) | ✅ Go 実装済み |
 | `GET /api/videos/{video_id}/jikkyo` (ニコニコ実況の過去ログコメント) | ✅ Go 実装済み |
 | `DELETE /api/videos/{video_id}` (録画ファイルの削除、管理者のみ) | ✅ Go 実装済み |
-| `POST /api/videos/{video_id}/reanalyze`・`/thumbnail/regenerate` | 🔁 Python 版へプロキシ |
+| `POST /api/videos/{video_id}/reanalyze`・`/thumbnail/regenerate` | Go 実装 (番組情報・シーク位置・画像採点と生成) |
 | `GET /api/settings/client`・`PUT /api/settings/client` (クライアント設定の取得・更新) | ✅ Go 実装済み (51 項目の型・選択肢・入れ子の検証と同期時刻の照合を含む) |
 | `GET /api/settings/server`・`PUT /api/settings/server` (サーバー設定の取得・更新) | ✅ Go 実装済み (PUT は config.yaml をコメントを保持したまま行単位で書き換える) |
 | `GET /api/maintenance/logs/{log_type}` (サーバーログ・アクセスログの SSE 配信) | ✅ Go 実装済み |
 | `POST /api/maintenance/restart`・`POST /api/maintenance/shutdown` (再起動・終了) | ✅ Go 実装済み (ローカルホストからのアクセスは認証不要) |
-| `POST /api/maintenance/update-database` (データベース更新) | ✅ Go 実装済み (IPTV バックエンドはプレイリストの再取得、EDCB / Mirakurun は Python 版へプロキシ) |
-| `POST /api/maintenance/run-batch-scan`・`/run-background-analysis` | 🔁 Python 版へプロキシ |
+| `POST /api/maintenance/update-database` (データベース更新) | Go 実装 (EDCB / Mirakurun / IPTV。プロキシモードも保持) |
+| `POST /api/maintenance/run-batch-scan`・`/run-background-analysis` | Go 実装 (録画一覧・背景解析と状態API) |
+| `/api/maintenance/capture-scan/*`・`/database-vacuum/*` | Go 実装 (キャプチャ走査・DB最適化と状態API) |
 | `GET /api/captures`・`GET /api/captures/{filename}`・`POST /api/captures`・`DELETE /api/captures/{filename}` (キャプチャ一覧・取得・アップロード・削除) | ✅ Go 実装済み |
 | `GET`/`POST`/`PUT`/`DELETE /api/captures/folders` (キャプチャフォルダ管理) | ✅ Go 実装済み |
 | `GET`/`POST`/`DELETE /api/captures/folders/{folder_id}/captures` (フォルダ内キャプチャ操作) | ✅ Go 実装済み |
 | `/assets/*`・`/` (client/dist の静的配信、SPA フォールバック) | ✅ Go 実装済み |
 | CORS (Starlette 互換) | ✅ Go 実装済み |
-| その他の全 API | 🔁 Python 版へプロキシ |
+| `/api/bluesky/*`・`/api/niconico/*` | Go 実装 (認証・アカウント連携・画像変換等) |
+| 未知の API | `-no-proxy` では404、比較用プロキシモードではPythonへ転送 |
 
-### EDCB 番組検索の完成候補 (PG3)
+### EDCB 番組検索
 
 - `-no-proxy` (`s.proxy == nil`) 時は通常の CtrlCmd `SearchPg` (1025) を Go から送信する。native 経路には Python / ariblib の実行時依存はない。
 - プロキシ有効時は検索条件の検証を含め既存 Python 転送を維持する。native を無条件に proxy へ戻す変更ではない。
@@ -79,7 +82,9 @@ Python と併走する移行モードでは、型と保存先を検証し、使�
 - TCP native 検索専用 client は HTTP キャンセルと期限、既定 15 秒のタイムアウト、64 MiB の応答上限を ChSet5 を含め適用する。旧 URL client は既存サイズ範囲を維持し、SearchPg 1025 のみ 64 MiB に制限する。本文は申告長を先取り確保せず実受信に応じて増やす。
 - `TestPG3*` は実 TCP の合成 peer のみを使用する。本番 EDCB・予約サービス・SSH へは接続していない。
 - 既存 `TestProgramSearchProxiedForEDCB` は assertion 不変で通過。no-proxy native 正常系と旧 proxy 構成を併存させる。
-- 名前付きパイプの期限・部分 Read と実機互換性は未検証。不正 UTF-16、JSON null/必須子フィールド/Pydantic coercion、特殊な拡張見出しの完全互換性は未達 (follow-up 証跡の監査項目を参照)。
+- Windowsの実パイプとLinuxのFIFO / UNIXソケットで期限・部分Read・中止を検証した。
+  稼働中のEDCB接続はTCPを維持しており、EDCBアプリとのローカルパイプ接続は未確認。
+  詳細文や入力検証の比較範囲は[MIGRATION.md](MIGRATION.md)を参照。
 
 ### FastAPI の 422 検証エラー互換 (`internal/api/fastapi_validation.go`)
 
@@ -98,25 +103,24 @@ Python と併走する移行モードでは、型と保存先を検証し、使�
 - 文字列 → int の変換は前後の空白・符号・アンダースコア区切り・ゼロ小数部 (`1.0`) を許容し、
   小数 (`1.5`) や指数 (`1e2`) は `int_parsing` になる (`int_from_float` ではない) 。
 
-**既知の未達 (follow-up)**: `GET /api/videos`・`GET /api/videos/search`・`GET /api/series` の `page`、
-`GET /api/captures/folders/{folder_id}/captures?page` はまだ文字列 detail (`Invalid page` など) を返す。
-`page=0` / `page=-1` の扱いも Python 版と異なる (Python は 200、Go は 422) 。実機プローブの結果は
-移行台帳の検証記録に保存している。
+録画・シリーズ一覧の`page`は本家同様、0以下でも先頭ページを返す。
+旧キャプチャフォルダAPIでは本家の`ge=1`制約に従い、1未満は検証エラー配列を返す。
 
 ## 使い方
 
-Python 版サーバー (`server/` で `uv run task serve` / `uv run task dev`) を起動した状態で、
-`server-go/` ディレクトリから実行します。
+Go単独運転では、`config.yaml`と設定したバックエンド、同梱エンコーダーを用意し、
+`server-go/`から実行します。配信画面のビルド済みファイルは`client/dist/`に含まれます。
+以下の`.exe`はWindows用の名前です。Linuxでは拡張子を外し、ワーカーだけ`.elf`にします。
 
 ```powershell
-# 開発中の起動 (Python 版の 127.0.0.77:7010 へプロキシ)
-go run ./cmd/konomitv-go
+# 開発中の単独起動
+go run ./cmd/konomitv-go -no-proxy
 
 # ビルドして実行
 go run ./cmd/thumbnail-assets
 go build -o ../server/go-native/FFmpeg-Thumbnail/thumbnail-worker.exe ./cmd/thumbnail-worker
 go build -o konomitv-go.exe ./cmd/konomitv-go
-./konomitv-go.exe
+./konomitv-go.exe -no-proxy
 ```
 
 通常サムネイルの抽出には上記の専用 Go ワーカーが必要です。
@@ -124,6 +128,31 @@ Linux ではワーカーの出力名を `thumbnail-worker.elf` にします。
 `thumbnail-assets` は固定した配布物の SHA-256 を検証し、デコード用の共有ライブラリだけを取得します。
 実行時の Python は不要で、既存の FFmpeg / QSVEncC のファイルは変更しません。
 Go 版専用のファイルは `server/go-native/` に配置します。
+
+### Twitter連携用のChrome
+
+既存のChrome / Braveがあれば優先して利用します。専用のChromeを置く場合は、Goだけで導入できます。
+公式Chrome for Testing `157.0.8103.78`のWindows amd64 / Linux amd64・arm64配布ZIPをSHA-256で照合し、
+展開後の全ファイルと共有ライブラリのリンク先を`assets-manifest.json`に記録します。
+同じコマンドの再実行では全ファイルを再検証します。不明な既存ディレクトリや異なる版は上書きしません。
+
+```powershell
+go run ./cmd/browser-assets
+# 取得済みZIPも固定したSHA-256で検証する
+go run ./cmd/browser-assets -archive /path/to/chrome.zip
+```
+
+Ubuntuで不足する共有ライブラリと日本語フォントをアプリ内に置く場合は、次を指定します。
+`apt-get download`と`dpkg-deb -x`だけを使い、OSへのパッケージ導入や設定変更は行いません。
+`-apparmor-profile chrome`は既存の同名プロファイルを利用する指定で、新しいプロファイルは作成しません。
+Chromeのサンドボックスは有効なままです。
+
+```sh
+go run ./cmd/browser-assets -ubuntu-libraries -apparmor-profile chrome
+```
+
+Linuxは`server/go-native/Chrome/chrome`、Windowsは`server/go-native/Chrome/chrome-win64/chrome.exe`を検出します。
+取得元、ライセンス、実機検証の範囲は[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)と[MIGRATION.md](MIGRATION.md)を参照。
 
 デフォルトでは `127.0.0.77:7002` でリッスンします。Python 版 (Akebi 経由で 7000) とは別ポートなので
 共存できます。動作確認は HTTP で直接行ってください (API のみなら HTTPS は不要です) 。
