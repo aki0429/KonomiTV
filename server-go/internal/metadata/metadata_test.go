@@ -3,6 +3,7 @@ package metadata
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"os"
@@ -277,7 +278,7 @@ func TestMarshalThumbnailInfo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshalThumbnailInfo returned error: %v", err)
 	}
-	want := `{"version": 1, "representative": {"format": "WebP", "width": 480, "height": 270}, ` +
+	want := `{"version": 1, "representative": {"format": "WebP", "width": 480, "height": 270, "revision": 1}, ` +
 		`"tile": {"format": "WebP", "image_width": 16320, "image_height": 1440, "tile_width": 320, ` +
 		`"tile_height": 180, "total_tiles": 360, "column_count": 51, "row_count": 8, "interval_sec": 10.0}}`
 	if got != want {
@@ -560,7 +561,7 @@ func TestUpdateCMSectionsAndThumbnailInfo(t *testing.T) {
 		t.Fatalf("UpdateCMSections returned error: %v", err)
 	}
 	layout := CalculateThumbnailLayout(3600)
-	if err := store.UpdateThumbnailInfo(ctx, "/recorded/update.ts", BuildThumbnailInfo(layout)); err != nil {
+	if err := store.UpdateThumbnailInfo(ctx, "/recorded/update.ts", program.Video.FileHash, BuildThumbnailInfo(layout)); err != nil {
 		t.Fatalf("UpdateThumbnailInfo returned error: %v", err)
 	}
 	var cmSections, thumbnailInfo sql.NullString
@@ -570,7 +571,8 @@ func TestUpdateCMSectionsAndThumbnailInfo(t *testing.T) {
 	if !cmSections.Valid || !strings.Contains(cmSections.String, `"start_time": 100.0`) {
 		t.Errorf("unexpected cm_sections: %v", cmSections)
 	}
-	if !thumbnailInfo.Valid || !strings.Contains(thumbnailInfo.String, `"total_tiles": 360`) {
+	var info ThumbnailInfo
+	if !thumbnailInfo.Valid || json.Unmarshal([]byte(thumbnailInfo.String), &info) != nil || info.Tile.TotalTiles != 360 || info.Representative.Revision != 1 {
 		t.Errorf("unexpected thumbnail_info: %v", thumbnailInfo)
 	}
 	// 保存された cm_sections を再解析できること

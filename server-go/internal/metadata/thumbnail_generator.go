@@ -100,7 +100,7 @@ func (g *ThumbnailGenerator) GenerateAndSave(ctx context.Context, filePath strin
 
 	// thumbnail_info を DB に保存する
 	if g.Store != nil {
-		if err := g.Store.UpdateThumbnailInfo(ctx, filePath, BuildThumbnailInfo(layout)); err != nil {
+		if err := g.Store.UpdateThumbnailInfo(ctx, filePath, fileHash, BuildThumbnailInfo(layout)); err != nil {
 			return err
 		}
 	}

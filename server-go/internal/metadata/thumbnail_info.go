@@ -18,6 +18,8 @@ func marshalThumbnailInfo(info ThumbnailInfo) (string, error) {
 	builder.WriteString(strconv.Itoa(info.Representative.Width))
 	builder.WriteString(`, "height": `)
 	builder.WriteString(strconv.Itoa(info.Representative.Height))
+	builder.WriteString(`, "revision": `)
+	builder.WriteString(strconv.Itoa(info.Representative.Revision))
 	builder.WriteString(`}, "tile": {"format": `)
 	builder.WriteString(pyString(info.Tile.Format))
 	builder.WriteString(`, "image_width": `)

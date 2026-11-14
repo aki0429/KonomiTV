@@ -196,14 +196,18 @@ func (s *Store) UpdateCMSections(ctx context.Context, filePath string, sections 
 
 // UpdateThumbnailInfo は指定されたファイルパスの RecordedVideo の thumbnail_info を更新する。
 // 移植元: ThumbnailGenerator.__saveThumbnailInfoToDB()
-func (s *Store) UpdateThumbnailInfo(ctx context.Context, filePath string, info ThumbnailInfo) error {
+func (s *Store) UpdateThumbnailInfo(ctx context.Context, filePath string, fileHash string, info ThumbnailInfo) error {
 	payload, err := marshalThumbnailInfo(info)
 	if err != nil {
 		return err
 	}
 	_, err = s.writeDB().ExecContext(ctx,
-		`UPDATE recorded_videos SET thumbnail_info = ?, updated_at = ? WHERE file_path = ?`,
-		payload, database.FormatDBTime(s.now()), filePath,
+		// 生成中に入力が変わっていれば保存しない。同じ内容の別録画も同じ画像を参照する。
+		// 番号は DB 上の現在値から進め、画像差し替えや並行生成で巻き戻さない。
+		`UPDATE recorded_videos SET thumbnail_info = json_set(?, '$.representative.revision',
+		 COALESCE(json_extract(thumbnail_info, '$.representative.revision'), 0) + 1)
+		 WHERE file_hash = ? AND EXISTS(SELECT 1 FROM recorded_videos source WHERE source.file_path=? AND source.file_hash=?)`,
+		payload, fileHash, filePath, fileHash,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update thumbnail_info: %w", err)

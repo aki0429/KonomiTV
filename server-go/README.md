@@ -47,6 +47,7 @@ Go 単独運転 (`-no-proxy`) では、Python を起動せずに DB を作成で
 | `GET /api/videos`・`GET /api/videos/search` (録画番組一覧・検索) | ✅ Go 実装済み (応答は Python 版と完全一致を検証済み) |
 | `GET /api/videos/{video_id}` (録画番組情報) | ✅ Go 実装済み |
 | `GET /api/videos/{video_id}/thumbnail`・`/thumbnail/tiled` (サムネイル画像、ETag / 304 対応) | ✅ Go 実装済み |
+| `PUT /api/videos/{video_id}/thumbnail` (同じ放送回のキャプチャで代表画像を変更) | ✅ Go 実装済み |
 | `GET /api/videos/{video_id}/download` (録画ファイルのダウンロード、Range 対応) | ✅ Go 実装済み |
 | `GET /api/videos/{video_id}/jikkyo` (ニコニコ実況の過去ログコメント) | ✅ Go 実装済み |
 | `DELETE /api/videos/{video_id}` (録画ファイルの削除、管理者のみ) | ✅ Go 実装済み |
@@ -205,24 +206,26 @@ curl http://127.0.0.77:7002/api/version
 
 ### 録画番組 API (`/api/videos`)
 
-録画番組の一覧・検索・詳細・サムネイル画像・録画ファイルのダウンロード・削除を Go で実装している
-(応答は Python 版 `schemas.RecordedProgram` と完全に一致することを検証済み) 。
+録画番組の一覧・検索・詳細・サムネイル画像・録画ファイルのダウンロード・削除を Go で実装している。
+応答互換性はフィクスチャと API 試験で確認する。機能全体の移植完了は `MIGRATION.md` の未完了項目も含めて判断する。
 
 - 一覧と検索は Python 版と同じ生 SQL (recorded_programs + recorded_videos + channels の結合) を発行する。
   `order=ids` の場合は指定された ID の順序を維持する (ページングも Python 版と同じ挙動) 。
 - サムネイル画像は `server/data/thumbnails/<file_hash>.webp` を配信し、存在しない場合は
   `server/static/thumbnails/default.webp` をキャッシュ無効で返す。
   `ETag` / `Last-Modified` による 304 応答 (If-None-Match / If-Modified-Since) にも対応する。
+- 代表サムネイルの変更は、ネットワーク ID・サービス ID・イベント ID・開始時刻が一致するキャプチャに限る。
+  読める保存場所と内容ハッシュを確認して 480×270 の WebP を作成する。同じ内容の録画の `representative.revision` も進める。
+  自動再生成も DB 上の現在の番号から進め、生成中に入力のハッシュが変わった場合は情報を書き戻さない。
 - 録画ファイルのダウンロードは `http.ServeFile` で配信するため Range リクエスト (シーク) に対応する。
 - 削除は管理者のみ実行でき、データベースのレコード・サムネイル画像・補助ファイル (.ts.program.txt / .ts.err) ・
   録画ファイル本体を Python 版と同じ順序で削除する。
 - ニコニコ実況の過去ログコメントは過去ログ API から取得して DPlayer の形式に変換する
   (コメントの色・位置・サイズの解釈は Python 版と一致することをフィクスチャで検証済み) 。
 
-**未対応**: メタデータ再解析 (`POST /api/videos/{video_id}/reanalyze`) とサムネイル画像再生成
-(`POST /api/videos/{video_id}/thumbnail/regenerate`) は Go 版では未実装のため Python 版へプロキシする
-(FFmpeg / psisiarc を使った録画ファイルの解析処理が必要なため) 。
-また、MPEG-4 コンテナの録画番組で `.psc` ファイルがある場合のコメント時刻の補正は行わない。
+メタデータ再解析 (`POST /api/videos/{video_id}/reanalyze`) とサムネイル画像再生成
+(`POST /api/videos/{video_id}/thumbnail/regenerate`) も Go で実行する。
+顔検出・画像採点と MPEG-4 の `.psc` を使う解析は引き続き移植する。
 
 ### メンテナンス API (`/api/maintenance`)
 
@@ -239,11 +242,11 @@ curl http://127.0.0.77:7002/api/version
   どちらも管理者ユーザーまたは `Host: 127.0.0.77:<server.port + 10>` (内部ポート) からのアクセスで実行できる。
 - `POST /api/maintenance/update-database` は IPTV バックエンドではプレイリストを再取得するだけで、
   Python 版と同じくチャンネル情報・番組情報をデータベースに保存しない。
-  EDCB / Mirakurun バックエンドのチャンネル情報・番組情報の更新は Go 版では未実装のため Python 版へプロキシする。
+  EDCB / Mirakurun バックエンドのチャンネル情報・番組情報は Go で取得して更新する。
 
-**未対応**: 録画フォルダの一括スキャン (`POST /api/maintenance/run-batch-scan`) と
-バックグラウンド解析 (`POST /api/maintenance/run-background-analysis`) は、
-録画ファイルのメタデータ解析・CM 区間検出・サムネイル生成が必要なため Python 版へプロキシする。
+録画スキャン・バックグラウンド解析・キャプチャスキャン・DB 最適化は Go で実行する。
+各処理の `/run` と `/status` に対応し、HTTP 切断後も処理を続ける。DB 最適化には管理者認証が必要。
+欠落した録画は一週間保持し、保存先が読めない場合や大量欠落時には期限削除を見送る。
 
 ### キャプチャ API (`/api/captures`)
 

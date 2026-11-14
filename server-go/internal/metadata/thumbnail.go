@@ -185,9 +185,10 @@ func isLiveActionGenre(genre Genre) bool {
 type ThumbnailInfo struct {
 	Version        int `json:"version"`
 	Representative struct {
-		Format string `json:"format"`
-		Width  int    `json:"width"`
-		Height int    `json:"height"`
+		Format   string `json:"format"`
+		Width    int    `json:"width"`
+		Height   int    `json:"height"`
+		Revision int    `json:"revision"`
 	} `json:"representative"`
 	Tile struct {
 		Format      string  `json:"format"`
@@ -209,6 +210,7 @@ func BuildThumbnailInfo(layout ThumbnailLayout) ThumbnailInfo {
 	info.Representative.Format = "WebP"
 	info.Representative.Width = ScoringWidth
 	info.Representative.Height = ScoringHeight
+	info.Representative.Revision = 1
 	info.Tile.Format = "WebP"
 	info.Tile.ImageWidth = layout.TileImageWidth
 	info.Tile.ImageHeight = layout.TileImageHeight

@@ -774,6 +774,7 @@ func containsString(values []string, target string) bool {
 type validationContext struct {
 	Expected string `json:"expected,omitempty"`
 	Ge       *int   `json:"ge,omitempty"`
+	Gt       *int   `json:"gt,omitempty"`
 	Le       *int   `json:"le,omitempty"`
 	Error    string `json:"error,omitempty"`
 }

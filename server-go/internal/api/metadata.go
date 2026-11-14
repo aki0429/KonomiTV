@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -46,12 +45,8 @@ func (s *Server) newMetadataService() *metadata.Service {
 			// サムネイル画像の実生成は、同梱 FFmpeg の tile フィルタと libwebp で行う。
 			// Linux の ffmpeg.elf は同じディレクトリの共有ライブラリを必要とするため、
 			// そのディレクトリを LD_LIBRARY_PATH として渡す。
-			Renderer: &metadata.FFMpegThumbnailRenderer{
-				FFmpegPath:  s.paths.LibraryPath("FFmpeg"),
-				LibraryPath: filepath.Dir(s.paths.LibraryPath("FFmpeg")),
-				Logger:      s.logger,
-			},
-			Logger: s.logger,
+			Renderer: s.thumbnailRenderer,
+			Logger:   s.logger,
 		},
 		Logger: s.logger,
 	}

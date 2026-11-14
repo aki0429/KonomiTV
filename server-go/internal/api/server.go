@@ -10,6 +10,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/epgupdate"
 	"github.com/aki0429/KonomiTV/server-go/internal/iptv"
 	"github.com/aki0429/KonomiTV/server-go/internal/jikkyo"
+	"github.com/aki0429/KonomiTV/server-go/internal/metadata"
 	"github.com/aki0429/KonomiTV/server-go/internal/stream"
 	"github.com/aki0429/KonomiTV/server-go/internal/torne"
 	"github.com/aki0429/KonomiTV/server-go/internal/videostream"
@@ -26,21 +28,22 @@ import (
 
 // Server は Go 版 KonomiTV サーバーのインスタンス。
 type Server struct {
-	config         *config.Config
-	paths          constants.Paths
-	db             *sql.DB         // 読み取り専用
-	writeDB        *sql.DB         // 書き込み用 (SQLite の書き込みを直列化するため別接続)
-	captureCatalog *captureCatalog // キャプチャ画像の登録・保存場所の同期
-	vacuumState    maintenanceVacuumState
-	auth           *auth.Manager
-	logger         *slog.Logger
-	iptv           *iptv.Manager
-	liveStreams    *stream.Manager
-	videoStreams   *videostream.Manager              // 録画視聴セッション
-	offlineFactory videostream.OfflineEncoderFactory // 保存専用エンコーダー工場
-	offlineSlots   chan struct{}                     // 通常視聴の余裕を残す三枠の保存上限
-	proxy          http.Handler                      // nil の場合はプロキシ無効
-	latestVersion  *latestVersionCache
+	config            *config.Config
+	paths             constants.Paths
+	db                *sql.DB         // 読み取り専用
+	writeDB           *sql.DB         // 書き込み用 (SQLite の書き込みを直列化するため別接続)
+	captureCatalog    *captureCatalog // キャプチャ画像の登録・保存場所の同期
+	vacuumState       maintenanceVacuumState
+	thumbnailRenderer *metadata.FFMpegThumbnailRenderer // 自動生成とキャプチャ差し替えの画像出力
+	auth              *auth.Manager
+	logger            *slog.Logger
+	iptv              *iptv.Manager
+	liveStreams       *stream.Manager
+	videoStreams      *videostream.Manager              // 録画視聴セッション
+	offlineFactory    videostream.OfflineEncoderFactory // 保存専用エンコーダー工場
+	offlineSlots      chan struct{}                     // 通常視聴の余裕を残す三枠の保存上限
+	proxy             http.Handler                      // nil の場合はプロキシ無効
+	latestVersion     *latestVersionCache
 	// lifecycleContext は手動スキャンなどを HTTP 接続ではなくサーバーの終了に結び付ける。
 	lifecycleContext context.Context
 	// accessLogWriters はアクセスログの出力先 (標準出力とログファイル) 。
@@ -135,6 +138,11 @@ func New(options Options) (*Server, error) {
 		db:               options.DB,
 		writeDB:          writeDB,
 		captureCatalog:   &captureCatalog{db: options.DB, writeDB: writeDB, logger: options.Logger, folders: options.Config.Capture.UploadFolders},
+		thumbnailRenderer: &metadata.FFMpegThumbnailRenderer{
+			FFmpegPath:  options.Paths.LibraryPath("FFmpeg"),
+			LibraryPath: filepath.Dir(options.Paths.LibraryPath("FFmpeg")),
+			Logger:      options.Logger,
+		},
 		auth:             options.Auth,
 		logger:           options.Logger,
 		iptv:             iptvManager,
@@ -202,6 +210,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/videos/{video_id}/download", s.handleVideoDownload)
 	mux.HandleFunc("GET /api/videos/{video_id}/jikkyo", s.handleVideoJikkyo)
 	mux.HandleFunc("GET /api/videos/{video_id}/thumbnail", s.handleVideoThumbnail)
+	mux.HandleFunc("PUT /api/videos/{video_id}/thumbnail", s.handleVideoThumbnailUpdate)
 	mux.HandleFunc("GET /api/videos/{video_id}/thumbnail/tiled", s.handleVideoThumbnailTile)
 
 	// 設定
