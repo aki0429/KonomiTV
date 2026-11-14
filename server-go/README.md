@@ -240,7 +240,23 @@ curl http://127.0.0.77:7002/api/version
 
 メタデータ再解析 (`POST /api/videos/{video_id}/reanalyze`) とサムネイル画像再生成
 (`POST /api/videos/{video_id}/thumbnail/regenerate`) も Go で実行する。
-顔検出・画像採点と MPEG-4 の `.psc` を使う解析は引き続き移植する。
+代表画像は 480x270 の候補を Go で採点し、人物・アニメの顔がある候補を優先する。
+輝度、コントラスト、鮮明さ、輪郭、情報量、黒帯・単色・画面端の減点、アニメの色分布を評価する。
+顔検出には本家と同じ HAAR / LBP モデルを実行ファイルへ埋め込む。実行時の Python / OpenCV は不要。
+番組ジャンルと録画余白を DB から取得し、採点した画像を再シークせずに WebP へ保存する。
+画像採点の浮動小数点集約と色分布の Lab 丸め・k-means の固定乱数には OpenCV との差がある。
+31 画像の本家比較では人物・アニメ・補助人物の検出矩形、白黒変換、輪郭、黒帯が一致し、
+総合点の許容差は通常 0.003、アニメ 0.08 点で検証する。区間内に候補がなければ本家同様に無作為に選ぶ。
+映像 PID が途中で変化する TS の tsreadex 経由抽出と MPEG-4 の `.psc` を使う解析は引き続き移植する。
+同梱モデルと画像処理のライセンスは [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照。
+
+採点の比較データは固定した本家の `ThumbnailGenerator.py` の実メソッドで生成する。
+`server/` から次を実行する (`SOURCE.py` は対象 revision の本家ファイル、
+`astronaut.png` は同 notices に記載した scikit-image v0.25.2 の NASA 写真):
+
+```powershell
+uv run --no-project --python 3.13 --with opencv-contrib-python-headless==5.0.0.93 --with numpy==2.5.4 python ../server-go/tools/generate_thumbnail_scoring_reference.py SOURCE.py astronaut.png
+```
 
 ### メンテナンス API (`/api/maintenance`)
 

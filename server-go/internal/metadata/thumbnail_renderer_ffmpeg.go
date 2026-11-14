@@ -9,6 +9,7 @@ import (
 	"image/png"
 	"io"
 	"log/slog"
+	"math/rand/v2"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -65,10 +66,9 @@ func ExecCommandRunner(ctx context.Context, name string, args []string, env []st
 //
 // タイル画像は各候補位置から 1 フレームずつ抽出した 320x180 の画像を、tile フィルタで
 // TileCols x TileRows の格子に並べて 1 枚の WebP として保存する。
-// 代表サムネイルは候補区間の開始時刻から抽出した 1 フレームを 480x270 の WebP として保存する。
+// 採点用に 480x270 で抽出した同じフレームを使い、候補区間の最高得点を代表画像にする。
 //
-// HasVideoStreamChanges / ContainerFormat / FaceDetectionMode は Python 版の
-// tsreadex 経由の抽出とフレームスコアリングで使うパラメータのため、この実装では使用しない。
+// HasVideoStreamChanges / ContainerFormat に応じた tsreadex 経由の抽出は別途移植する。
 type FFMpegThumbnailRenderer struct {
 	// FFmpegPath は FFmpeg 実行ファイルのパス (空の場合は PATH 上の "ffmpeg" を使う) 。
 	FFmpegPath string
@@ -104,7 +104,7 @@ func (r *FFMpegThumbnailRenderer) Render(ctx context.Context, params ThumbnailRe
 		}
 	}
 
-	// 2. 各候補位置から 1 フレームずつ抽出し、320x180 に縮小した一時ファイルを作る
+	// 2. 採点・代表画像用に 480x270 の一時フレームを作る。タイル化時に 320x180 に縮小する。
 	offsets := params.CandidateOffsets
 	if params.Layout.TotalTiles > 0 && len(offsets) > params.Layout.TotalTiles {
 		offsets = offsets[:params.Layout.TotalTiles]
@@ -124,6 +124,8 @@ func (r *FFMpegThumbnailRenderer) Render(ctx context.Context, params ThumbnailRe
 		}
 	}()
 
+	var scores []thumbnailFrameScore
+	var scoreIndices []int
 	for index, offset := range offsets {
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("thumbnail rendering was canceled: %w", err)
@@ -134,7 +136,7 @@ func (r *FFMpegThumbnailRenderer) Render(ctx context.Context, params ThumbnailRe
 		framePath := filepath.Join(temporaryDirectory, frameFileName(index+1))
 		options := []string{
 			"-frames:v", "1",
-			"-vf", fmt.Sprintf("scale=%d:%d", TileWidth, TileHeight),
+			"-vf", fmt.Sprintf("scale=%d:%d", ScoringWidth, ScoringHeight),
 			"-f", "image2",
 			"-start_number", strconv.Itoa(index + 1),
 		}
@@ -145,11 +147,35 @@ func (r *FFMpegThumbnailRenderer) Render(ctx context.Context, params ThumbnailRe
 					return err
 				}
 				r.logger().Warn("Thumbnail frame unavailable; using black frame.", "offset", offset)
-				continue
+			} else {
+				return fmt.Errorf("failed to extract frame %d/%d at %.3f sec: %w", index+1, len(offsets), offset, err)
 			}
-			return fmt.Errorf("failed to extract frame %d/%d at %.3f sec: %w", index+1, len(offsets), offset, err)
 		}
+		// 本家の判定時刻は抽出オフセットではなくタイル上の idx * interval。
+		if !thumbnailTimeInCandidateRanges(float64(index)*params.Layout.TileIntervalSec, params.CandidateTimeRanges) {
+			continue
+		}
+		frame, err := readThumbnailScoreFrame(framePath)
+		if err != nil {
+			return err
+		}
+		score, err := scoreThumbnailFrame(ctx, frame, params.FaceDetectionMode)
+		if err != nil {
+			return fmt.Errorf("failed to score thumbnail frame %d: %w", index+1, err)
+		}
+		scores = append(scores, score)
+		scoreIndices = append(scoreIndices, index)
 	}
+	best := selectThumbnailFrame(scores, params.FaceDetectionMode)
+	representativeIndex := 0
+	if best >= 0 {
+		representativeIndex = scoreIndices[best]
+	} else {
+		// 本家と同じく、区間内に候補がなければ抽出済みフレームから無作為に選ぶ。
+		representativeIndex = rand.IntN(len(offsets))
+		r.logger().Warn("No frames found in candidate intervals; selecting a random frame.")
+	}
+	representativeFrame := filepath.Join(temporaryDirectory, frameFileName(representativeIndex+1))
 
 	// 3. 抽出したフレームを格子状に並べ、タイル画像 1 枚の WebP として書き出す
 	// フレームが格子の数に足りない場合、残りのマスは tile フィルタが黒で埋める
@@ -175,39 +201,23 @@ func (r *FFMpegThumbnailRenderer) Render(ctx context.Context, params ThumbnailRe
 		return fmt.Errorf("failed to generate tile image: %w", err)
 	}
 
-	// 4. 代表サムネイルの候補区間の開始時刻から 1 フレーム抽出し、480x270 の WebP として書き出す
-	// 候補区間が無い場合は最初の候補位置を使う (移植元: ThumbnailGenerator の代表サムネイル選定)
-	representativeSec := offsets[0]
-	if len(params.CandidateTimeRanges) > 0 {
-		representativeSec = params.CandidateTimeRanges[0][0]
-	}
-	if representativeSec < 0 {
-		representativeSec = 0
-	}
-	representativeOptions := []string{
+	// 4. 再シークせず、実際に採点したフレームをそのまま代表画像にする。
+	representativeArgs := []string{
+		"-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", representativeFrame,
 		"-frames:v", "1",
 		"-vf", fmt.Sprintf("scale=%d:%d", ScoringWidth, ScoringHeight),
 		"-c:v", "libwebp",
 		"-quality", strconv.Itoa(webpQualityRepresentative),
 		"-compression_level", strconv.Itoa(webpCompressionLevel),
+		params.RepresentativePath,
 	}
-	if err := r.extractFrame(ctx, params.FilePath, representativeSec, params.RepresentativePath, representativeOptions); err != nil {
-		if !errors.Is(err, errThumbnailFrameUnavailable) {
-			return fmt.Errorf("failed to generate representative thumbnail at %.3f sec: %w", representativeSec, err)
-		}
-		black := filepath.Join(temporaryDirectory, "representative_black.png")
-		if err := writeBlackThumbnailFrame(black); err != nil {
-			return err
-		}
-		args := append([]string{"-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", black}, representativeOptions...)
-		args = append(args, params.RepresentativePath)
-		if err := r.runCommand(ctx, args); err != nil {
-			return fmt.Errorf("failed to generate representative thumbnail: %w", err)
-		}
+	if err := r.runCommand(ctx, representativeArgs); err != nil {
+		return fmt.Errorf("failed to generate representative thumbnail: %w", err)
 	}
 	if _, err := os.Stat(params.RepresentativePath); err != nil {
-		return fmt.Errorf("failed to generate representative thumbnail at %.3f sec: %w", representativeSec, err)
+		return fmt.Errorf("failed to generate representative thumbnail: %w", err)
 	}
+	r.logger().Debug("Representative thumbnail selected.", "index", representativeIndex, "face_detection_mode", params.FaceDetectionMode)
 	return nil
 }
 
@@ -251,7 +261,7 @@ func (r *FFMpegThumbnailRenderer) extractFrame(ctx context.Context, input string
 }
 
 func writeBlackThumbnailFrame(path string) error {
-	frame := image.NewNRGBA(image.Rect(0, 0, TileWidth, TileHeight))
+	frame := image.NewNRGBA(image.Rect(0, 0, ScoringWidth, ScoringHeight))
 	for index := 3; index < len(frame.Pix); index += 4 {
 		frame.Pix[index] = 255
 	}
@@ -260,6 +270,28 @@ func writeBlackThumbnailFrame(path string) error {
 		return err
 	}
 	return os.WriteFile(path, data.Bytes(), 0600)
+}
+
+func thumbnailTimeInCandidateRanges(sec float64, ranges [][2]float64) bool {
+	for _, r := range ranges {
+		if r[0] <= sec && sec <= r[1] {
+			return true
+		}
+	}
+	return false
+}
+
+func readThumbnailScoreFrame(path string) (thumbnailScoreImage, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return thumbnailScoreImage{}, fmt.Errorf("open thumbnail frame: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+	img, err := png.Decode(f)
+	if err != nil {
+		return thumbnailScoreImage{}, fmt.Errorf("decode thumbnail frame: %w", err)
+	}
+	return newThumbnailScoreImage(img), nil
 }
 
 // runCommand は FFmpeg を実行する (RunCommand が未設定の場合は ExecCommandRunner を使う) 。

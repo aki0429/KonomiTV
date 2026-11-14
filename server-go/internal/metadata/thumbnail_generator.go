@@ -2,14 +2,14 @@ package metadata
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 )
 
 // ThumbnailRenderParams はサムネイル描画に必要な入力。
-// 実際のフレーム抽出 (PyAV) と画像処理 (OpenCV) は Go 標準ライブラリでは再現できないため、
-// Renderer 実装に委譲する (テストではフェイクを差し込む) 。
+// フレーム抽出・エンコードは FFmpeg、採点・顔検出は Go の Renderer 実装で行う。
 type ThumbnailRenderParams struct {
 	// FilePath は録画ファイルのパス。
 	FilePath string
@@ -95,6 +95,23 @@ func (g *ThumbnailGenerator) generateAndSave(ctx context.Context, filePath, file
 		CandidateTimeRanges: candidateRanges,
 		TilePath:            tilePath,
 		RepresentativePath:  representativePath,
+	}
+	if g.Store != nil {
+		// 取り込み済みの番組情報を使い、録画余白とジャンルを代表画像の選定に反映する。
+		// 移動・再解析で別のファイルへ差し替わった場合は画像を公開しない。
+		var genres string
+		var startMargin, endMargin float64
+		if err := g.Store.DB.QueryRowContext(ctx, `SELECT rp.recording_start_margin,rp.recording_end_margin,rp.genres,rv.container_format,rv.has_video_stream_changes
+			FROM recorded_videos rv JOIN recorded_programs rp ON rp.id=rv.recorded_program_id
+			WHERE rv.file_path=? AND rv.file_hash=?`, filePath, fileHash).Scan(&startMargin, &endMargin, &genres, &params.ContainerFormat, &params.HasVideoStreamChanges); err != nil {
+			return fmt.Errorf("load thumbnail program metadata: %w", err)
+		}
+		var values []Genre
+		if err := json.Unmarshal([]byte(genres), &values); err != nil {
+			return fmt.Errorf("decode thumbnail program genres: %w", err)
+		}
+		params.CandidateTimeRanges = CandidateTimeRanges(durationSec, startMargin, endMargin)
+		params.FaceDetectionMode = DetermineFaceDetectionMode(values)
 	}
 	if g.Renderer == nil {
 		return fmt.Errorf("thumbnail renderer is not implemented")

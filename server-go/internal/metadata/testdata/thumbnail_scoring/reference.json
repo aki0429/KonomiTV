@@ -1,0 +1,1788 @@
+{
+  "upstream_revision": "687b904bb0a2cbb329596fd7b0368c09afe19a6c",
+  "source_sha256": "f5fd79e96a1e3a997fcdd41dfc5409a61afa1de6b5a53ff4259777dd0af203b5",
+  "opencv": "5.0.0",
+  "numpy": "2.5.4",
+  "models": {
+    "haarcascade_frontalface_default.xml": "0f7d4527844eb514d4a4948e822da90fbb16a34a0bbbbc6adc6498747a5aafb0",
+    "lbpcascade_animeface.xml": "9376d30ac38db6bda2a68b88b3b76bbd7e6aa33af47f7f5c76bc88ca75f1ce30"
+  },
+  "images": [
+    {
+      "name": "solid-0",
+      "gray_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "canny50_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "canny100_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "letterbox": null,
+      "scores": {
+        "None": {
+          "min": -1000.0,
+          "max": -1000.0,
+          "found_face": false
+        },
+        "Human": {
+          "min": -1000.0,
+          "max": -1000.0,
+          "found_face": false
+        },
+        "Anime": {
+          "min": -1000.0,
+          "max": -1000.0,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "solid-20",
+      "gray_sha256": "8429d51b094b8a5e5fffe062ded8b65e2fa41c74437f21c0fabc5ca258e1f003",
+      "canny50_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "canny100_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "letterbox": null,
+      "scores": {
+        "None": {
+          "min": -1000.0,
+          "max": -1000.0,
+          "found_face": false
+        },
+        "Human": {
+          "min": -1000.0,
+          "max": -1000.0,
+          "found_face": false
+        },
+        "Anime": {
+          "min": -1000.0,
+          "max": -1000.0,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "solid-45",
+      "gray_sha256": "c4a7afdfa21b042a82c890c55ad05aac14dcb909ea87f5c709fe8ae508506ee4",
+      "canny50_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "canny100_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "letterbox": null,
+      "scores": {
+        "None": {
+          "min": -1000.0,
+          "max": -1000.0,
+          "found_face": false
+        },
+        "Human": {
+          "min": -1000.0,
+          "max": -1000.0,
+          "found_face": false
+        },
+        "Anime": {
+          "min": -1000.0,
+          "max": -1000.0,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "solid-127",
+      "gray_sha256": "ef98f38e61f6069946f8e09393c32222e6dbd9d8401f516ca61aafa52f58d737",
+      "canny50_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "canny100_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": -100.0,
+          "max": -100.0,
+          "found_face": false
+        },
+        "Human": {
+          "min": -100.0,
+          "max": -100.0,
+          "found_face": false
+        },
+        "Anime": {
+          "min": -99.9000015258789,
+          "max": -99.9000015258789,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "solid-225",
+      "gray_sha256": "c5da0f31c1ab0d0daf3dbf98e485226001f097a9f4d9c3f02d4a0cc205d32d3c",
+      "canny50_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "canny100_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": -190.0,
+          "max": -190.0,
+          "found_face": false
+        },
+        "Human": {
+          "min": -190.0,
+          "max": -190.0,
+          "found_face": false
+        },
+        "Anime": {
+          "min": -189.9000015258789,
+          "max": -189.9000015258789,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "solid-255",
+      "gray_sha256": "daf09c8aabb6c5e21639c69da6ec54c3b632c0dbed1d8c9017c03f9ef03a75e2",
+      "canny50_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "canny100_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": -190.0,
+          "max": -190.0,
+          "found_face": false
+        },
+        "Human": {
+          "min": -190.0,
+          "max": -190.0,
+          "found_face": false
+        },
+        "Anime": {
+          "min": -189.9000015258789,
+          "max": -189.9000015258789,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "solid-color",
+      "gray_sha256": "928cca2bf9e980b0e4a323c6f4a7784d0c557baab3fa56eda078e26896deeeb7",
+      "canny50_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "canny100_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": -100.0,
+          "max": -100.0,
+          "found_face": false
+        },
+        "Human": {
+          "min": -100.0,
+          "max": -100.0,
+          "found_face": false
+        },
+        "Anime": {
+          "min": -99.9000015258789,
+          "max": -99.9000015258789,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "gradient",
+      "gray_sha256": "25ed14320860ec8e2ba709773122e720956d707412a325c08875f8590730223a",
+      "canny50_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "canny100_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "letterbox": [
+        67,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 69.21469116210938,
+          "max": 69.21469116210938,
+          "found_face": false
+        },
+        "Human": {
+          "min": 69.21469116210938,
+          "max": 69.21469116210938,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 33.47901916503906,
+          "max": 33.47901916503906,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "color-gradient",
+      "gray_sha256": "8025d30d52257b00d1d487d3c82c8021a7ed5e3accc910abcd0fc50a9f9d428f",
+      "canny50_sha256": "ba714072c31f2bb290478010d47e33e90aaa3f6076182ec65a91ab7dd252167b",
+      "canny100_sha256": "ba714072c31f2bb290478010d47e33e90aaa3f6076182ec65a91ab7dd252167b",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 120.79955291748047,
+          "max": 120.79955291748047,
+          "found_face": false
+        },
+        "Human": {
+          "min": 120.79955291748047,
+          "max": 120.79955291748047,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 78.04861450195312,
+          "max": 78.04866790771484,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "checkerboard",
+      "gray_sha256": "13c44ddfa4fa4d148db14057a9939c7937b8814e37b58347b9e4fedc028b415b",
+      "canny50_sha256": "0270a2573186419209655421ea9ee3fddb2810f3962c68419562013435fcaab5",
+      "canny100_sha256": "0270a2573186419209655421ea9ee3fddb2810f3962c68419562013435fcaab5",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 343.60003662109375,
+          "max": 343.60003662109375,
+          "found_face": false
+        },
+        "Human": {
+          "min": 343.60003662109375,
+          "max": 343.60003662109375,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 261.7540588378906,
+          "max": 261.75726318359375,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "noise",
+      "gray_sha256": "bfb5a104c76fb09073febbd02f22f15617d0f58ff66186c9c0f1373596599b15",
+      "canny50_sha256": "69aa2b64d1a74a26b889893c13c87af54465ac9478a002f322acae09196499fd",
+      "canny100_sha256": "9e3f7567185c6727cbaa40a4ea3ca376ddd65634dd22cecd9db99ab28f5ece8f",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 204.91937255859375,
+          "max": 204.91937255859375,
+          "found_face": false
+        },
+        "Human": {
+          "min": 204.91937255859375,
+          "max": 204.91937255859375,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 173.563232421875,
+          "max": 173.56375122070312,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "dim-noise",
+      "gray_sha256": "bfc48727fb31dee97e7deb276e8a2653225580bb973fd7778135b121277a7232",
+      "canny50_sha256": "863e751a337bdfdf52c5a1446913d214c593f6cf36bcd7b3d0119ffd35aeb248",
+      "canny100_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "letterbox": [
+        16,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 84.06077575683594,
+          "max": 84.06077575683594,
+          "found_face": false
+        },
+        "Human": {
+          "min": 84.06077575683594,
+          "max": 84.06077575683594,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 26.249534606933594,
+          "max": 26.249534606933594,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "three-colors",
+      "gray_sha256": "e9817ca6cf2706f87d105a2a26ec1db346d0aa8a8bad70486097346a5af6dc74",
+      "canny50_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "canny100_sha256": "3bd8d3cf878b4daa903082fe0a919c37faf030689116ca2a50e72c3d16748c9f",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 68.10807800292969,
+          "max": 68.10807800292969,
+          "found_face": false
+        },
+        "Human": {
+          "min": 68.10807800292969,
+          "max": 68.10807800292969,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 45.943206787109375,
+          "max": 45.943206787109375,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "letterbox-8",
+      "gray_sha256": "f19ebde95b69466336b51f55455d92f4006ea739b949e52972953bbdf520b739",
+      "canny50_sha256": "88648459307fb461f70a1d3516106aa386ba477daa05fe810dce90fc903bfafa",
+      "canny100_sha256": "5d1099eeaf73974cb66c133b499020b3ddf848df01687524c0f6766b78c0a5b9",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 140.66529846191406,
+          "max": 140.66529846191406,
+          "found_face": false
+        },
+        "Human": {
+          "min": 140.66529846191406,
+          "max": 140.66529846191406,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 88.85677337646484,
+          "max": 88.85868835449219,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "letterbox-16",
+      "gray_sha256": "b348450302d9387ae475e62a988af7cd6ffb764e06792fda0f7821f2c8a52042",
+      "canny50_sha256": "3d2e8d4ba4bdf298ca35b417770572f6dc85b84e609aed9f9e9bb99a2711356d",
+      "canny100_sha256": "d70905a720eb1d8c0172d5938663a57fb7281e24da92190e6b96635c0b126186",
+      "letterbox": [
+        0,
+        16,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 85.05825805664062,
+          "max": 85.05825805664062,
+          "found_face": false
+        },
+        "Human": {
+          "min": 85.05825805664062,
+          "max": 85.05825805664062,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 35.81285095214844,
+          "max": 35.81361389160156,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "letterbox-32",
+      "gray_sha256": "21cb7cdd4311225285e9c074fc52b82ec75485b5242cc551f1f5006fb8adfb7e",
+      "canny50_sha256": "6466df6bc6a71ef85b2e09274505ad2a732ee48613552e675f3374c0127084d8",
+      "canny100_sha256": "6466df6bc6a71ef85b2e09274505ad2a732ee48613552e675f3374c0127084d8",
+      "letterbox": [
+        0,
+        16,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 96.53948974609375,
+          "max": 96.53948974609375,
+          "found_face": false
+        },
+        "Human": {
+          "min": 96.53948974609375,
+          "max": 96.53948974609375,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 46.584442138671875,
+          "max": 46.58514404296875,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "letterbox-50",
+      "gray_sha256": "6f7d9da1d320347235d7109975750d018328a747a8f79a00fce131b7871f428d",
+      "canny50_sha256": "fc5858539b42ecc5ad715db6c6002547c893c21be8ddeefa8686c69315a5a617",
+      "canny100_sha256": "fc5858539b42ecc5ad715db6c6002547c893c21be8ddeefa8686c69315a5a617",
+      "letterbox": [
+        0,
+        33,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 60.924163818359375,
+          "max": 60.924163818359375,
+          "found_face": false
+        },
+        "Human": {
+          "min": 60.924163818359375,
+          "max": 60.924163818359375,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 15.066383361816406,
+          "max": 15.067451477050781,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "letterbox-67",
+      "gray_sha256": "68286024096ed446ed8eecefc0183c8957e703b483a80649b81fb968902d8b3a",
+      "canny50_sha256": "ac82edcf8b46aabc2fa567b9d023fbcd7d147e313e644fee45bba6d959b12e57",
+      "canny100_sha256": "ac82edcf8b46aabc2fa567b9d023fbcd7d147e313e644fee45bba6d959b12e57",
+      "letterbox": null,
+      "scores": {
+        "None": {
+          "min": -1000.0,
+          "max": -1000.0,
+          "found_face": false
+        },
+        "Human": {
+          "min": -1000.0,
+          "max": -1000.0,
+          "found_face": false
+        },
+        "Anime": {
+          "min": -1000.0,
+          "max": -1000.0,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "white-border-1",
+      "gray_sha256": "2c4a54ad21e5530ac8c2530e88e654b1978ce81dc1243016dbeab7de767081d9",
+      "canny50_sha256": "5c99775dae967744350578e8f2caa25f9f870a6911857b72a19cb72112472d74",
+      "canny100_sha256": "c2fff9447428c2ce93bdb25a4b53783567f5769d0f8731ed1a1d2e9fee0f558e",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 222.90676879882812,
+          "max": 222.90676879882812,
+          "found_face": false
+        },
+        "Human": {
+          "min": 222.90676879882812,
+          "max": 222.90676879882812,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 186.22254943847656,
+          "max": 186.2233123779297,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "white-border-2",
+      "gray_sha256": "2375860727f55a6b0819662d6bd0b3ba8a8309b057766da10fece1e131d22b74",
+      "canny50_sha256": "712353657d2422ae4163dce6e0d15113ab0acdc1fa7cb20889a85c4f85c5a5df",
+      "canny100_sha256": "16653676aaaf2fda4575d3dc706716515f1b25efe92ae7c5051c2d53f177cd11",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 183.99990844726562,
+          "max": 183.99990844726562,
+          "found_face": false
+        },
+        "Human": {
+          "min": 183.99990844726562,
+          "max": 183.99990844726562,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 145.28475952148438,
+          "max": 145.2849884033203,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "white-border-3",
+      "gray_sha256": "145f3970f0ab1c6c9206b8d61d139e82e58017342f2f9805d581e42acfdc6530",
+      "canny50_sha256": "62beb351d12588da6abacd990d8379cb4bdaacf3869dd536b47004958e3998c9",
+      "canny100_sha256": "3935777847744aa791f4a90c506477cee3d965d4a16e5d40586aa596199bac15",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 170.1678924560547,
+          "max": 170.1678924560547,
+          "found_face": false
+        },
+        "Human": {
+          "min": 170.1678924560547,
+          "max": 170.1678924560547,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 132.0390625,
+          "max": 132.03944396972656,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "white-border-4",
+      "gray_sha256": "15af0e54ec87600d47b6830177b8fab5c1f5c1f9a186d826fa98765d2f7e8348",
+      "canny50_sha256": "66fc8558c03849bf5e49d950b6c1e2395bbe18c6198732306333e39fd88eeadc",
+      "canny100_sha256": "7cf3a970f87802b6c6b013fd81deb97cf197dcb6eaa7f3549bd661d4028190ff",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 155.88719177246094,
+          "max": 155.88719177246094,
+          "found_face": false
+        },
+        "Human": {
+          "min": 155.88719177246094,
+          "max": 155.88719177246094,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 119.14682006835938,
+          "max": 119.14697265625,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "astronaut",
+      "gray_sha256": "31774ec13401cdac3b8cbd1f0f0fdc4028ea20a1cf5e978803c199a90f9d52a8",
+      "canny50_sha256": "55b195eb131b0fdc989966942fc8f73b8563c4fccf819d6353a442fbf6bf299b",
+      "canny100_sha256": "ca16b42a70fb285a8d109a47be9d3542895fbf88a78f44129fc288fb0e5b3019",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 183.78294372558594,
+          "max": 183.78294372558594,
+          "found_face": false
+        },
+        "Human": {
+          "min": 183.78294372558594,
+          "max": 183.78294372558594,
+          "found_face": false
+        },
+        "Anime": {
+          "min": 113.51577758789062,
+          "max": 113.51627349853516,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [],
+        "Anime": [],
+        "Auxiliary": []
+      }
+    },
+    {
+      "name": "face-60",
+      "gray_sha256": "f7629f288c2bf746432f6e7fe2c3b17c1bb9732d8f992e941119b067acc90fe5",
+      "canny50_sha256": "0b3274f6569ceb3b423b135f9695954c619c14e61615b92bdd7d99df30f0f8fd",
+      "canny100_sha256": "37f009ec0e90722a706733bb4ecce2901d678e445fbe41ebda6975b154eabd94",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 16.9129695892334,
+          "max": 16.9129695892334,
+          "found_face": false
+        },
+        "Human": {
+          "min": 17.28333995960377,
+          "max": 17.28333995960377,
+          "found_face": true
+        },
+        "Anime": {
+          "min": 10.372808456420898,
+          "max": 10.372808456420898,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [
+          [
+            106,
+            17,
+            40,
+            40
+          ]
+        ],
+        "Anime": [
+          [
+            107,
+            36,
+            33,
+            33
+          ]
+        ],
+        "Auxiliary": [
+          [
+            107,
+            17,
+            38,
+            38
+          ]
+        ]
+      }
+    },
+    {
+      "name": "posterized-face-60",
+      "gray_sha256": "4de0e34bb5b93678c15e5008e610bd079bc9bc919655ab086d5b18112074caf8",
+      "canny50_sha256": "9f068410670a4c49db2ab22b6ee6adc2d869037d7242c52a15ddc9b18eb51b12",
+      "canny100_sha256": "d28f161d4049d89bfa7a3ba688bd3684a97309b31509a14ac625c3fe570a98b2",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 17.588027954101562,
+          "max": 17.588027954101562,
+          "found_face": false
+        },
+        "Human": {
+          "min": 17.977148324471933,
+          "max": 17.977148324471933,
+          "found_face": true
+        },
+        "Anime": {
+          "min": 10.406367301940918,
+          "max": 10.406367301940918,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [
+          [
+            106,
+            16,
+            41,
+            41
+          ]
+        ],
+        "Anime": [],
+        "Auxiliary": [
+          [
+            106,
+            17,
+            40,
+            40
+          ]
+        ]
+      }
+    },
+    {
+      "name": "face-100",
+      "gray_sha256": "5b23648d8934123d4cfabb81a774894d99c2091f4a6b0b7b0fb35772b63ccfb0",
+      "canny50_sha256": "d9355c00efb869b345f1007422b9cd209d52e57874ea139a654e96888444dbe9",
+      "canny100_sha256": "28780e6f73dd9f12fe1ba4ffa4a32621f4eb13f0ea7b9641303d4ad594def905",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 26.762481689453125,
+          "max": 26.762481689453125,
+          "found_face": false
+        },
+        "Human": {
+          "min": 27.801602059823495,
+          "max": 27.801602059823495,
+          "found_face": true
+        },
+        "Anime": {
+          "min": 16.78226089477539,
+          "max": 16.78226089477539,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [
+          [
+            110,
+            21,
+            67,
+            67
+          ]
+        ],
+        "Anime": [
+          [
+            107,
+            45,
+            67,
+            67
+          ],
+          [
+            142,
+            36,
+            36,
+            36
+          ]
+        ],
+        "Auxiliary": [
+          [
+            111,
+            22,
+            64,
+            64
+          ]
+        ]
+      }
+    },
+    {
+      "name": "posterized-face-100",
+      "gray_sha256": "91482f359bc7356e0c403d452f1cac43462072f0bdf5a81b19a6b27f9ff264d7",
+      "canny50_sha256": "47d0d3d28b34272eba904d69c64718e0f9dc86573af40a340d3a79c4c26d7b6c",
+      "canny100_sha256": "0c556e1e9bc69283b1fd4c631ebda94937f942e3708b349ff98e36d627af3be3",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 28.930368423461914,
+          "max": 28.930368423461914,
+          "found_face": false
+        },
+        "Human": {
+          "min": 29.969488793832284,
+          "max": 29.969488793832284,
+          "found_face": true
+        },
+        "Anime": {
+          "min": 17.156734466552734,
+          "max": 17.156734466552734,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [
+          [
+            110,
+            21,
+            67,
+            67
+          ]
+        ],
+        "Anime": [],
+        "Auxiliary": [
+          [
+            111,
+            21,
+            65,
+            65
+          ]
+        ]
+      }
+    },
+    {
+      "name": "face-160",
+      "gray_sha256": "a797453d3347526db5f7595e9ed6650cddfc570df24fdf94d7ddc9ed4e1b4c65",
+      "canny50_sha256": "92f0b7777474e286a431f621f0985fb72514b15e70e391d78c045a5b727bd492",
+      "canny100_sha256": "640dda36dafc27fd03aaa0906ee504d5658007a5adfa43aa847e4e6aae37f161",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 66.18894958496094,
+          "max": 66.18894958496094,
+          "found_face": false
+        },
+        "Human": {
+          "min": 68.69265328866464,
+          "max": 68.69265328866464,
+          "found_face": true
+        },
+        "Anime": {
+          "min": 45.09450149536133,
+          "max": 45.09450149536133,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [
+          [
+            117,
+            28,
+            104,
+            104
+          ]
+        ],
+        "Anime": [
+          [
+            167,
+            53,
+            57,
+            57
+          ]
+        ],
+        "Auxiliary": [
+          [
+            116,
+            29,
+            104,
+            104
+          ]
+        ]
+      }
+    },
+    {
+      "name": "posterized-face-160",
+      "gray_sha256": "c7cb9872eb051448511172a1014aff69efc6ce0bbad5763d4246ed6cd1875f1f",
+      "canny50_sha256": "027e921d1e908cc44d8009db0cc7ff0724d855e08a4aa050abf5458d05f3f09e",
+      "canny100_sha256": "61f2f5bdddd2ceb52c722f8d3cb5d5a9a0c0970bd1aa53d2df6011e89c388189",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 65.86305236816406,
+          "max": 65.86305236816406,
+          "found_face": false
+        },
+        "Human": {
+          "min": 68.3188394052011,
+          "max": 68.3188394052011,
+          "found_face": true
+        },
+        "Anime": {
+          "min": 42.28738784790039,
+          "max": 42.28738784790039,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [
+          [
+            117,
+            29,
+            103,
+            103
+          ]
+        ],
+        "Anime": [],
+        "Auxiliary": [
+          [
+            116,
+            29,
+            103,
+            103
+          ]
+        ]
+      }
+    },
+    {
+      "name": "face-235",
+      "gray_sha256": "ef90e832da97d481ddba03a7c647bb1e2c988f99878c19bfb1544c53ca1f187a",
+      "canny50_sha256": "5b4b2d6d532f203e63f6f1afc05750a449d6d56e01a0d55db634b42013ef4005",
+      "canny100_sha256": "9ee0aef914b6ce9c1de58b6836014d0efbd268abb6dd202890d600db1bcbeaaa",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 114.88107299804688,
+          "max": 114.88107299804688,
+          "found_face": false
+        },
+        "Human": {
+          "min": 120.44241559063947,
+          "max": 120.44241559063947,
+          "found_face": true
+        },
+        "Anime": {
+          "min": 90.40235900878906,
+          "max": 90.40235900878906,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [
+          [
+            124,
+            36,
+            155,
+            155
+          ]
+        ],
+        "Anime": [
+          [
+            126,
+            102,
+            144,
+            144
+          ],
+          [
+            202,
+            75,
+            80,
+            80
+          ]
+        ],
+        "Auxiliary": [
+          [
+            125,
+            37,
+            152,
+            152
+          ]
+        ]
+      }
+    },
+    {
+      "name": "posterized-face-235",
+      "gray_sha256": "f90a4906fd517a0d6856efd749ffe36db49e35965c4f02e3f4ab088c9291fff5",
+      "canny50_sha256": "ce2f55ff7836f85e91cfcccaf54e3dee57b64c9fec8d6956cd49f2fdbf96d594",
+      "canny100_sha256": "1e24d39d0d73fa544b33baa6cc40f040a86e7aa3bad1b150e07d6f9513948255",
+      "letterbox": [
+        0,
+        0,
+        480,
+        270
+      ],
+      "scores": {
+        "None": {
+          "min": 109.25103759765625,
+          "max": 109.25103759765625,
+          "found_face": false
+        },
+        "Human": {
+          "min": 114.45937093098958,
+          "max": 114.45937093098958,
+          "found_face": true
+        },
+        "Anime": {
+          "min": 71.44632720947266,
+          "max": 71.44632720947266,
+          "found_face": false
+        }
+      },
+      "faces": {
+        "Human": [
+          [
+            126,
+            38,
+            150,
+            150
+          ]
+        ],
+        "Anime": [],
+        "Auxiliary": [
+          [
+            126,
+            37,
+            151,
+            151
+          ]
+        ]
+      }
+    }
+  ],
+  "face_boost_cases": [
+    {
+      "mode": "Human",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          24,
+          24
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [],
+      "boost": 0.13333333333332575,
+      "found_face": true
+    },
+    {
+      "mode": "Human",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          24,
+          24
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [
+        [
+          0,
+          0,
+          24,
+          24
+        ]
+      ],
+      "boost": 0.13333333333332575,
+      "found_face": true
+    },
+    {
+      "mode": "Human",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          100,
+          100
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [],
+      "boost": 2.3148148148148096,
+      "found_face": true
+    },
+    {
+      "mode": "Human",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          100,
+          100
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [
+        [
+          0,
+          0,
+          24,
+          24
+        ]
+      ],
+      "boost": 2.3148148148148096,
+      "found_face": true
+    },
+    {
+      "mode": "Human",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          172,
+          172
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [],
+      "boost": 6.848148148148141,
+      "found_face": true
+    },
+    {
+      "mode": "Human",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          172,
+          172
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [
+        [
+          0,
+          0,
+          24,
+          24
+        ]
+      ],
+      "boost": 6.848148148148141,
+      "found_face": true
+    },
+    {
+      "mode": "Human",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          173,
+          173
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [],
+      "boost": 6.928009259259255,
+      "found_face": true
+    },
+    {
+      "mode": "Human",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          173,
+          173
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [
+        [
+          0,
+          0,
+          24,
+          24
+        ]
+      ],
+      "boost": 6.928009259259255,
+      "found_face": true
+    },
+    {
+      "mode": "Human",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          200,
+          200
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [],
+      "boost": 9.259259259259267,
+      "found_face": true
+    },
+    {
+      "mode": "Human",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          200,
+          200
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [
+        [
+          0,
+          0,
+          24,
+          24
+        ]
+      ],
+      "boost": 9.259259259259267,
+      "found_face": true
+    },
+    {
+      "mode": "Human",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          269,
+          269
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [],
+      "boost": 16.750231481481478,
+      "found_face": true
+    },
+    {
+      "mode": "Human",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          269,
+          269
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [
+        [
+          0,
+          0,
+          24,
+          24
+        ]
+      ],
+      "boost": 16.750231481481478,
+      "found_face": true
+    },
+    {
+      "mode": "Anime",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          24,
+          24
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [],
+      "boost": 0.7111076977454331,
+      "found_face": true
+    },
+    {
+      "mode": "Anime",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          24,
+          24
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [
+        [
+          0,
+          0,
+          24,
+          24
+        ]
+      ],
+      "boost": 0.0,
+      "found_face": false
+    },
+    {
+      "mode": "Anime",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          100,
+          100
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [],
+      "boost": 12.345675598979994,
+      "found_face": true
+    },
+    {
+      "mode": "Anime",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          100,
+          100
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [
+        [
+          0,
+          0,
+          24,
+          24
+        ]
+      ],
+      "boost": 0.0,
+      "found_face": false
+    },
+    {
+      "mode": "Anime",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          172,
+          172
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [],
+      "boost": 36.5234533767578,
+      "found_face": true
+    },
+    {
+      "mode": "Anime",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          172,
+          172
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [
+        [
+          0,
+          0,
+          24,
+          24
+        ]
+      ],
+      "boost": 0.0,
+      "found_face": false
+    },
+    {
+      "mode": "Anime",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          173,
+          173
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [],
+      "boost": 36.94901546796871,
+      "found_face": true
+    },
+    {
+      "mode": "Anime",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          173,
+          173
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [
+        [
+          0,
+          0,
+          24,
+          24
+        ]
+      ],
+      "boost": 0.0,
+      "found_face": false
+    },
+    {
+      "mode": "Anime",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          200,
+          200
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [],
+      "boost": 46.801330953744326,
+      "found_face": true
+    },
+    {
+      "mode": "Anime",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          200,
+          200
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [
+        [
+          0,
+          0,
+          24,
+          24
+        ]
+      ],
+      "boost": 0.0,
+      "found_face": false
+    },
+    {
+      "mode": "Anime",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          269,
+          269
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [],
+      "boost": 63.067280537251605,
+      "found_face": true
+    },
+    {
+      "mode": "Anime",
+      "image_area": 129600,
+      "faces": [
+        [
+          1,
+          1,
+          269,
+          269
+        ],
+        [
+          20,
+          20,
+          20,
+          20
+        ]
+      ],
+      "auxiliary": [
+        [
+          0,
+          0,
+          24,
+          24
+        ]
+      ],
+      "boost": 0.0,
+      "found_face": false
+    }
+  ]
+}

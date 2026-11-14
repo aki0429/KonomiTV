@@ -33,9 +33,16 @@ type recordingRunner struct {
 func newRecordingRunner() *recordingRunner {
 	runner := &recordingRunner{}
 	runner.onCall = func(index int, name string, args []string, env []string) error {
-		return os.WriteFile(args[len(args)-1], []byte("RIFF....WEBPVP8 "), 0o644)
+		return writeFakeThumbnailOutput(args[len(args)-1])
 	}
 	return runner
+}
+
+func writeFakeThumbnailOutput(path string) error {
+	if strings.HasSuffix(path, ".png") {
+		return writeBlackThumbnailFrame(path)
+	}
+	return os.WriteFile(path, []byte("RIFF....WEBPVP8 "), 0o644)
 }
 
 // run は CommandRunner として使う。
@@ -125,8 +132,8 @@ func TestFFMpegThumbnailRendererRender(t *testing.T) {
 		if got := argAfter(call.args, "-i"); got != params.FilePath {
 			t.Errorf("frame %d: -i = %q, want %q", index, got, params.FilePath)
 		}
-		if got := argAfter(call.args, "-vf"); got != fmt.Sprintf("scale=%d:%d", TileWidth, TileHeight) {
-			t.Errorf("frame %d: -vf = %q, want scale=320:180", index, got)
+		if got := argAfter(call.args, "-vf"); got != fmt.Sprintf("scale=%d:%d", ScoringWidth, ScoringHeight) {
+			t.Errorf("frame %d: -vf = %q, want scale=480:270", index, got)
 		}
 		if got := argAfter(call.args, "-frames:v"); got != "1" {
 			t.Errorf("frame %d: -frames:v = %q, want 1", index, got)
@@ -161,10 +168,13 @@ func TestFFMpegThumbnailRendererRender(t *testing.T) {
 		t.Errorf("tile frames:v = %q, want 1", got)
 	}
 
-	// 代表サムネイル: 候補区間の先頭の開始時刻を使い、480x270 で保存されること
+	// 代表サムネイル: 区間内 (20 秒) の採点済み画像を使い、再シークしないこと
 	representativeArgs := runner.calls[7].args
-	if got := argAfter(representativeArgs, "-ss"); got != "7.500" {
-		t.Errorf("representative -ss = %q, want 7.500", got)
+	if got := filepath.Base(argAfter(representativeArgs, "-i")); got != "frame_00005.png" {
+		t.Errorf("representative input = %q, want frame_00005.png", got)
+	}
+	if got := argAfter(representativeArgs, "-ss"); got != "" {
+		t.Errorf("representative unexpectedly seeks to %q", got)
 	}
 	if got := argAfter(representativeArgs, "-vf"); got != fmt.Sprintf("scale=%d:%d", ScoringWidth, ScoringHeight) {
 		t.Errorf("representative -vf = %q, want scale=480:270", got)
@@ -180,7 +190,7 @@ func TestFFMpegThumbnailRendererRender(t *testing.T) {
 	}
 }
 
-// TestFFMpegThumbnailRendererRepresentativeFallback は候補区間が無い場合に最初の候補位置を使うことを検証する。
+// TestFFMpegThumbnailRendererRepresentativeFallback は区間内の候補が無ければ抽出済み画像を使うことを検証する。
 func TestFFMpegThumbnailRendererRepresentativeFallback(t *testing.T) {
 	directory := t.TempDir()
 	params := testThumbnailRenderParams(directory)
@@ -195,8 +205,8 @@ func TestFFMpegThumbnailRendererRepresentativeFallback(t *testing.T) {
 	if len(runner.calls) != 4 {
 		t.Fatalf("RunCommand was called %d times, want 4", len(runner.calls))
 	}
-	if got := argAfter(runner.calls[3].args, "-ss"); got != "3.500" {
-		t.Errorf("representative -ss = %q, want 3.500", got)
+	if got := filepath.Base(argAfter(runner.calls[3].args, "-i")); got != "frame_00001.png" && got != "frame_00002.png" {
+		t.Errorf("representative input = %q, want an extracted frame", got)
 	}
 }
 
@@ -293,7 +303,7 @@ func TestFFMpegThumbnailRendererRenderStopsWhenCanceledMidway(t *testing.T) {
 		if index == 1 {
 			cancel()
 		}
-		return os.WriteFile(args[len(args)-1], []byte("RIFF....WEBPVP8 "), 0o644)
+		return writeFakeThumbnailOutput(args[len(args)-1])
 	}
 
 	renderer := &FFMpegThumbnailRenderer{FFmpegPath: "ffmpeg-test", RunCommand: runner.run}
@@ -352,7 +362,7 @@ func TestFFMpegThumbnailRendererRenderWrapsCommandError(t *testing.T) {
 				if testCase.fail(params, args) {
 					return sentinel
 				}
-				return os.WriteFile(args[len(args)-1], []byte("RIFF....WEBPVP8 "), 0o644)
+				return writeFakeThumbnailOutput(args[len(args)-1])
 			}
 
 			renderer := &FFMpegThumbnailRenderer{FFmpegPath: "ffmpeg-test", RunCommand: runner.run}
