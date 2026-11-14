@@ -45,19 +45,18 @@ type Paths struct {
 }
 
 // libraryBinaryPaths はサードパーティーライブラリの名前から、LibraryDir からの相対パスへの対応表。
-// ThumbnailWorker は Go 版専用。他の項目は server/app/constants.py の LIBRARY_PATH と一致させること。
+// server/app/constants.py の LIBRARY_PATH と一致させること。
 var libraryBinaryPaths = map[string]string{
-	"Akebi":           "Akebi/akebi-https-server",
-	"FFmpeg":          "FFmpeg/ffmpeg",
-	"FFprobe":         "FFmpeg/ffprobe",
-	"QSVEncC":         "QSVEncC/QSVEncC",
-	"NVEncC":          "NVEncC/NVEncC",
-	"VCEEncC":         "VCEEncC/VCEEncC",
-	"rkmppenc":        "rkmppenc/rkmppenc",
-	"tsreadex":        "tsreadex/tsreadex",
-	"psisiarc":        "psisiarc/psisiarc",
-	"psisimux":        "psisimux/psisimux",
-	"ThumbnailWorker": "FFmpeg-Thumbnail/thumbnail-worker",
+	"Akebi":    "Akebi/akebi-https-server",
+	"FFmpeg":   "FFmpeg/ffmpeg",
+	"FFprobe":  "FFmpeg/ffprobe",
+	"QSVEncC":  "QSVEncC/QSVEncC",
+	"NVEncC":   "NVEncC/NVEncC",
+	"VCEEncC":  "VCEEncC/VCEEncC",
+	"rkmppenc": "rkmppenc/rkmppenc",
+	"tsreadex": "tsreadex/tsreadex",
+	"psisiarc": "psisiarc/psisiarc",
+	"psisimux": "psisimux/psisimux",
 }
 
 // libraryExtension はサードパーティーライブラリの拡張子 (Windows は .exe、それ以外は .elf) 。
@@ -71,6 +70,17 @@ func libraryExtension() string {
 // LibraryPath はサードパーティーライブラリの絶対パスを返す (server/app/constants.py の LIBRARY_PATH 相当) 。
 func (p Paths) LibraryPath(name string) string {
 	return filepath.Join(p.LibraryDir, filepath.FromSlash(libraryBinaryPaths[name])) + libraryExtension()
+}
+
+// ThumbnailLibraryDir は Go 版専用のデコード用ライブラリ置き場。
+// thirdparty が共有・管理者所有のリンクであっても、Go 版だけで導入・更新できる。
+func (p Paths) ThumbnailLibraryDir() string {
+	return filepath.Join(p.ServerDir, "go-native", "FFmpeg-Thumbnail")
+}
+
+// ThumbnailWorkerPath は API サーバーから分離した Go ワーカーの実行ファイル。
+func (p Paths) ThumbnailWorkerPath() string {
+	return filepath.Join(p.ThumbnailLibraryDir(), "thumbnail-worker") + libraryExtension()
 }
 
 // NewPaths は ServerDir から各パスを構築する。

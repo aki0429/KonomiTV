@@ -144,8 +144,8 @@ func New(options Options) (*Server, error) {
 		writeDB:          writeDB,
 		captureCatalog:   &captureCatalog{db: options.DB, writeDB: writeDB, logger: options.Logger, folders: options.Config.Capture.UploadFolders},
 		thumbnailRenderer: &metadata.FFMpegThumbnailRenderer{
-			FrameWorkerPath:  options.Paths.LibraryPath("ThumbnailWorker"),
-			FrameLibraryPath: filepath.Join(options.Paths.LibraryDir, "FFmpeg-Thumbnail", "av.libs"),
+			FrameWorkerPath:  options.Paths.ThumbnailWorkerPath(),
+			FrameLibraryPath: filepath.Join(options.Paths.ThumbnailLibraryDir(), "av.libs"),
 			FFmpegPath:       options.Paths.LibraryPath("FFmpeg"),
 			TSReadExPath:     options.Paths.LibraryPath("tsreadex"),
 			LibraryPath:      filepath.Dir(options.Paths.LibraryPath("FFmpeg")),

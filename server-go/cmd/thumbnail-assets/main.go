@@ -30,7 +30,7 @@ type manifest struct {
 }
 
 func main() {
-	destination := flag.String("output", "../server/thirdparty/FFmpeg-Thumbnail", "library installation directory")
+	destination := flag.String("output", "../server/go-native/FFmpeg-Thumbnail", "library installation directory")
 	flag.Parse()
 	if err := install(*destination); err != nil {
 		fmt.Fprintln(os.Stderr, err)

@@ -161,6 +161,7 @@ server/static/interlaced_*
 
 # thirdparty
 server/thirdparty/*
+server/go-native/
 
 # encoder coredup
 server/core.*

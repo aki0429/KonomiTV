@@ -113,7 +113,7 @@ go run ./cmd/konomitv-go
 
 # ビルドして実行
 go run ./cmd/thumbnail-assets
-go build -o ../server/thirdparty/FFmpeg-Thumbnail/thumbnail-worker.exe ./cmd/thumbnail-worker
+go build -o ../server/go-native/FFmpeg-Thumbnail/thumbnail-worker.exe ./cmd/thumbnail-worker
 go build -o konomitv-go.exe ./cmd/konomitv-go
 ./konomitv-go.exe
 ```
@@ -122,6 +122,7 @@ go build -o konomitv-go.exe ./cmd/konomitv-go
 Linux ではワーカーの出力名を `thumbnail-worker.elf` にします。
 `thumbnail-assets` は固定した配布物の SHA-256 を検証し、デコード用の共有ライブラリだけを取得します。
 実行時の Python は不要で、既存の FFmpeg / QSVEncC のファイルは変更しません。
+Go 版専用のファイルは `server/go-native/` に配置します。
 
 デフォルトでは `127.0.0.77:7002` でリッスンします。Python 版 (Akebi 経由で 7000) とは別ポートなので
 共存できます。動作確認は HTTP で直接行ってください (API のみなら HTTPS は不要です) 。
