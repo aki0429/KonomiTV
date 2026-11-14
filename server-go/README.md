@@ -21,7 +21,7 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `GET /api/channels/{channel_id}/logo` (チャンネルロゴ) | ✅ Go 実装済み (IPTV 疑似チャンネルは Python 版へプロキシ) |
 | `GET /api/channels/{channel_id}/jikkyo` (ニコニコ実況 WebSocket URL) | ✅ Go 実装済み (ニコニコアカウント連携時のニコ生セッション取得・トークン更新含む) |
 | `GET /api/channels` (チャンネル一覧、現在/次の番組・IPTV 疑似チャンネル含む) | ✅ Go 実装済み |
-| `GET /api/programs/timetable` (番組表) | ✅ Go 実装済み (EDCB バックエンドの予約情報は未対応) |
+| `GET /api/programs/timetable` (番組表) | ✅ Go 実装済み (EDCB の録画中・無効・競合状態、EID 不一致時の時間照合を含む) |
 | `POST /api/programs/search` (番組検索) | 🚧 Go native 完成候補 (EDCB 以外は 422。`-no-proxy` 時は SearchPg 1025、有効時は既存 Python 転送を維持。実機・親受入れ未実施) |
 | `GET /api/series`・`GET /api/series/search`・`GET /api/series/{series_id}` (シリーズ番組) | ✅ Go 実装済み (録画番組・録画ファイル・チャンネルまで展開) |
 | `GET /api/iptv/channels`・`/countries`・`/groups`・`/playlist.m3u` (IPTV チャンネル一覧・国・グループ・プレイリスト出力) | ✅ Go 実装済み (実データ 11152 チャンネルで Python 版と完全一致を検証済み) |
@@ -152,6 +152,7 @@ curl http://127.0.0.77:7002/api/version
 ### 録画フォルダの継続監視
 
 - `-no-proxy` の Go 単独運転では、起動時から設定済みの録画フォルダを 10 秒間隔で観測する。Python 併走モードでは二重監視を避けるため開始しない。
+- Go 単独運転では、起動時と `general.program_update_interval` 分ごとにチャンネル・番組を更新し、実況勢いを 30 秒ごとに更新する。各更新はサーバー終了時にキャンセルする。
 - フォルダごとに一つの解析 worker を持ち、発見した順にキューへ入れる。全ファイルを先に収集・ソートしない。直近 24 時間の録画と監視開始後の変更を優先し、過去分の取り込みが新規録画を塞がないようにする。
 - サイズ・更新日時・録画完了の安定化を検出する。リンク解決前後の除外パスも既存設定に従う。ファイル削除・衝突整理は既存の手動一括スキャンで同期する。
 - 一覧のメタデータ登録と重いサムネイル / CM 解析を分ける。後者は別 worker が毎分確認するため、未生成の画像は登録より遅れて反映される。

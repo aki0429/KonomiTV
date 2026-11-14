@@ -30,6 +30,9 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/videostream"
 )
 
+// buildRevision は配布バイナリと Git コミットを照合するためビルド時に設定する。
+var buildRevision = "development"
+
 func main() {
 	var (
 		listenAddress = flag.String("listen", "127.0.0.77:7002", "Go 版サーバーがリッスンするアドレス")
@@ -42,7 +45,7 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		fmt.Printf("KonomiTV version %s (server-go)\n", constants.Version)
+		fmt.Printf("KonomiTV version %s (server-go, revision %s)\n", constants.Version, buildRevision)
 		return
 	}
 
@@ -169,13 +172,19 @@ func main() {
 
 	// Python 版を併走させる移行モードでは二重監視を避け、Go 単独運転時だけ開始する。
 	monitorDone := make(chan struct{})
+	updatesDone := make(chan struct{})
 	if *noProxy {
 		go func() {
 			defer close(monitorDone)
 			server.RunRecordedFolderMonitoring(ctx)
 		}()
+		go func() {
+			defer close(updatesDone)
+			server.RunBackgroundUpdates(ctx)
+		}()
 	} else {
 		close(monitorDone)
+		close(updatesDone)
 	}
 
 	// 録画視聴 (HLS) のエンコーダーを登録する (VideoEncodingTask 相当)
@@ -198,6 +207,7 @@ func main() {
 	go func() {
 		logger.Info(
 			"KonomiTV server (Go) started",
+			slog.String("revision", buildRevision),
 			slog.String("version", constants.Version),
 			slog.String("listen", httpServer.Addr),
 			slog.Bool("proxy_enabled", backendURL != ""),
@@ -224,6 +234,11 @@ func main() {
 	case <-monitorDone:
 	case <-shutdownCtx.Done():
 		logger.Warn("Recorded folder monitoring did not stop before shutdown timeout.")
+	}
+	select {
+	case <-updatesDone:
+	case <-shutdownCtx.Done():
+		logger.Warn("Background updates did not stop before shutdown timeout.")
 	}
 	// EDCB バックエンドで起動したチューナー (EpgDataCap_Bon) を全て終了する (Python 版 EDCBTuner.closeAll() 相当)
 	stream.CloseAllEDCBTuners()

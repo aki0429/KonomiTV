@@ -420,6 +420,7 @@ func (s *Server) handleProgramTimeTable(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// チャンネルごとに番組をグループ化する
+	reservationByID, reservationByTime := s.timeTableReservations(channels, time.Now())
 	programsByChannel := map[string][]timeTableProgramResponse{}
 	for _, channelID := range channelIDs {
 		programsByChannel[channelID] = []timeTableProgramResponse{}
@@ -435,7 +436,13 @@ func (s *Server) handleProgramTimeTable(w http.ResponseWriter, r *http.Request) 
 			writeError(w, http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
-		programsByChannel[program.ChannelID] = append(programsByChannel[program.ChannelID], timeTableProgramResponse{programResponse: *response})
+		reservation := reservationByID[program.ID]
+		if reservation == nil {
+			reservation = matchTimeTableReservation(reservationByTime, program.ChannelID, response.StartTime, response.EndTime)
+		}
+		programsByChannel[program.ChannelID] = append(programsByChannel[program.ChannelID], timeTableProgramResponse{
+			programResponse: *response, Reservation: reservation,
+		})
 	}
 
 	// レスポンスを構築する

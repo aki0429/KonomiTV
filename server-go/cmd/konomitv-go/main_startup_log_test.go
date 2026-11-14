@@ -95,7 +95,7 @@ func TestMainStartupLogProxyPrivacy(t *testing.T) {
 					if attr.Value.Kind() != slog.KindBool || attr.Value.Bool() != tc.wantEnabled {
 						t.Errorf("proxy_enabled must be a boolean matching enabled=%v, got %v", tc.wantEnabled, attr.Value)
 					}
-				case "version", "listen", "server_dir", "backend_type", "encoder":
+				case "version", "revision", "listen", "server_dir", "backend_type", "encoder":
 					// 起動ログの既存非 URL 属性のみ許可する。
 				default:
 					t.Errorf("unexpected startup attribute %q; backend URL details must not be logged", attr.Key)
@@ -211,6 +211,7 @@ func mainStartupString(t *testing.T, expr ast.Expr, backend string) string {
 		case *ast.Ident:
 			parts = append([]string{node.Name}, parts...)
 			values := map[string]string{
+				"buildRevision":       "0123456789abcdef0123456789abcdef01234567",
 				"constants.Version":   "synthetic-version",
 				"httpServer.Addr":     "127.0.0.1:7002",
 				"paths.ServerDir":     "synthetic-server-dir",

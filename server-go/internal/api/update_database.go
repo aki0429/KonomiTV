@@ -24,7 +24,7 @@ func (s *Server) updateDatabaseNative(ctx context.Context) {
 			s.logger.Error("Failed to update channels:", "error", err)
 		}
 	case "EDCB":
-		if source, err := s.newEDCBUpdateSource(5 * time.Second); err != nil {
+		if source, err := s.newEDCBUpdateSource(ctx, 5*time.Second); err != nil {
 			s.logger.Error("Failed to update channels:", "error", err)
 		} else if err := epgupdate.UpdateChannelsFromEDCB(ctx, s.writeDB, source, s.config.TV.PreferredTerrestrialRegion, s.logger); err != nil {
 			s.logger.Error("Failed to update channels:", "error", err)
@@ -32,13 +32,7 @@ func (s *Server) updateDatabaseNative(ctx context.Context) {
 	}
 	s.logger.Info(fmt.Sprintf("Channels update complete. (%.3f sec)", time.Since(start).Seconds()))
 
-	fetch := s.jikkyoStatusFetch
-	if fetch == nil {
-		fetch = epgupdate.HTTPFetchJikkyoChannels(&http.Client{})
-	}
-	if err := epgupdate.UpdateJikkyoStatus(ctx, s.writeDB, s.jikkyoChannelMap(), &s.jikkyoStatuses, fetch, time.Now(), s.logger); err != nil {
-		s.logger.Error("Failed to update jikkyo status:", "error", err)
-	}
+	s.updateJikkyoStatus(ctx)
 
 	start = time.Now()
 	s.logger.Info("Programs updating...")
@@ -48,7 +42,7 @@ func (s *Server) updateDatabaseNative(ctx context.Context) {
 			s.logger.Error("Failed to update programs from Mirakurun:", "error", err)
 		}
 	case "EDCB":
-		if source, err := s.newEDCBUpdateSource(10 * time.Second); err != nil {
+		if source, err := s.newEDCBUpdateSource(ctx, 10*time.Second); err != nil {
 			s.logger.Error("Failed to update programs from EDCB:", "error", err)
 		} else if err := epgupdate.UpdateProgramsFromEDCB(ctx, s.writeDB, source, time.Now(), s.logger); err != nil {
 			s.logger.Error("Failed to update programs from EDCB:", "error", err)
@@ -58,16 +52,27 @@ func (s *Server) updateDatabaseNative(ctx context.Context) {
 }
 
 // newEDCBUpdateSource は更新処理用の EDCB クライアントを生成する (テストでは差し替え可能) 。
-func (s *Server) newEDCBUpdateSource(timeout time.Duration) (epgupdate.EDCBSource, error) {
+func (s *Server) newEDCBUpdateSource(ctx context.Context, timeout time.Duration) (epgupdate.EDCBSource, error) {
 	if s.edcbUpdateSource != nil {
 		return s.edcbUpdateSource, nil
 	}
-	client, err := reservations.NewClientFromURL(s.config.General.EDCBURL)
+	client, err := reservations.NewClientFromURLContext(ctx, s.config.General.EDCBURL)
 	if err != nil {
 		return nil, err
 	}
 	client.SetTimeout(timeout)
 	return client, nil
+}
+
+// updateJikkyoStatus は番組更新とは別周期で実況勢いを更新する。
+func (s *Server) updateJikkyoStatus(ctx context.Context) {
+	fetch := s.jikkyoStatusFetch
+	if fetch == nil {
+		fetch = epgupdate.HTTPFetchJikkyoChannels(&http.Client{})
+	}
+	if err := epgupdate.UpdateJikkyoStatus(ctx, s.writeDB, s.jikkyoChannelMap(), &s.jikkyoStatuses, fetch, time.Now(), s.logger); err != nil && ctx.Err() == nil {
+		s.logger.Error("Failed to update jikkyo status:", "error", err)
+	}
 }
 
 // mirakurunUpdateSource は更新処理用の Mirakurun API クライアントを返す (テストでは差し替え可能) 。
