@@ -162,6 +162,13 @@ server/static/interlaced_*
 # thirdparty
 server/thirdparty/*
 server/go-native/
+server/backups/
+
+# Native Go distribution binaries
+/kgo
+/kgo.exe
+/konomitv-service
+/konomitv-service.exe
 
 # encoder coredup
 server/core.*
