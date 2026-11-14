@@ -9,8 +9,8 @@ import (
 )
 
 // Version は KonomiTV サーバーのバージョン。
-// server/pyproject.toml の project.version と一致させること (TestVersionMatchesPyproject で検証している) 。
-const Version = "0.14.1"
+// client/package.json と一致させること (TestVersionMatchesClient で検証している) 。
+const Version = "0.15.0-dev"
 
 // JST は Asia/Tokyo の固定タイムゾーン。
 // 日本国内向けのアプリケーションのため、夏時間などは考慮する必要がない。

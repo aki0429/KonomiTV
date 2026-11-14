@@ -3,57 +3,144 @@ import { AxiosError } from 'axios';
 
 import Message from '@/message';
 import APIClient from '@/services/APIClient';
-import Utils, { Semaphore } from '@/utils';
+import Utils, { dayjs, Semaphore } from '@/utils';
 
 
-/** EXIF XPComment に格納されたキャプチャメタデータを表すインターフェイス (サーバー側の CaptureMetadata に対応) */
-export interface ICaptureMetadata {
+/** キャプチャの一覧 */
+export interface ICaptures {
+    captures: ICapture[];
+    programs: ICaptureProgram[];
+    next_cursor: string | null;
+}
+
+/** キャプチャ */
+export interface ICapture {
+    id: number;
+    file_hash: string;
+    file_size: number;
     captured_at: string;
-    captured_playback_position: number;
-    network_id: number;
-    service_id: number;
-    event_id: number;
-    title: string;
-    description: string;
-    start_time: string;
-    end_time: string;
-    duration: number;
+    broadcast_at: string | null;
+    image_width: number;
+    image_height: number;
+    metadata_status: 'Parsed' | 'NoMetadata' | 'Invalid';
+    playback_position: number | null;
     caption_text: string | null;
     is_caption_composited: boolean;
     is_comment_composited: boolean;
+    capture_program_id: number | null;
+    is_favorite: boolean | null;
+    tag_ids: number[] | null;
 }
 
-/** キャプチャ画像の情報を表すインターフェイス (サーバー側の Capture に対応) */
-export interface ICapture {
-    filename: string;
-    file_size: number;
-    file_modified_at: string;
-    mime_type: 'image/jpeg' | 'image/png';
-    image_width: number;
-    image_height: number;
-    capture_metadata: ICaptureMetadata | null;
+/** キャプチャに埋め込まれた番組情報を、番組キーごとにまとめたもの */
+export interface ICaptureProgram {
+    id: number;
+    network_id: number;
+    service_id: number;
+    event_id: number;
+    start_time: string;
+    // 放送時間未定の番組で撮ったキャプチャだけで作った放送回は、終了時刻と番組長が不明なので null になる
+    end_time: string | null;
+    duration: number | null;
+    title: string;
+    description: string;
+    channel: ICaptureChannel | null;
+    recorded_program_ids: number[];
 }
 
-/** キャプチャ一覧レスポンスを表すインターフェイス (サーバー側の Captures に対応) */
-export interface ICaptures {
+/** キャプチャの番組に紐づくチャンネル */
+export interface ICaptureChannel {
+    id: string;
+    display_channel_id: string;
+    name: string;
+    type: string;
+}
+
+/** 日付ごとのキャプチャの件数 */
+export interface ICaptureSections {
+    sections: ICaptureSection[];
     total: number;
-    captures: ICapture[];
 }
 
-/** キャプチャフォルダ一覧レスポンスを表すインターフェイス (サーバー側の CaptureFolders に対応) */
-export interface ICaptureFolders {
-    total: number;
-    folders: ICaptureFolder[];
+/** 1日分のキャプチャの件数 */
+export interface ICaptureSection {
+    date: string;
+    count: number;
 }
 
-/** キャプチャフォルダ情報を表すインターフェイス (サーバー側の CaptureFolder に対応) */
-export interface ICaptureFolder {
+/** 番組ごとのキャプチャのまとまりの一覧 */
+export interface ICapturePrograms {
+    programs: ICaptureProgramAlbum[];
+    next_cursor: string | null;
+}
+
+/** 枚数と代表のキャプチャを含む、番組ごとのキャプチャのまとまり */
+export interface ICaptureProgramAlbum extends ICaptureProgram {
+    capture_count: number;
+    cover_capture: ICapture;
+}
+
+/** キャプチャのタグ */
+export interface ICaptureTag {
     id: number;
     name: string;
-    sort_order: number;
     capture_count: number;
     created_at: string;
     updated_at: string;
+}
+
+/** キャプチャの削除の結果 */
+export interface ICaptureDeleteResult {
+    deleted_capture_ids: number[];
+    failed_capture_ids: number[];
+}
+
+/** キャプチャの詳細 (番組と実ファイルの場所を含む) */
+export interface ICaptureDetail extends ICapture {
+    program: ICaptureProgram | null;
+    files: ICaptureFile[];
+}
+
+/** キャプチャの実ファイルの場所 */
+export interface ICaptureFile {
+    file_name: string;
+    file_path: string;
+    status: 'Available' | 'Missing' | 'Invalid';
+}
+
+/** キャプチャの一覧の並び順 */
+export type CaptureSortOrder = 'CapturedAtDesc' | 'CapturedAtAsc' | 'BroadcastAtDesc' | 'BroadcastAtAsc' | 'PlaybackPosition';
+
+/** 放送回の一覧の並び順 */
+export type CaptureProgramSortOrder = 'BroadcastAtDesc' | 'BroadcastAtAsc';
+
+/** タイムラインの時間の軸 (撮影日時か放送日時か) */
+export type CaptureTimelineAxis = 'CapturedAt' | 'BroadcastAt';
+
+/** 検索語を探す範囲 (1つも指定しない場合は、字幕・番組名・番組概要・チャンネル名・ファイル名のすべてから探す) */
+export type CaptureQueryTarget = 'CaptionText' | 'ProgramTitle' | 'ProgramDescription';
+
+/** キャプチャの一覧と日付ごとの件数の絞り込み */
+export interface ICaptureFilter {
+    capture_program_id?: number | null;
+    recorded_program_id?: number | null;
+    network_id?: number | null;
+    service_id?: number | null;
+    event_id?: number | null;
+    start_time?: string | null;
+    is_favorite?: boolean | null;
+    // 複数のタグはすべて付いているキャプチャに、複数のチャンネルはどれかに当てはまるキャプチャに絞る
+    tag_ids?: number[] | null;
+    channel_ids?: string[] | null;
+    // 期間 (YYYY-MM-DD) はタイムラインの時間の軸で比べ、終了日もその日の分まで含める
+    start_date?: string | null;
+    end_date?: string | null;
+    is_caption_composited?: boolean | null;
+    is_comment_composited?: boolean | null;
+    has_caption_text?: boolean | null;
+    has_metadata?: boolean | null;
+    query?: string | null;
+    query_targets?: CaptureQueryTarget[] | null;
 }
 
 
@@ -148,175 +235,414 @@ class Captures {
     }
 
     /**
-     * キャプチャ一覧を取得する
-     * @param order ソート順序 ('desc': 新しい順, 'asc': 古い順)
-     * @param page ページ番号 (1始まり)
-     * @param search 番組名・ファイル名・チャンネル名での部分一致検索キーワード (省略時は全件取得)
-     * @returns キャプチャ一覧情報 (取得に失敗した場合は null)
+     * 手元の画像ファイルをキャプチャとしてアップロードし、登録されたキャプチャを返す
+     * 視聴画面からのアップロードと違い、ファイルの更新日時を一緒に送り、メタデータのない画像の撮影日時として使わせる
+     * @param file アップロードする画像ファイル
+     * @returns 登録されたキャプチャ (失敗時は null)
      */
-    static async fetchCaptures(
-        order: 'desc' | 'asc' = 'desc',
-        page: number = 1,
-        search?: string,
-    ): Promise<ICaptures | null> {
-        // undefined のパラメータは axios が自動で除外するため、そのまま渡す
-        const response = await APIClient.get<ICaptures>('/captures', {
-            params: { order, page, search },
-        });
+    static async uploadLocalFile(file: File): Promise<ICapture | null> {
+
+        // ブラウザが読めるファイルの更新日時を一緒に送る
+        // サーバー側で保存したファイルの更新日時に設定しないと、撮影日時がアップロードした日時になってしまう
+        const form_data = new FormData();
+        form_data.append('image', file, file.name);
+        form_data.append('file_modified_at', String(file.lastModified));
+
+        await this.semaphore.acquire();
+        let response: Awaited<ReturnType<typeof APIClient.post<ICapture>>>;
+        try {
+            response = await APIClient.post<ICapture>('/captures', form_data, {
+                headers: {'Content-Type': 'multipart/form-data'},
+                timeout: 60 * 1000,
+            });
+        } finally {
+            this.semaphore.release();
+        }
         if (response.type === 'error') {
-            APIClient.showGenericError(response, 'キャプチャ一覧の取得に失敗しました。');
+            APIClient.showGenericError(response, `${file.name} のアップロードに失敗しました。`);
             return null;
         }
         return response.data;
     }
 
-    /**
-     * キャプチャ画像の URL を取得する
-     * @param filename キャプチャ画像のファイル名
-     * @param thumbnail サムネイル画像を取得するかどうか
-     * @returns キャプチャ画像の URL
-     */
-    static getCaptureImageURL(filename: string, thumbnail: boolean = false): string {
-        const base = Utils.api_base_url;
-        const params = thumbnail ? '?thumbnail=true' : '';
-        return `${base}/captures/${encodeURIComponent(filename)}${params}`;
-    }
 
     /**
-     * キャプチャ画像を削除する
-     * @param filename 削除するキャプチャ画像のファイル名
-     * @returns 削除に成功した場合は true
+     * 一覧や日付ごとの件数の API に渡す絞り込みを、クエリパラメータに変換する
+     * 指定された絞り込みだけをパラメータに入れる
+     * @param filter 絞り込みの条件
+     * @returns クエリパラメータ
      */
-    static async deleteCapture(filename: string): Promise<boolean> {
-        const response = await APIClient.delete(`/captures/${encodeURIComponent(filename)}`);
-        if (response.type === 'error') {
-            APIClient.showGenericError(response, 'キャプチャの削除に失敗しました。');
-            return false;
+    private static buildFilterParams(filter: ICaptureFilter): Record<string, string | number | boolean | (string | number)[]> {
+        const params: Record<string, string | number | boolean | (string | number)[]> = {};
+        for (const [key, value] of Object.entries(filter)) {
+            // 空の配列 (検索語を探す範囲を1つも選んでいない) も、指定なしとして送らない
+            if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) {
+                continue;
+            }
+            params[key] = value as string | number | boolean | (string | number)[];
         }
-        return true;
+        return params;
     }
 
-    // ==================== フォルダ CRUD ====================
 
     /**
-     * ログインユーザーのキャプチャフォルダ一覧を取得する
-     * @returns フォルダ一覧情報 (取得に失敗した場合は null)
+     * キャプチャの一覧を取得する
+     * @param options 並び順・カーソル・件数・日付・絞り込み
+     * @returns キャプチャの一覧 (失敗時は null)
      */
-    static async fetchFolders(): Promise<ICaptureFolders | null> {
-        const response = await APIClient.get<ICaptureFolders>('/captures/folders');
+    static async fetchCaptures(options: {
+        order?: CaptureSortOrder;
+        cursor?: string | null;
+        limit?: number;
+        date?: string | null;
+        day_start_hour?: number;
+        filter?: ICaptureFilter;
+    } = {}): Promise<ICaptures | null> {
+
+        const params: Record<string, string | number | boolean | (string | number)[]> = {
+            ...this.buildFilterParams(options.filter ?? {}),
+            order: options.order ?? 'CapturedAtDesc',
+            limit: options.limit ?? 100,
+        };
+        if (options.cursor) {
+            params.cursor = options.cursor;
+        }
+        if (options.date) {
+            params.date = options.date;
+        }
+        // 日付の境目の時刻は、日付の指定 (date) と期間の絞り込み (start_date・end_date) の両方に使われる
+        if (options.date || options.day_start_hour !== undefined) {
+            params.day_start_hour = options.day_start_hour ?? 0;
+        }
+
+        const response = await APIClient.get<ICaptures>('/captures', {
+            params,
+            // 検索語を探す範囲やタグなどのリストを FastAPI が受け付ける &query_targets=A&query_targets=B の形式にエンコードする
+            paramsSerializer: {
+                indexes: null,
+            },
+        });
         if (response.type === 'error') {
-            // 401 (未ログイン) や 404 (サーバー未対応) の場合はエラーメッセージを表示しない
-            if (response.status !== 401 && response.status !== 404) {
-                APIClient.showGenericError(response, 'キャプチャフォルダ一覧の取得に失敗しました。');
+            APIClient.showGenericError(response, 'キャプチャの一覧を取得できませんでした。');
+            return null;
+        }
+        return response.data;
+    }
+
+
+    /**
+     * 条件に合うキャプチャを、カーソルをたどって最後まで取得する
+     * 番組の中のキャプチャ (多くても数百件) のように件数が限られる一覧や、Shift キーで範囲選択した期間のように、すべてのキャプチャが必要なときのためのもの
+     * @param options 並び順・日付・絞り込み
+     * @returns キャプチャと、それらが参照する番組 (失敗時は null)
+     */
+    static async fetchAllCaptures(options: {
+        order?: CaptureSortOrder;
+        date?: string | null;
+        day_start_hour?: number;
+        filter?: ICaptureFilter;
+    } = {}): Promise<ICaptures | null> {
+
+        const captures: ICapture[] = [];
+        const programs = new Map<number, ICaptureProgram>();
+        let cursor: string | null = null;
+
+        // 次のページが無くなるまで取得を繰り返す
+        do {
+            const page = await this.fetchCaptures({ ...options, cursor, limit: 200 });
+            if (page === null) {
+                return null;
+            }
+            captures.push(...page.captures);
+            for (const program of page.programs) {
+                programs.set(program.id, program);
+            }
+            cursor = page.next_cursor;
+        } while (cursor !== null);
+
+        return { captures, programs: [...programs.values()], next_cursor: null };
+    }
+
+
+    /**
+     * 日付ごとのキャプチャの件数を取得する (タイムラインの高さとスクラバーの元になる)
+     * @param options 時間の軸・日付の境目の時刻・絞り込み
+     * @returns 日付ごとの件数 (失敗時は null)
+     */
+    static async fetchSections(options: {
+        axis?: CaptureTimelineAxis;
+        day_start_hour?: number;
+        filter?: ICaptureFilter;
+    } = {}): Promise<ICaptureSections | null> {
+
+        const params: Record<string, string | number | boolean | (string | number)[]> = {
+            ...this.buildFilterParams(options.filter ?? {}),
+            axis: options.axis ?? 'CapturedAt',
+            day_start_hour: options.day_start_hour ?? 0,
+        };
+        const response = await APIClient.get<ICaptureSections>('/captures/sections', {
+            params,
+            // 検索語を探す範囲やタグなどのリストを FastAPI が受け付ける &query_targets=A&query_targets=B の形式にエンコードする
+            paramsSerializer: {
+                indexes: null,
+            },
+        });
+        if (response.type === 'error') {
+            // 削除済みのタグで絞り込んだときは、タグの画面がタグが存在しないことを案内するので、エラーの通知は表示しない
+            if (response.data.detail !== 'Capture tag not found') {
+                APIClient.showGenericError(response, 'キャプチャの日付ごとの件数を取得できませんでした。');
             }
             return null;
         }
         return response.data;
     }
 
+
     /**
-     * 新しいキャプチャフォルダを作成する
-     * @param name フォルダ名
-     * @returns 作成されたフォルダ情報 (作成に失敗した場合は null)
+     * 利用できるキャプチャがあるチャンネルの一覧を取得する (チャンネルでの絞り込みの選択肢に使う)
+     * @returns チャンネルの一覧 (失敗時は null)
      */
-    static async createFolder(name: string): Promise<ICaptureFolder | null> {
-        const response = await APIClient.post<ICaptureFolder>('/captures/folders', { name });
+    static async fetchChannels(): Promise<ICaptureChannel[] | null> {
+        const response = await APIClient.get<ICaptureChannel[]>('/captures/channels');
         if (response.type === 'error') {
-            APIClient.showGenericError(response, 'キャプチャフォルダの作成に失敗しました。');
+            APIClient.showGenericError(response, 'キャプチャのあるチャンネルの一覧を取得できませんでした。');
             return null;
         }
         return response.data;
     }
 
+
     /**
-     * キャプチャフォルダの名前や表示順序を更新する
-     * @param folderId 更新するフォルダの ID
-     * @param updates 更新する内容 (name, sort_order のいずれかまたは両方)
-     * @returns 更新後のフォルダ情報 (更新に失敗した場合は null)
+     * キャプチャの詳細を取得する
+     * @param capture_id キャプチャの ID
+     * @returns キャプチャの詳細 (失敗時は null)
      */
-    static async updateFolder(
-        folderId: number,
-        updates: { name?: string; sort_order?: number },
-    ): Promise<ICaptureFolder | null> {
-        const response = await APIClient.put<ICaptureFolder>(`/captures/folders/${folderId}`, updates);
+    static async fetchCapture(capture_id: number): Promise<ICaptureDetail | null> {
+        const response = await APIClient.get<ICaptureDetail>(`/captures/${capture_id}`);
         if (response.type === 'error') {
-            APIClient.showGenericError(response, 'キャプチャフォルダの更新に失敗しました。');
+            APIClient.showGenericError(response, 'キャプチャの情報を取得できませんでした。');
             return null;
         }
         return response.data;
     }
 
+
     /**
-     * キャプチャフォルダを削除する
-     * フォルダに紐付けられたブックマークも自動削除されるが、実際のキャプチャ画像は削除されない。
-     * @param folderId 削除するフォルダの ID
-     * @returns 削除に成功した場合は true
+     * キャプチャの画像の URL を返す
+     * 画像は長期間キャッシュされるので、内容が変わったら URL も変わるよう、内容のハッシュを URL に付加する
+     * @param capture キャプチャ
+     * @returns 画像の URL
      */
-    static async deleteFolder(folderId: number): Promise<boolean> {
-        const response = await APIClient.delete(`/captures/folders/${folderId}`);
+    static getImageURL(capture: ICapture): string {
+        return `${Utils.api_base_url}/captures/${capture.id}/image?hash=${capture.file_hash}`;
+    }
+
+
+    /**
+     * キャプチャの画像を、保存先にあるファイル名でブラウザにダウンロードさせる
+     * 開発時は API のオリジンが画面と異なり、a 要素の download 属性が効かずに画像を開いてしまうため、Blob として取得してから保存させる
+     * 複数枚を渡したときは、選んだ順に1枚ずつ保存させる
+     * @param captures キャプチャのリスト
+     * @returns すべて保存できたかどうか
+     */
+    static async downloadImages(captures: ICapture[]): Promise<boolean> {
+        for (const capture of captures) {
+            const [detail, image] = await Promise.all([
+                Captures.fetchCapture(capture.id),
+                APIClient.get<Blob>(Captures.getImageURL(capture).replace(Utils.api_base_url, ''), { responseType: 'blob' }),
+            ]);
+            if (image.type === 'error') {
+                APIClient.showGenericError(image, 'キャプチャの画像をダウンロードできませんでした。');
+                return false;
+            }
+            // ファイル名を取得できなかったときは、撮影日時から KonomiTV のキャプチャと同じ形式のファイル名を付ける
+            const extension = image.data.type === 'image/png' ? 'png' : 'jpg';
+            const fileName = detail?.files[0]?.file_name ?? `Capture_${dayjs(capture.captured_at).format('YYYYMMDD-HHmmss')}.${extension}`;
+            Utils.downloadBlobData(image.data, fileName);
+        }
+        return true;
+    }
+
+
+    /**
+     * 番組ごとのキャプチャのまとまり (放送の回ごと) の一覧を取得する
+     * @param options カーソル・件数・検索語・録画の有無での絞り込み・並び順
+     * @returns 番組の一覧 (失敗時は null)
+     */
+    static async fetchPrograms(options: {
+        cursor?: string | null;
+        limit?: number;
+        query?: string;
+        has_recorded_program?: boolean | null;
+        order?: CaptureProgramSortOrder;
+    } = {}): Promise<ICapturePrograms | null> {
+
+        const params: Record<string, string | number | boolean> = {
+            order: options.order ?? 'BroadcastAtDesc',
+            limit: options.limit ?? 60,
+        };
+        if (options.cursor) {
+            params.cursor = options.cursor;
+        }
+        if (options.query) {
+            params.query = options.query;
+        }
+        if (options.has_recorded_program !== null && options.has_recorded_program !== undefined) {
+            params.has_recorded_program = options.has_recorded_program;
+        }
+        const response = await APIClient.get<ICapturePrograms>('/captures/programs', { params });
         if (response.type === 'error') {
-            APIClient.showGenericError(response, 'キャプチャフォルダの削除に失敗しました。');
+            APIClient.showGenericError(response, 'キャプチャの番組の一覧を取得できませんでした。');
+            return null;
+        }
+        return response.data;
+    }
+
+
+    /**
+     * 番組ごとのキャプチャのまとまりを1件取得する
+     * @param capture_program_id キャプチャの番組の ID
+     * @returns 番組 (失敗時は null)
+     */
+    static async fetchProgram(capture_program_id: number): Promise<ICaptureProgramAlbum | null> {
+        const response = await APIClient.get<ICaptureProgramAlbum>(`/captures/programs/${capture_program_id}`);
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, 'キャプチャの番組の情報を取得できませんでした。');
+            return null;
+        }
+        return response.data;
+    }
+
+
+    /**
+     * キャプチャをお気に入りに追加する・お気に入りから外す (ログイン必須)
+     * @param capture_ids キャプチャの ID のリスト
+     * @param is_favorite true ならお気に入りに追加し、false なら外す
+     * @returns 成功したかどうか
+     */
+    static async updateFavorites(capture_ids: number[], is_favorite: boolean): Promise<boolean> {
+        const response = is_favorite ?
+            await APIClient.post('/captures/favorites', { capture_ids }) :
+            await APIClient.delete('/captures/favorites', { data: { capture_ids } });
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, is_favorite ? 'お気に入りに追加できませんでした。' : 'お気に入りから外せませんでした。');
             return false;
         }
         return true;
     }
 
-    // ==================== フォルダ内キャプチャ操作 ====================
 
     /**
-     * 指定されたフォルダ内のキャプチャ一覧を取得する
-     * @param folderId フォルダ ID
-     * @param order ソート順序 ('desc': 新しい順, 'asc': 古い順)
-     * @param page ページ番号 (1始まり)
-     * @returns キャプチャ一覧情報 (取得に失敗した場合は null)
+     * 本人のタグの一覧を取得する (ログイン必須)
+     * @returns タグの一覧 (失敗時は null)
      */
-    static async fetchFolderCaptures(
-        folderId: number,
-        order: 'desc' | 'asc' = 'desc',
-        page: number = 1,
-    ): Promise<ICaptures | null> {
-        const response = await APIClient.get<ICaptures>(`/captures/folders/${folderId}/captures`, {
-            params: { order, page },
+    static async fetchTags(): Promise<ICaptureTag[] | null> {
+        const response = await APIClient.get<ICaptureTag[]>('/captures/tags');
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, 'タグの一覧を取得できませんでした。');
+            return null;
+        }
+        return response.data;
+    }
+
+
+    /**
+     * タグを作成する (ログイン必須)
+     * @param name タグの名前
+     * @returns 作成したタグ (失敗時は null)
+     */
+    static async createTag(name: string): Promise<ICaptureTag | null> {
+        const response = await APIClient.post<ICaptureTag>('/captures/tags', { name });
+        if (response.type === 'error') {
+            switch (response.data.detail) {
+                case 'Capture tag name already exists':
+                    Message.error('同じ名前のタグがすでにあります。別の名前を入力してください。');
+                    break;
+                default:
+                    APIClient.showGenericError(response, 'タグを作成できませんでした。');
+                    break;
+            }
+            return null;
+        }
+        return response.data;
+    }
+
+
+    /**
+     * タグの名前を変更する (ログイン必須)
+     * @param tag_id タグの ID
+     * @param name 新しい名前
+     * @returns 変更後のタグ (失敗時は null)
+     */
+    static async renameTag(tag_id: number, name: string): Promise<ICaptureTag | null> {
+        const response = await APIClient.put<ICaptureTag>(`/captures/tags/${tag_id}`, { name });
+        if (response.type === 'error') {
+            switch (response.data.detail) {
+                case 'Capture tag name already exists':
+                    Message.error('同じ名前のタグがすでにあります。別の名前を入力してください。');
+                    break;
+                default:
+                    APIClient.showGenericError(response, 'タグの名前を変更できませんでした。');
+                    break;
+            }
+            return null;
+        }
+        return response.data;
+    }
+
+
+    /**
+     * タグを削除する (キャプチャ自体は消えない) (ログイン必須)
+     * @param tag_id タグの ID
+     * @returns 成功したかどうか
+     */
+    static async deleteTag(tag_id: number): Promise<boolean> {
+        const response = await APIClient.delete(`/captures/tags/${tag_id}`);
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, 'タグを削除できませんでした。');
+            return false;
+        }
+        return true;
+    }
+
+
+    /**
+     * キャプチャにタグを付ける・外す (ログイン必須)
+     * @param tag_id タグの ID
+     * @param capture_ids キャプチャの ID のリスト
+     * @param is_tagged true なら付け、false なら外す
+     * @returns 成功したかどうか
+     */
+    static async updateTagItems(tag_id: number, capture_ids: number[], is_tagged: boolean): Promise<boolean> {
+        const response = is_tagged ?
+            await APIClient.post(`/captures/tags/${tag_id}/items`, { capture_ids }) :
+            await APIClient.delete(`/captures/tags/${tag_id}/items`, { data: { capture_ids } });
+        if (response.type === 'error') {
+            APIClient.showGenericError(response, is_tagged ? 'タグを付けられませんでした。' : 'タグを外せませんでした。');
+            return false;
+        }
+        return true;
+    }
+
+
+    /**
+     * キャプチャを削除する (実ファイルも削除される) (管理者のみ)
+     * @param capture_ids キャプチャの ID のリスト
+     * @returns 削除の結果 (失敗時は null)
+     */
+    static async deleteCaptures(capture_ids: number[]): Promise<ICaptureDeleteResult | null> {
+        // サーバーは1回のリクエストで受け取ったキャプチャをすべて削除してから応答し、1回に削除できる枚数に上限はない
+        // ネットワーク上の保存先では1枚の削除に約 50ms かかるので、既定の30秒に、その2倍の 100ms を枚数分だけ加えた時間までレスポンスを待つ
+        // 数百枚をまとめて削除したときも、サーバーが削除し終えるまで待って、その結果を表示する
+        const response = await APIClient.delete<ICaptureDeleteResult>('/captures', {
+            data: { capture_ids },
+            timeout: 30 * 1000 + capture_ids.length * 100,
         });
         if (response.type === 'error') {
-            APIClient.showGenericError(response, 'フォルダ内キャプチャ一覧の取得に失敗しました。');
+            APIClient.showGenericError(response, 'キャプチャを削除できませんでした。');
             return null;
         }
         return response.data;
-    }
-
-    /**
-     * 指定されたフォルダにキャプチャを一括追加する
-     * 既にフォルダ内に存在するキャプチャは無視される。
-     * @param folderId フォルダ ID
-     * @param filenames 追加するキャプチャ画像のファイル名リスト
-     * @returns 追加に成功した場合は true
-     */
-    static async addCapturesToFolder(folderId: number, filenames: string[]): Promise<boolean> {
-        const response = await APIClient.post(`/captures/folders/${folderId}/captures`, { filenames });
-        if (response.type === 'error') {
-            APIClient.showGenericError(response, 'フォルダへのキャプチャ追加に失敗しました。');
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * 指定されたフォルダからキャプチャを一括削除する
-     * CaptureBookmark レコードのみを削除し、実際のキャプチャ画像ファイルは削除しない。
-     * @param folderId フォルダ ID
-     * @param filenames 削除するキャプチャ画像のファイル名リスト
-     * @returns 削除に成功した場合は true
-     */
-    static async removeCapturesFromFolder(folderId: number, filenames: string[]): Promise<boolean> {
-        const response = await APIClient.delete(`/captures/folders/${folderId}/captures`, {
-            data: { filenames },
-        });
-        if (response.type === 'error') {
-            APIClient.showGenericError(response, 'フォルダからのキャプチャ削除に失敗しました。');
-            return false;
-        }
-        return true;
     }
 }
 

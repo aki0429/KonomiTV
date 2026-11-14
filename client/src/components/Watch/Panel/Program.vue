@@ -38,7 +38,12 @@
                     <span class="ml-2">勢い:</span>
                     <span class="ml-2">{{channelsStore.channel.current.jikkyo_force ?? '--'}} コメ/分</span>
                 </div>
-                <div class="program-info__status-viewers ml-5">
+                <div class="program-info__status-toru">
+                    <Icon icon="fluent:timer-16-filled" height="15px" />
+                    <span class="ml-2">予約数:</span>
+                    <span class="ml-2">{{toruCountStore.getToruCount(channelsStore.channel.current.program_present?.id ?? null)?.count.toLocaleString() ?? '--'}}<span class="program-info__status-toru-unit">トル</span></span>
+                </div>
+                <div class="program-info__status-viewers">
                     <Icon icon="fa-solid:eye" height="14px" />
                     <span class="ml-2">視聴数:</span>
                     <span class="ml-1">{{channelsStore.channel.current.viewer_count}}</span>
@@ -75,6 +80,11 @@
                     <span style="margin-left: 5px;">録画開始 (EDCB 専用)</span>
                 </template>
             </div>
+            <a v-if="channelsStore.channel.current.program_present" v-ripple class="program-info__captures"
+                href="/captures/broadcast" @click.prevent="openCaptures()">
+                <Icon icon="fluent:image-multiple-20-regular" width="17px" height="17px" style="margin-bottom: -1px" />
+                <span style="margin-left: 4.5px;">この番組のキャプチャ</span>
+            </a>
         </section>
         <!-- 録画停止確認ダイアログ -->
         <v-dialog v-model="show_stop_recording_dialog" max-width="715">
@@ -131,6 +141,7 @@ import Message from '@/message';
 import Reservations, { IReservation } from '@/services/Reservations';
 import useChannelsStore from '@/stores/ChannelsStore';
 import useServerSettingsStore from '@/stores/ServerSettingsStore';
+import useToruCountStore from '@/stores/ToruCountStore';
 import Utils, { ChannelUtils, ProgramUtils } from '@/utils';
 
 export default defineComponent({
@@ -153,7 +164,7 @@ export default defineComponent({
             // 外部からの予約追加や番組変更を検知するためのバックグラウンドポーリングタイマー ID (60秒間隔)
             background_polling_timer_id: null as ReturnType<typeof setInterval> | null,
             // バックグラウンドポーリングの実行中かどうか
-            // API 応答遅延時にポーリング処理が多重実行されるのを防ぐ
+            // API レスポンス遅延時にポーリング処理が多重実行されるのを防ぐ
             is_background_polling_in_progress: false,
             // 録画予約状態取得の最新リクエストを識別するトークン
             // 非同期通信の完了順が前後しても、最新の番組状態だけを反映するために使う
@@ -161,7 +172,7 @@ export default defineComponent({
         };
     },
     computed: {
-        ...mapStores(useChannelsStore, useServerSettingsStore),
+        ...mapStores(useChannelsStore, useServerSettingsStore, useToruCountStore),
 
         // EDCB バックエンドかどうか
         // サーバー設定がまだ取得されていない場合は EDCB と判定しない
@@ -222,6 +233,50 @@ export default defineComponent({
         },
     },
     methods: {
+
+        /**
+         * 現在放送中の番組で撮ったキャプチャの画面へ移る
+         * キャプチャがまだ無くても番組名や局ロゴを出せるよう、番組情報を画面遷移と一緒に渡す
+         */
+        openCaptures(): void {
+            const program = this.channelsStore.channel.current.program_present;
+            const channel = this.channelsStore.channel.current;
+            if (program === null) {
+                return;
+            }
+            // 放送時間未定の番組は duration が Infinity で、end_time には便宜上 start_time と同じ時刻が入っているため、キャプチャの EXIF に書き込むとき (CaptureManager.ts) と同じく、どちらも null にする
+            let endTime: string | null = program.end_time;
+            let duration: number | null = program.duration;
+            if (Number.isFinite(program.duration) === false) {
+                endTime = null;
+                duration = null;
+            }
+            this.$router.push({
+                path: '/captures/broadcast',
+                query: {
+                    network_id: String(program.network_id),
+                    service_id: String(program.service_id),
+                    event_id: String(program.event_id),
+                    start_time: program.start_time,
+                },
+                state: {
+                    capture_program_hint: {
+                        id: 0,
+                        network_id: program.network_id,
+                        service_id: program.service_id,
+                        event_id: program.event_id,
+                        start_time: program.start_time,
+                        end_time: endTime,
+                        duration: duration,
+                        title: program.title,
+                        description: program.description,
+                        channel: { id: channel.id, display_channel_id: channel.display_channel_id, name: channel.name, type: channel.type },
+                        recorded_program_ids: [],
+                    },
+                },
+            });
+        },
+
         /**
          * 現在の番組の録画予約状態をチェックする
          * 全予約を取得し、現在放送中の番組と一致する予約を探す
@@ -403,7 +458,7 @@ export default defineComponent({
                 if (this.polling_timer_id !== null || this.is_starting_recording === true) {
                     return;
                 }
-                // API 応答が遅い環境では次周期が先に到来して多重実行されるため、実行中はスキップする
+                // API レスポンスが遅い環境では次周期が先に到来して多重実行されるため、実行中はスキップする
                 if (this.is_background_polling_in_progress === true) {
                     return;
                 }
@@ -637,6 +692,28 @@ export default defineComponent({
                 box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.25);
             }
         }
+        .program-info__captures {
+            display: flex;
+            align-items: center;
+            width: fit-content;
+            margin-top: 8px;
+            padding: 5px 8px;
+            color: rgb(var(--v-theme-text-darken-1));
+            font-size: 12.7px;
+            line-height: 170%;
+            background: rgb(var(--v-theme-background-lighten-1));
+            border-radius: 4px;
+            user-select: none;
+            transition: color 0.15s ease;
+            cursor: pointer;
+            @include smartphone-horizontal {
+                font-size: 11.5px;
+            }
+
+            &:hover {
+                color: rgb(var(--v-theme-text));
+            }
+        }
         .program-info__next {
             display: flex;
             align-items: center;
@@ -680,6 +757,10 @@ export default defineComponent({
         .program-info__status {
             display: flex;
             align-items: center;
+            // パネルの幅に勢い・予約数・視聴数が収まらない場合は、後ろの項目から次の行へ送る
+            flex-wrap: wrap;
+            column-gap: 20px;
+            row-gap: 6px;
             margin-top: 16px;
             font-size: 14px;
             color: rgb(var(--v-theme-text-darken-1));
@@ -688,11 +769,19 @@ export default defineComponent({
                 font-size: 12px;
             }
 
-            &-force, &-viewers {
+            &-force, &-toru, &-viewers {
                 display: flex;
                 align-items: center;
+                white-space: nowrap;
             }
 
+            // 単位の「トル」は、数値とベースラインを揃えたまま少し小さく表示する
+            &-toru-unit {
+                margin-left: 3px;
+                font-size: 0.85em;
+            }
+
+            // 視聴中は、今の盛り上がりを示す実況勢いだけを色分けし、放送前の期待を示す予約数は視聴数と同じ色で表示する
             &-force--festival {
                 color: #E7556E;
             }

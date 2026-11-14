@@ -1,4 +1,5 @@
 
+import { ICaptureProgram } from '@/services/Captures';
 import { IProgram } from '@/services/Programs';
 import { IRecordedProgram } from '@/services/Videos';
 import Utils, { dayjs } from '@/utils';
@@ -342,7 +343,7 @@ export class ProgramUtils {
      * @param key 番組情報のオブジェクトから取り出すプロパティのキー
      * @returns 装飾した文字列
      */
-    static decorateProgramInfo(program: IProgram | IRecordedProgram | null, key: string): string {
+    static decorateProgramInfo(program: IProgram | IRecordedProgram | ICaptureProgram | null, key: string): string {
 
         // program が空でないかつ、program[key] が存在する
         if (program !== null && program[key] !== null) {
@@ -520,7 +521,7 @@ export class ProgramUtils {
 
     /**
      * formatString() で使用する変換マップを取得する
-     * server/app/utils/TSInformation.py の TSInfoAnalyzer.__buildFormatStringTranslationMap() と同等の処理を行う
+     * server/app/utils/TSInformation.py の TSInformation.__buildFormatStringTranslationMap() と同等の処理を行う
      * @returns 変換マップ
      */
     private static buildFormatStringTranslationMap(): {[key: string]: string} {

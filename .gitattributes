@@ -1,0 +1,5 @@
+# Vite に読み込まれる HTML の改行を揃え、PWA の事前キャッシュを OS に依存させない。
+client/index.html text eol=lf
+# ビルドが計算したファイル名と事前キャッシュのハッシュを、そのまま配布する。
+# 圧縮済み JavaScript に含まれる文字列の末尾空白も書き換えない。
+client/dist/** -text -whitespace

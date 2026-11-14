@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aki0429/KonomiTV/server-go/internal/constants"
 	"github.com/aki0429/KonomiTV/server-go/internal/niconico"
 )
 
@@ -412,8 +413,16 @@ func TestNiconicoAuthCallbackAPI(t *testing.T) {
 					if got.Method != expected.Method || got.Path != expected.Path {
 						t.Errorf("request[%d] = %s %s, want %s %s", index, got.Method, got.Path, expected.Method, expected.Path)
 					}
-					if expected.UserAgent != nil && got.UserAgent != *expected.UserAgent {
-						t.Errorf("request[%d] User-Agent = %q, want %q", index, got.UserAgent, *expected.UserAgent)
+					if expected.UserAgent != nil {
+						wantUserAgent := *expected.UserAgent
+						// Python 比較データの生成時には API_REQUEST_HEADERS を旧版の値でスタブ化している。
+						// 製品バージョンだけを現在の値に揃え、ヘッダー自体の検証は保持する。
+						if wantUserAgent == "KonomiTV/0.14.1" {
+							wantUserAgent = "KonomiTV/" + constants.Version
+						}
+						if got.UserAgent != wantUserAgent {
+							t.Errorf("request[%d] User-Agent = %q, want %q", index, got.UserAgent, wantUserAgent)
+						}
 					}
 					if expected.XFrontendID != nil && got.XFrontendID != *expected.XFrontendID {
 						t.Errorf("request[%d] X-Frontend-Id = %q, want %q", index, got.XFrontendID, *expected.XFrontendID)

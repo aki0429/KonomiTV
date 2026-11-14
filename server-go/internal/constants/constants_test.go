@@ -1,26 +1,27 @@
 package constants
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
-	"regexp"
 	"testing"
 )
 
-// TestVersionMatchesPyproject は Go 側のバージョン定数が server/pyproject.toml と一致することを検証する。
+// TestVersionMatchesClient は Go 側のバージョン定数がクライアントと一致することを検証する。
 // バージョンを更新する際にどちらかの更新を忘れるのを防ぐための回帰テスト。
-func TestVersionMatchesPyproject(t *testing.T) {
-	pyprojectPath := filepath.Join("..", "..", "..", "server", "pyproject.toml")
-	data, err := os.ReadFile(pyprojectPath)
+func TestVersionMatchesClient(t *testing.T) {
+	packagePath := filepath.Join("..", "..", "..", "client", "package.json")
+	data, err := os.ReadFile(packagePath)
 	if err != nil {
-		t.Skipf("server/pyproject.toml not found (%s), skipping", pyprojectPath)
+		t.Skipf("client/package.json not found (%s), skipping", packagePath)
 	}
-	pattern := regexp.MustCompile(`(?m)^version\s*=\s*"([^"]+)"`)
-	matches := pattern.FindSubmatch(data)
-	if matches == nil {
-		t.Fatalf("failed to find version in %s", pyprojectPath)
+	var metadata struct {
+		Version string `json:"version"`
 	}
-	if got, want := Version, string(matches[1]); got != want {
-		t.Fatalf("Version = %q, but server/pyproject.toml says %q", got, want)
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := Version, metadata.Version; got != want {
+		t.Fatalf("Version = %q, but client/package.json says %q", got, want)
 	}
 }
