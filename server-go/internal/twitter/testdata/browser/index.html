@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><title>KonomiTV local browser fixture</title></head>
+<body tabindex="0"><h1>ローカル検証用ページ</h1>
+<nav><div role="tablist"><div><button role="tab">おすすめ</button></div><div><button role="tab" aria-selected="true">フォロー中</button></div></div></nav>
+<script>
+// 本家のフック対象と同じ webpack の公開面だけを、外部通信なしで用意する。
+const factories = {}, cache = {};
+function requireFixture(id) {
+    if (cache[id]) return cache[id].exports;
+    const module = cache[id] = {exports: {}};
+    factories[id](module, module.exports, requireFixture);
+    return module.exports;
+}
+requireFixture.o = (object, key) => Object.hasOwn(object, key);
+requireFixture.d = (object, definitions) => {
+    for (const key in definitions) Object.defineProperty(object, key, {enumerable:true, get:definitions[key]});
+};
+self.webpackChunk_twitter_responsive_web = [];
+self.webpackChunk_twitter_responsive_web.push = chunk => {
+    Object.assign(factories, chunk[1]);
+    if (chunk[2]) chunk[2](requireFixture);
+    return 0;
+};
+</script>
+<script src="/main.123abc.js"></script>
+</body></html>

@@ -22,7 +22,7 @@ var PersistCookiesFunc func(ctx context.Context, account *Account, cookiesTxt st
 // PersistCookies は Cookie を DB に保存する。
 func PersistCookies(ctx context.Context, account *Account, cookiesTxt string) error {
 	// 未保存 (Temporary) アカウントは DB 上の行を持たないためスキップする
-	if account.ID == 0 {
+	if account.ID <= 0 {
 		return nil
 	}
 	// アカウント単位のコールバック (internal/api が設定する) を優先する

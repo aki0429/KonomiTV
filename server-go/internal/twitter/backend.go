@@ -64,8 +64,8 @@ type ComposeResult struct {
 // (TwitterScrapeBrowser のうち GraphQL クライアントが必要とする範囲) 。
 //
 // Python 版は Zendriver で Chromium を制御するが、Go 版ではこのインターフェースの実装として
-// 差し替え可能にしている。実際のブラウザ駆動実装は別途用意する必要があり、
-// 未実装の場合は UnavailableBackend が日本語のエラーメッセージを返す。
+// 差し替え可能にしている。既定の BrowserBackend は専用 Chrome / Brave を CDP で駆動し、
+// UnavailableBackend は実ブラウザーを使わない試験などで明示的に指定する。
 //
 // GraphQL の query_id / operationName を含む HTTP ヘッダーと X-Client-Transaction-ID は
 // Twitter Web App の main.js が実行時に内部生成して付与する値であり、Python 版

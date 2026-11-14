@@ -3,6 +3,40 @@
 対象: `tsukumijima/KonomiTV` master `687b904bb0a2cbb329596fd7b0368c09afe19a6c` (2026-11-14)。
 完全移植は作業中。README の過去の「実装済み」は実機確認・現行本家との機能一致を保証しない。
 
+## Twitter の実ブラウザー処理
+
+既定の `UnavailableBackend` を実ブラウザーへ置き換えた完成候補。
+Go の CDP 通信で Chrome / Brave を起動し、一時プロファイル・Cookie復号・UA/言語/時差の復元、
+main.js のブレークポイントと本家 `zendriver_setup.js` の注入、GraphQL呼び出しを実装した。
+投稿は本家から抽出した9個のJS式と、モーダル・paste・画像・返信先・Ctrl+Enterの手順を使う。
+画像アップロード完了、CreateTweet本文、通信断と不正応答を監視し、終了時にイベント監視を解除する。
+
+本家の実メソッドから生成したフィルター591・UA20・言語8・Cookie書き出し3ケースと、
+本家f-stringを評価した9個のJS式を比較した。セットアップJSも本家の正規化SHA-256と照合する。
+フィルターは6配布元を並行取得し、完全な取得・検査・保存ができなければ既存キャッシュを保持する。
+投稿中の自動停止抑制が旧Go版で欠けていたため、本家に合わせてキャンセル・再予約を実装した。
+アカウント差し替え・時刻・停止予約は複数のHTTP要求とタイマーの間で保護する。
+同時認証の一時アカウントは要求ごとに分離し、認証失敗ではブラウザーを回収する。
+再認証の付け替えでは本家と同じく、同じ永続IDにあった古いブラウザーも停止する。
+
+WindowsとLinux実機の実Chromeを使い、本家JSの注入、GraphQL、Cookie書き出し、画面画像、
+文字・画像・返信先の受け渡し、画像失敗と不正なCreateTweet応答からの復帰をローカル模擬ページで確認した。
+両OSで再セットアップ・親プロセス強制終了・セットアップ期限切れ・中止後の回収も確認した。
+実際のTwitterアカウントへのログイン・投稿・いいね等の外部操作は実施していない。
+
+最終Windowsのbuild/vet/全体testは成功 (API113.942秒、実ブラウザーを含むtwitter24.345秒)。
+Linux実機のrace検査も成功 (実ブラウザーを含むtwitter32.132秒、Twitter API132.221秒)。
+同時認証では実際のHTTP処理とSQLite保存を通し、Cookieの要求間混同がないことを確認した。
+PythonのRuffは成功。Windowsのtaskipy区切り文字問題と既存Pyright45 errors / 7 warningsは継続。
+
+実機には[公式Chrome for Testing](https://googlechromelabs.github.io/chrome-for-testing/) 157.0.8103.78を
+アプリ専用の `server/go-native/Chrome` に配置した。配布ZIP203,266,906bytesはGoogle StorageのMD5と一致し、
+計算したSHA-256は `9223832977a13db3646201b1341c1f9cf08afa3ceae92540116d7b0c062364fb`。
+不足していたUbuntuのライブラリ2種と日本語フォントも専用ディレクトリに展開した。
+既存のChrome用AppArmorプロファイルで起動し、Chromeのサンドボックスは有効なまま。
+
+本家クライアントと導入手順の更新、残りの実機確認と全体監査は継続する。
+
 ## EDCB のローカルパイプ受信 (a9d40ba4)
 
 ソース `a9d40ba4c746b29261314213381823da6b335ebe` は GitHub へ push し、Linux 実機へ導入した。

@@ -72,9 +72,14 @@ type RawResponse struct {
 // GraphQLClient は Twitter Web App の GraphQL API ラッパー
 // (TwitterGraphQLAPI 相当) 。1 つの Twitter アカウントに 1 インスタンスが対応する。
 type GraphQLClient struct {
-	account *Account
-	backend Backend
-	logger  *slog.Logger
+	// mu はアカウントの差し替えと、自動停止・取得時刻を HTTP / タイマー間で保護する。
+	mu                 sync.RWMutex
+	shutdownGeneration uint64
+	shutdownTimer      *time.Timer
+	composeActive      bool
+	account            *Account
+	backend            Backend
+	logger             *slog.Logger
 
 	// lastGraphQLAPICallTime は GraphQL API の前回呼び出し時刻 (UNIX 時間) 。
 	lastGraphQLAPICallTime float64
@@ -109,6 +114,8 @@ type Account struct {
 	CookieBrowserInfo string
 	// PlainCookies は未保存 (Temporary) アカウント用の平文 Cookie。
 	PlainCookies string
+	// LoadCookies は保存済み Cookie を必要時に復号する。秘密鍵は API 側に保持する。
+	LoadCookies func() (string, error)
 	// PersistCookies は Cookie を暗号化して DB に保存するコールバック (internal/api が設定する) 。
 	PersistCookies func(ctx context.Context, cookiesTxt string) error
 }
@@ -120,16 +127,20 @@ func (account *Account) IsNetscapeCookieFile() bool {
 
 // LogPrefix はログのプレフィックスを返す。
 func (client *GraphQLClient) LogPrefix() string {
-	return fmt.Sprintf("[TwitterGraphQLAPI][@%s]", client.account.ScreenName)
+	return fmt.Sprintf("[TwitterGraphQLAPI][@%s]", client.Account().ScreenName)
 }
 
 // Account はこのクライアントが扱うアカウントを返す。
 func (client *GraphQLClient) Account() *Account {
+	client.mu.RLock()
+	defer client.mu.RUnlock()
 	return client.account
 }
 
 // SetAccount はアカウント情報を差し替える (Python 版のシングルトン更新相当) 。
 func (client *GraphQLClient) SetAccount(account *Account) {
+	client.mu.Lock()
+	defer client.mu.Unlock()
 	client.account = account
 	client.backend.SetAccount(account)
 }
@@ -226,6 +237,9 @@ func AsGraphQLErrorMessage(err error) (string, bool) {
 
 // markBrowserForRestart はブラウザを再起動が必要な状態にマークする。
 func (client *GraphQLClient) markBrowserForRestart(ctx context.Context, reason string) {
+	client.mu.Lock()
+	client.stopIdleShutdownLocked()
+	client.mu.Unlock()
 	client.logger.Warn(client.LogPrefix() + " " + reason)
 	if err := client.backend.MarkForRestart(ctx); err != nil {
 		client.logger.Warn("error during browser shutdown", "error", err, "prefix", client.LogPrefix())
@@ -239,7 +253,9 @@ func (client *GraphQLClient) finishRequest(ctx context.Context) {
 			client.logger.Warn("failed to save cookies after API call", "error", err, "prefix", client.LogPrefix())
 		}
 	}
+	client.mu.Lock()
 	client.lastGraphQLAPICallTime = client.currentTime()
+	client.mu.Unlock()
 	client.scheduleShutdown()
 }
 
@@ -249,21 +265,48 @@ func (client *GraphQLClient) saveCookies(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return PersistCookies(ctx, client.account, cookies)
+	return PersistCookies(ctx, client.Account(), cookies)
 }
 
 // scheduleShutdown は一定時間後にヘッドレスブラウザを自動停止させるタスクを再スケジュールする。
 func (client *GraphQLClient) scheduleShutdown() {
-	if !client.backend.IsSetupComplete() || client.shutdownScheduler == nil {
+	if !client.backend.IsSetupComplete() {
 		return
 	}
-	client.shutdownScheduler(BrowserIdleTimeout*time.Second, func() {
-		if client.currentTime()-client.lastGraphQLAPICallTime >= BrowserIdleTimeout {
+	client.mu.Lock()
+	if client.composeActive {
+		client.mu.Unlock()
+		return
+	}
+	client.stopIdleShutdownLocked()
+	generation := client.shutdownGeneration
+	callback := func() {
+		client.mu.RLock()
+		shouldClose := generation == client.shutdownGeneration && !client.composeActive && client.currentTime()-client.lastGraphQLAPICallTime >= BrowserIdleTimeout
+		client.mu.RUnlock()
+		if shouldClose {
 			client.logger.Info(fmt.Sprintf("%s Shutting down browser after %d seconds of inactivity.",
 				client.LogPrefix(), BrowserIdleTimeout))
 			_ = client.backend.Shutdown(context.Background())
 		}
-	})
+	}
+	scheduler := client.shutdownScheduler
+	if scheduler == nil {
+		client.shutdownTimer = time.AfterFunc(BrowserIdleTimeout*time.Second, callback)
+	}
+	client.mu.Unlock()
+	if scheduler != nil {
+		scheduler(BrowserIdleTimeout*time.Second, callback)
+	}
+}
+
+// stopIdleShutdownLocked は未実行の停止タスクと、開始済みの古いコールバックを無効にする。
+func (client *GraphQLClient) stopIdleShutdownLocked() {
+	client.shutdownGeneration++
+	if client.shutdownTimer != nil {
+		client.shutdownTimer.Stop()
+		client.shutdownTimer = nil
+	}
 }
 
 // KeepAlive はヘッドレスブラウザの自動シャットダウンを抑制する。
@@ -271,7 +314,9 @@ func (client *GraphQLClient) KeepAlive() {
 	if !client.backend.IsSetupComplete() {
 		return
 	}
+	client.mu.Lock()
 	client.lastGraphQLAPICallTime = client.currentTime()
+	client.mu.Unlock()
 	client.scheduleShutdown()
 }
 

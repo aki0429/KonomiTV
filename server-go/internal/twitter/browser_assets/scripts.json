@@ -1,0 +1,48 @@
+{
+  "source_sha256": "23403a0738544acea02ce2264b8396752d325cc9939e7b295678a1cfe2c56095",
+  "scripts": {
+    "modal_ready": {
+      "template": "\n                new Promise((resolve, reject) => {\n                    const timeout = setTimeout(() => reject(new Error('Timeout: compose modal not opened')), 10000);\n                    const check = () => {\n                        const isComposeUrl = location.pathname === '/compose/post';\n                        const textarea = document.querySelector('[role=\"dialog\"] [data-testid=\"tweetTextarea_0\"]');\n                        if (isComposeUrl && textarea) {\n                            clearTimeout(timeout);\n                            resolve(true);\n                        } else {\n                            requestAnimationFrame(check);\n                        }\n                    };\n                    check();\n                })\n                ",
+      "expressions": []
+    },
+    "button_ready": {
+      "template": "\n                new Promise((resolve, reject) => {\n                    const timeout = setTimeout(() => reject(new Error('Timeout: tweetButton not enabled')), 30000);\n                    const check = () => {\n                        const btn = document.querySelector('[role=\"dialog\"] [data-testid=\"tweetButton\"]');\n                        if (btn && btn.getAttribute('aria-disabled') !== 'true') {\n                            clearTimeout(timeout);\n                            resolve(true);\n                        } else {\n                            setTimeout(check, 300);\n                        }\n                    };\n                    check();\n                })\n                ",
+      "expressions": []
+    },
+    "focus": {
+      "template": "\n                (() => {\n                    const textarea = document.querySelector('[role=\"dialog\"] [data-testid=\"tweetTextarea_0\"]');\n                    if (!textarea) {\n                        return false;\n                    }\n                    if (document.activeElement !== textarea) {\n                        textarea.focus();\n                    }\n                    return document.activeElement === textarea;\n                })()\n                ",
+      "expressions": []
+    },
+    "discard": {
+      "template": "\n                    (() => {\n                        const discardBtn = document.querySelector('[data-testid=\"confirmationSheetConfirm\"]');\n                        if (discardBtn) {\n                            discardBtn.click();\n                            return true;\n                        }\n                        return false;\n                    })()\n                    ",
+      "expressions": []
+    },
+    "reply": {
+      "template": "\n                    (() => {\n                        const wrappedState = __KONOMITV_JSON_0__;\n                        const composeUrl = `/compose/post?in_reply_to=${encodeURIComponent(__KONOMITV_JSON_1__)}`;\n                        window.history.pushState(wrappedState, '', composeUrl);\n                        window.dispatchEvent(new PopStateEvent('popstate', { state: wrappedState }));\n                    })()\n                    ",
+      "expressions": [
+        "json.dumps(reply_state)",
+        "json.dumps(validated_reply_to_status_id)"
+      ]
+    },
+    "paste": {
+      "template": "\n                    (() => {\n                        // ツイート送信モーダル内の tweetTextarea_0 を対象にする (タイムラインのインライン投稿欄ではなくモーダルのもの)\n                        const textarea = document.querySelector('[role=\"dialog\"] [data-testid=\"tweetTextarea_0\"]');\n                        if (!textarea) return false;\n                        textarea.focus();\n                        const dt = new DataTransfer();\n                        dt.setData('text/plain', __KONOMITV_JSON_0__);\n                        const pasteEvent = new ClipboardEvent('paste', {\n                            bubbles: true,\n                            cancelable: true,\n                            clipboardData: dt,\n                        });\n                        textarea.dispatchEvent(pasteEvent);\n                        return true;\n                    })()\n                    ",
+      "expressions": [
+        "json.dumps(tweet_text, ensure_ascii=False)"
+      ]
+    },
+    "attach": {
+      "template": "\n                    (() => {\n                        const images = window.__preloadedImages;\n                        delete window.__preloadedImages;\n                        if (!images) return 'preloaded images not found';\n                        const fileInput = document.querySelector('[role=\"dialog\"] [data-testid=\"fileInput\"]');\n                        if (!fileInput) return 'fileInput not found';\n                        const dt = new DataTransfer();\n                        for (const img of images) {\n                            const binaryString = atob(img.base64);\n                            const bytes = new Uint8Array(binaryString.length);\n                            for (let i = 0; i < binaryString.length; i++) {\n                                bytes[i] = binaryString.charCodeAt(i);\n                            }\n                            const file = new File([bytes], img.fileName, { type: img.mimeType });\n                            dt.items.add(file);\n                        }\n                        fileInput.files = dt.files;\n                        fileInput.dispatchEvent(new Event('change', { bubbles: true }));\n                        return true;\n                    })()\n                    ",
+      "expressions": []
+    },
+    "following": {
+      "template": "\n                        new Promise((resolve, reject) => {\n                            const timeout = setTimeout(() => reject(new Error('Timeout: Following tab not found')), 10000);\n                            const check = () => {\n                                // タイムラインタブリストの2番目のタブ (「フォロー中」) を探す\n                                const tabList = document.querySelector('nav div[role=\"tablist\"]');\n                                if (!tabList) {\n                                    requestAnimationFrame(check);\n                                    return;\n                                }\n                                const followingTab = tabList.querySelector('div:nth-child(2) > [role=\"tab\"]');\n                                if (!followingTab) {\n                                    requestAnimationFrame(check);\n                                    return;\n                                }\n                                // 既に「フォロー中」タブが選択されている場合はそのまま完了\n                                if (followingTab.getAttribute('aria-selected') === 'true') {\n                                    clearTimeout(timeout);\n                                    resolve('already_selected');\n                                    return;\n                                }\n                                // 「フォロー中」タブをクリックして切り替える\n                                followingTab.click();\n                                clearTimeout(timeout);\n                                resolve('switched');\n                            };\n                            check();\n                        })\n                        ",
+      "expressions": []
+    },
+    "preload": {
+      "template": "window.__preloadedImages = __KONOMITV_JSON_0__",
+      "expressions": [
+        "json.dumps(images_json_array, ensure_ascii=False)"
+      ]
+    }
+  }
+}

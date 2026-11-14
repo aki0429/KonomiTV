@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/aki0429/KonomiTV/server-go/internal/auth"
@@ -21,9 +22,21 @@ import (
 
 // newTwitterBackendFactory は Twitter アカウントごとのブラウザ Backend を生成する。
 //
-// Go 版のヘッドレスブラウザ駆動は未実装のため、既定では UnavailableBackend を使う。
+// 未指定時はサーバーの保存先を使う実ブラウザー Backend を生成する。
 // テストではフェイク Backend を返すファクトリに差し替えてエンドポイントを検証する。
-var newTwitterBackendFactory twitter.BackendFactory = twitter.NewUnavailableBackend
+var newTwitterBackendFactory twitter.BackendFactory
+
+// temporaryTwitterAccountSequence は同時認証の Cookie とブラウザーを要求単位で分離する。
+var temporaryTwitterAccountSequence atomic.Int64
+
+func (s *Server) twitterBackendFactory() twitter.BackendFactory {
+	if newTwitterBackendFactory != nil {
+		return newTwitterBackendFactory
+	}
+	return func(account *twitter.Account) twitter.Backend {
+		return twitter.NewBrowserBackend(account, twitter.BrowserOptions{DataDir: s.paths.DataDir, Logger: s.logger})
+	}
+}
 
 // twitterProxyUserAgent は Twitter 動画プロキシで送信する User-Agent
 // (constants.py の API_REQUEST_HEADERS['User-Agent'] 相当) 。
@@ -175,6 +188,17 @@ func (s *Server) twitterAccountToModel(record twitterAccountRecord) *twitter.Acc
 	if record.CookieBrowserInfo != nil {
 		account.CookieBrowserInfo = *record.CookieBrowserInfo
 	}
+	account.LoadCookies = func() (string, error) {
+		if !strings.HasPrefix(record.AccessTokenSecret, twitterCookieEncryptionPrefix) {
+			return record.AccessTokenSecret, nil
+		}
+		secret, err := auth.LoadOrCreateSecret(filepath.Join(s.paths.DataDir, "jwt_secret.dat"))
+		if err != nil {
+			return "", err
+		}
+		plain, err := twitter.NewFernetFromSecret(secret).Decrypt(strings.TrimPrefix(record.AccessTokenSecret, twitterCookieEncryptionPrefix))
+		return string(plain), err
+	}
 	// Cookie が更新されたら暗号化して DB へ保存する
 	account.PersistCookies = func(ctx context.Context, cookiesTxt string) error {
 		encrypted, err := s.encryptTwitterCookie(cookiesTxt)
@@ -191,7 +215,7 @@ func (s *Server) twitterAccountToModel(record twitterAccountRecord) *twitter.Acc
 
 // getTwitterGraphQLClient は Twitter アカウントに紐づくシングルトンクライアントを取得する。
 func (s *Server) getTwitterGraphQLClient(record twitterAccountRecord) *twitter.GraphQLClient {
-	return twitter.GetInstance(s.twitterAccountToModel(record), newTwitterBackendFactory, s.logger)
+	return twitter.GetInstance(s.twitterAccountToModel(record), s.twitterBackendFactory(), s.logger)
 }
 
 // twitterHTTPClient は Twitter 動画プロキシに使う HTTP クライアントを返す。
@@ -312,6 +336,7 @@ func (s *Server) handleTwitterCookieAuth(w http.ResponseWriter, r *http.Request)
 	// 一時的な TwitterAccount を用意してログイン中の Twitter アカウント情報を取得する
 	plainCookies := cookiesTxt
 	temporaryAccount := &twitter.Account{
+		ID:           -temporaryTwitterAccountSequence.Add(1),
 		UserID:       currentUser.ID,
 		Name:         "Temporary",
 		ScreenName:   "Temporary",
@@ -319,8 +344,13 @@ func (s *Server) handleTwitterCookieAuth(w http.ResponseWriter, r *http.Request)
 		AccessToken:  "NETSCAPE_COOKIE_FILE",
 		PlainCookies: plainCookies,
 	}
-	temporaryID := temporaryAccount.ID // 0 (未保存)
-	client := twitter.GetInstance(temporaryAccount, newTwitterBackendFactory, s.logger)
+	if cookieBrowserInfo != nil {
+		temporaryAccount.CookieBrowserInfo = *cookieBrowserInfo
+	}
+	temporaryID := temporaryAccount.ID // 負数は未保存。永続IDと衝突しない。
+	client := twitter.GetInstance(temporaryAccount, s.twitterBackendFactory(), s.logger)
+	// 成功時は rebind により一時エントリーが消える。失敗時はブラウザーを回収する。
+	defer twitter.RemoveInstance(temporaryID)
 
 	viewerResult := client.FetchLoggedViewer(r.Context())
 	if result, ok := viewerResult.(*twitter.TwitterAPIResult); ok && !result.IsSuccess {
@@ -402,7 +432,7 @@ func (s *Server) handleTwitterCookieAuth(w http.ResponseWriter, r *http.Request)
 	}
 
 	// 一時アカウントで立ち上げたインスタンスを永続化後の ID に紐づけ直す
-	twitter.RebindInstance(&temporaryID, s.twitterAccountToModel(persisted), newTwitterBackendFactory, s.logger)
+	twitter.RebindInstance(&temporaryID, s.twitterAccountToModel(persisted), s.twitterBackendFactory(), s.logger)
 
 	// 古い形式のレコードを自動削除する
 	if deletedCount, err := s.deleteOldFormatTwitterAccounts(r.Context(), currentUser.ID); err == nil && deletedCount > 0 {

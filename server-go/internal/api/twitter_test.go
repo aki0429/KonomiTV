@@ -101,6 +101,9 @@ func rawResponseJSON(parsedResponse string, statusCode int) *twitter.RawResponse
 // newTwitterTestServer は Twitter ルートを登録したハンドラーとトークンを返す。
 func newTwitterTestServer(t *testing.T) (*Server, http.Handler, string) {
 	t.Helper()
+	previousFactory := newTwitterBackendFactory
+	// API の応答試験は外部へ接続せず、ブラウザー実動作は別のローカル fixture で検証する。
+	newTwitterBackendFactory = twitter.NewUnavailableBackend
 	server, _ := newTestServer(t, "")
 	userID := createTestUser(t, server.db, "twitter-user", "hunter2", true)
 	token := issueTestToken(t, userID)
@@ -110,7 +113,7 @@ func newTwitterTestServer(t *testing.T) (*Server, http.Handler, string) {
 
 	t.Cleanup(func() {
 		twitter.ResetInstances()
-		newTwitterBackendFactory = twitter.NewUnavailableBackend
+		newTwitterBackendFactory = previousFactory
 	})
 	return server, mux, token
 }

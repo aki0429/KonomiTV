@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -29,6 +30,7 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/logging"
 	"github.com/aki0429/KonomiTV/server-go/internal/reservations"
 	"github.com/aki0429/KonomiTV/server-go/internal/stream"
+	"github.com/aki0429/KonomiTV/server-go/internal/twitter"
 	"github.com/aki0429/KonomiTV/server-go/internal/videostream"
 )
 
@@ -229,6 +231,8 @@ func main() {
 	}))
 
 	httpServer := &http.Server{
+		// サービス終了時は HTTP 内のブラウザー接続待ちも中止してからプロセスを回収する。
+		BaseContext:       func(net.Listener) context.Context { return ctx },
 		Addr:              *listenAddress,
 		Handler:           server.Handler(),
 		ReadHeaderTimeout: 30 * time.Second,
@@ -255,6 +259,11 @@ func main() {
 
 	<-ctx.Done()
 	logger.Info("shutting down server...")
+	browsersDone := make(chan struct{})
+	go func() {
+		twitter.ShutdownAllBrowsers(context.Background())
+		close(browsersDone)
+	}()
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -279,6 +288,7 @@ func main() {
 		logger.Warn("Capture folder monitoring did not stop before shutdown timeout.")
 	}
 	stream.CloseAllEDCBTuners()
+	<-browsersDone
 	logger.Info("server stopped")
 }
 

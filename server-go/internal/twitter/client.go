@@ -42,9 +42,6 @@ func GetInstance(account *Account, factory BackendFactory, logger *slog.Logger) 
 		randomFloat: func(minimum float64, maximum float64) float64 {
 			return minimum + rand.Float64()*(maximum-minimum)
 		},
-		shutdownScheduler: func(delay time.Duration, callback func()) {
-			time.AfterFunc(delay, callback)
-		},
 	}
 	instances[account.ID] = client
 	return client
@@ -79,9 +76,6 @@ func NewDetachedClient(account *Account, backend Backend, logger *slog.Logger) *
 		randomFloat: func(minimum float64, maximum float64) float64 {
 			return minimum + rand.Float64()*(maximum-minimum)
 		},
-		shutdownScheduler: func(delay time.Duration, callback func()) {
-			time.AfterFunc(delay, callback)
-		},
 	}
 }
 
@@ -92,6 +86,9 @@ func RemoveInstance(accountID int64) {
 	delete(instances, accountID)
 	instancesMu.Unlock()
 	if ok {
+		client.mu.Lock()
+		client.stopIdleShutdownLocked()
+		client.mu.Unlock()
 		_ = client.backend.Shutdown(context.Background())
 	}
 }
@@ -102,9 +99,17 @@ func RebindInstance(previousAccountID *int64, account *Account, factory BackendF
 		instancesMu.Lock()
 		if existing, ok := instances[*previousAccountID]; ok {
 			delete(instances, *previousAccountID)
+			previous := instances[account.ID]
 			existing.SetAccount(account)
 			instances[account.ID] = existing
 			instancesMu.Unlock()
+			// 本家 rebindInstance と同じく、同じ永続IDにあった古いブラウザーを破棄する。
+			if previous != nil && previous != existing {
+				previous.mu.Lock()
+				previous.stopIdleShutdownLocked()
+				previous.mu.Unlock()
+				_ = previous.backend.Shutdown(context.Background())
+			}
 			return existing
 		}
 		instancesMu.Unlock()
@@ -115,8 +120,33 @@ func RebindInstance(previousAccountID *int64, account *Account, factory BackendF
 // ResetInstances は登録済みインスタンスを全て破棄する (テスト用) 。
 func ResetInstances() {
 	instancesMu.Lock()
+	previous := instances
 	instances = map[int64]*GraphQLClient{}
 	instancesMu.Unlock()
+	for _, client := range previous {
+		client.mu.Lock()
+		client.stopIdleShutdownLocked()
+		client.mu.Unlock()
+	}
+}
+
+// ShutdownAllBrowsers はサーバー終了時にアカウント専用のブラウザーをすべて回収する。
+func ShutdownAllBrowsers(ctx context.Context) {
+	instancesMu.Lock()
+	backends := make([]Backend, 0, len(instances))
+	for _, client := range instances {
+		client.mu.Lock()
+		client.stopIdleShutdownLocked()
+		client.mu.Unlock()
+		backends = append(backends, client.backend)
+	}
+	instances = map[int64]*GraphQLClient{}
+	instancesMu.Unlock()
+	var group sync.WaitGroup
+	for _, backend := range backends {
+		group.Go(func() { _ = backend.Shutdown(ctx) })
+	}
+	group.Wait()
 }
 
 // SetNowForTesting はテスト用に現在時刻取得関数を差し替える。
@@ -131,6 +161,9 @@ func (client *GraphQLClient) SetRandomFloatForTesting(randomFloat func(minimum f
 
 // SetShutdownSchedulerForTesting はテスト用にシャットダウン予約関数を差し替える。
 func (client *GraphQLClient) SetShutdownSchedulerForTesting(scheduler func(delay time.Duration, callback func())) {
+	client.mu.Lock()
+	defer client.mu.Unlock()
+	client.stopIdleShutdownLocked()
 	client.shutdownScheduler = scheduler
 }
 
@@ -242,6 +275,11 @@ func (client *GraphQLClient) CreateTweet(ctx context.Context, tweet string, imag
 	}
 
 	throttleRemainingSeconds := maxFloat(0.0, throttleDeadline-client.currentTime())
+	// 本家と同じく、最長60秒の画像待ちを含む投稿中は既存の自動停止を取り消す。
+	client.mu.Lock()
+	client.stopIdleShutdownLocked()
+	client.composeActive = true
+	client.mu.Unlock()
 	client.logger.Info(fmt.Sprintf("%s Posting tweet via tweet posting modal...", client.LogPrefix()))
 	composeUIResult, err := client.backend.PostTweetViaComposeUI(ctx, ComposeRequest{
 		TweetText:            tweet,
@@ -384,7 +422,10 @@ func (client *GraphQLClient) finishTweetRequest(ctx context.Context) {
 			client.logger.Warn("failed to save cookies after tweet posting", "error", err, "prefix", client.LogPrefix())
 		}
 	}
+	client.mu.Lock()
+	client.composeActive = false
 	client.lastGraphQLAPICallTime = client.currentTime()
+	client.mu.Unlock()
 	client.scheduleShutdown()
 }
 
@@ -433,7 +474,9 @@ func (client *GraphQLClient) UnfavoriteTweet(ctx context.Context, tweetID string
 // 戻り値は *TimelineTweetsResult か *TwitterAPIResult のいずれか。
 func (client *GraphQLClient) HomeLatestTimeline(ctx context.Context, cursorID *string, cursorType string, seenTweetIDs []string) any {
 	if cursorID != nil && cursorType == "Top" {
+		client.mu.RLock()
 		elapsedSeconds := client.currentTime() - client.lastHomeFetchedAt
+		client.mu.RUnlock()
 		if elapsedSeconds < MinimumFetchIntervalSeconds {
 			return &TimelineTweetsResult{
 				IsSuccess:        true,
@@ -479,7 +522,9 @@ func (client *GraphQLClient) HomeLatestTimeline(ctx context.Context, cursorID *s
 // SearchTimeline はツイートを検索する (TwitterGraphQLAPI.searchTimeline 相当) 。
 func (client *GraphQLClient) SearchTimeline(ctx context.Context, searchType string, query string, cursorID *string, cursorType string) any {
 	if cursorID != nil && cursorType == "Top" {
+		client.mu.RLock()
 		elapsedSeconds := client.currentTime() - client.lastSearchFetchedAt
+		client.mu.RUnlock()
 		if elapsedSeconds < MinimumFetchIntervalSeconds {
 			return &TimelineTweetsResult{
 				IsSuccess:        true,
@@ -534,11 +579,13 @@ func (client *GraphQLClient) buildTimelineResult(ctx context.Context, response a
 	}
 
 	if cursorID == nil || cursorType == "Top" {
+		client.mu.Lock()
 		if isHome {
 			client.lastHomeFetchedAt = client.currentTime()
 		} else {
 			client.lastSearchFetchedAt = client.currentTime()
 		}
+		client.mu.Unlock()
 	}
 
 	detail := "Twitter のタイムラインを取得しました。"

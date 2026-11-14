@@ -25,6 +25,7 @@ Python と併走する移行モードでは、型と保存先を検証し、使�
 | `POST /api/users` (登録) ・`PUT`/`DELETE /api/users/me`・`PUT`/`DELETE /api/users/{username}` (更新・削除) | ✅ Go 実装済み |
 | `PUT /api/users/me/icon` (アイコン更新、512x512 PNG へ変換) | ✅ Go 実装済み |
 | `POST`/`DELETE /api/users/me/account-links` (Twitter / Bluesky 紐付け) | ✅ Go 実装済み |
+| `/api/twitter/*` (Cookie認証・タイムライン・検索・投稿・画像・返信・いいね等) | Go実装。Chrome / Braveを直接操作する。実ブラウザーとローカル模擬ページで検証、実アカウントへの投稿は未実施 |
 | `GET /api/channels/{channel_id}` (チャンネル情報、現在/次の番組を含む) | ✅ Go 実装済み |
 | `GET /api/channels/{channel_id}/logo` (チャンネルロゴ) | ✅ Go 実装済み (IPTV 疑似チャンネルは Python 版へプロキシ) |
 | `GET /api/channels/{channel_id}/jikkyo` (ニコニコ実況 WebSocket URL) | ✅ Go 実装済み (ニコニコアカウント連携時のニコ生セッション取得・トークン更新含む) |
@@ -167,6 +168,26 @@ curl http://127.0.0.77:7002/api/version
 - エラーレスポンスは FastAPI 互換の `{"detail": "..."}` 形式で返す。
 - CORS は Starlette の CORSMiddleware と同じヘッダーを返す。
 - 日時の JSON 表現は Pydantic v2 と同じ (`2026-09-22T15:11:58.874290+09:00`) 。
+
+### Twitter のブラウザー処理
+
+`internal/twitter/BrowserBackend` が本家の `TwitterScrapeBrowser` 相当を担当する。
+既定でインストール済みの Chrome / Brave を探し、見つからなければ `server/go-native/Chrome/chrome`
+(Windows は `chrome.exe`) も探索する。起動時は毎回専用の一時プロファイルを作り、保存済み Cookie と
+Cookie 採取時のブラウザー環境を復元する。本家の `zendriver_setup.js` を Go 実行ファイルへ同梱している。
+Python / Zendriver は実行時に使用しない。ブラウザーが必要になるまで Chrome は起動しない。
+
+投稿は本家のモーダル・paste・fileInput・Ctrl+Enter の経路を使い、画像 FINALIZE と CreateTweet 応答を
+CDP で監視する。投稿待ちの間は自動停止を無効にし、終了後に再予約する。
+サーバー終了・セットアップ失敗・接続断後の再起動では、専用ブラウザーの子プロセスと一時プロファイルも回収する。
+エラー画面は `server/data/twitter-debug-screenshots` に保存し、7日を過ぎた PNG を削除する。
+
+通常の試験は外部へ投稿しない。実ブラウザーのローカル模擬ページ試験は明示して実行する。
+
+```powershell
+$env:KONOMITV_TWITTER_BROWSER_TEST = '1'
+go test ./internal/twitter -run 'TestNativeTwitterBrowser' -count=1 -timeout=120s
+```
 
 ### 録画フォルダの継続監視
 

@@ -1,0 +1,5072 @@
+{
+  "source_sha256": "23403a0738544acea02ce2264b8396752d325cc9939e7b295678a1cfe2c56095",
+  "filters": [
+    {
+      "input": [
+        "||x.com/i/jot"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/i/jot$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/i/jot$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/i/jot$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/i/jot$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/i/jot$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/i/jot$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/i/jot$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/i/jot$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/i/jot$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/i/jot$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/i/jot$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^*/log.json"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com^*/log.json$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com^*/log.json$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com^*/log.json$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^*/log.json$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com^*/log.json$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^*/log.json$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^*/log.json$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^*/log.json$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com^*/log.json$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com^*/log.json$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^*/log.json$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/api*^"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/api*^$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/api*^$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/api*^$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/api*^$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/api*^$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/api*^$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/api*^$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/api*^$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/api*^$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/api*^$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/api*^$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/a|$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/a|$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/a|$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/a|$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/a|$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/a|$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|b"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|b$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|b$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|b$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|b$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|b$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|b$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|b$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|b$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|b$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|b$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a|b$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com^$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/測定 #~+-"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/測定 #~+-$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/測定 #~+-$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/測定 #~+-$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/測定 #~+-$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/測定 #~+-$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/測定 #~+-$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/測定 #~+-$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/測定 #~+-$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/測定 #~+-$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/測定 #~+-$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/測定 #~+-$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/i/jot"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/i/jot$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/i/jot$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/i/jot$xmlhttprequest,3p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/i/jot$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/i/jot$third-party"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/i/jot$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/i/jot$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/i/jot$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/i/jot$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/i/jot$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/i/jot$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^*/log.json"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com^*/log.json$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com^*/log.json$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com^*/log.json$xmlhttprequest,3p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com^*/log.json$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^*/log.json$third-party"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com^*/log.json$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^*/log.json$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^*/log.json$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com^*/log.json$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com^*/log.json$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^*/log.json$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/api*^"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/api*^$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/api*^$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/api*^$xmlhttprequest,3p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/api*^$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/api*^$third-party"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/api*^$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/api*^$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/api*^$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/api*^$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/api*^$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/api*^$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/a|$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/a|$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/a|$xmlhttprequest,3p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/a|$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|$third-party"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/a|$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/a|$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/a|$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|b"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|b$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|b$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|b$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|b$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|b$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|b$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|b$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|b$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|b$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|b$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/a|b$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com^$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/測定 #~+-"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/測定 #~+-$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/測定 #~+-$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/測定 #~+-$xmlhttprequest,3p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/測定 #~+-$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/測定 #~+-$third-party"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/測定 #~+-$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/測定 #~+-$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/測定 #~+-$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/測定 #~+-$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||twitter.com/測定 #~+-$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||twitter.com/測定 #~+-$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/i/jot"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/i/jot$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/i/jot$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/i/jot$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/i/jot$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/i/jot$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/i/jot$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/i/jot$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/i/jot$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/i/jot$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/i/jot$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/i/jot$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^*/log.json"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com^*/log.json$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com^*/log.json$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com^*/log.json$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^*/log.json$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com^*/log.json$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^*/log.json$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^*/log.json$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^*/log.json$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com^*/log.json$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com^*/log.json$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^*/log.json$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/api*^"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/api*^$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/api*^$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/api*^$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/api*^$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/api*^$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/api*^$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/api*^$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/api*^$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/api*^$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/api*^$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/api*^$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|b"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|b$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|b$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|b$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|b$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|b$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|b$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|b$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|b$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|b$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|b$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/a|b$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com^$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/測定 #~+-"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/測定 #~+-$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/測定 #~+-$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/測定 #~+-$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/測定 #~+-$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/測定 #~+-$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/測定 #~+-$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/測定 #~+-$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/測定 #~+-$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/測定 #~+-$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*analytics\\.x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||analytics.x.com/測定 #~+-$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||analytics.x.com/測定 #~+-$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/i/jot"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/i/jot$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/i/jot$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/i/jot$xmlhttprequest,3p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/i/jot$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/i/jot$third-party"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/i/jot$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/i/jot$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/i/jot$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/i/jot$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/i/jot$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/i/jot$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^*/log.json"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com^*/log.json$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com^*/log.json$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com^*/log.json$xmlhttprequest,3p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com^*/log.json$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^*/log.json$third-party"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com^*/log.json$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^*/log.json$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^*/log.json$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com^*/log.json$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com^*/log.json$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^*/log.json$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/api*^"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/api*^$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/api*^$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/api*^$xmlhttprequest,3p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/api*^$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/api*^$third-party"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/api*^$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/api*^$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/api*^$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/api*^$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/api*^$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/api*^$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|$xmlhttprequest,3p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|$third-party"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|b"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|b$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|b$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|b$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|b$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|b$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|b$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|b$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|b$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|b$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|b$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/a|b$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com^$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/測定 #~+-"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/測定 #~+-$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/測定 #~+-$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/測定 #~+-$xmlhttprequest,3p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/測定 #~+-$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/測定 #~+-$third-party"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/測定 #~+-$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/測定 #~+-$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/測定 #~+-$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/測定 #~+-$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*a\\.twitter\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||a.twitter.com/測定 #~+-$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||a.twitter.com/測定 #~+-$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/i/jot"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/i/jot$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/i/jot$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/i/jot$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/i/jot$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/i/jot$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/i/jot$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/i/jot$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/i/jot$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/i/jot$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/i/jot",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/i/jot$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/i/jot$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^*/log.json"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com^*/log.json$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com^*/log.json$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com^*/log.json$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^*/log.json$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com^*/log.json$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^*/log.json$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^*/log.json$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^*/log.json$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com^*/log.json$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?(?:[^A-Za-z0-9_.%-]|$).*/log\\.json",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com^*/log.json$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^*/log.json$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/api*^"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/api*^$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/api*^$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/api*^$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/api*^$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/api*^$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/api*^$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/api*^$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/api*^$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/api*^$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/api.*(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/api*^$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/api*^$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/a|$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/a|$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/a|$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/a|$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/a|$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a$",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/a|$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|b"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|b$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|b$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|b$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|b$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|b$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|b$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|b$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|b$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|b$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|b$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/a|b$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com^$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/測定 #~+-"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/測定 #~+-$xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/測定 #~+-$ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/測定 #~+-$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/測定 #~+-$1p"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/測定 #~+-$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/測定 #~+-$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/測定 #~+-$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/測定 #~+-$important,redirect=nooptext"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/測定 #~+-$xhr,ping"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/測定\\ \\#\\~\\+\\-",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||X.Com/測定 #~+-$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||X.Com/測定 #~+-$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/i/jot"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/i/jot$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/i/jot$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/i/jot$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/i/jot$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/i/jot$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/i/jot$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/i/jot$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/i/jot$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/i/jot$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/i/jot$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/i/jot$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^*/log.json"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^*/log.json$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^*/log.json$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^*/log.json$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^*/log.json$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^*/log.json$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^*/log.json$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^*/log.json$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^*/log.json$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^*/log.json$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^*/log.json$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^*/log.json$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/api*^"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/api*^$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/api*^$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/api*^$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/api*^$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/api*^$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/api*^$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/api*^$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/api*^$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/api*^$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/api*^$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/api*^$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|b"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|b$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|b$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|b$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|b$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|b$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|b$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|b$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|b$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|b$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|b$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/a|b$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com^$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/測定 #~+-"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/測定 #~+-$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/測定 #~+-$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/測定 #~+-$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/測定 #~+-$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/測定 #~+-$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/測定 #~+-$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/測定 #~+-$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/測定 #~+-$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/測定 #~+-$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/測定 #~+-$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com.evil.com/測定 #~+-$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/i/jot"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/i/jot$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/i/jot$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/i/jot$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/i/jot$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/i/jot$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/i/jot$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/i/jot$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/i/jot$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/i/jot$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/i/jot$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/i/jot$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^*/log.json"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^*/log.json$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^*/log.json$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^*/log.json$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^*/log.json$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^*/log.json$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^*/log.json$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^*/log.json$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^*/log.json$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^*/log.json$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^*/log.json$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^*/log.json$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/api*^"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/api*^$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/api*^$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/api*^$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/api*^$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/api*^$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/api*^$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/api*^$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/api*^$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/api*^$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/api*^$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/api*^$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|b"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|b$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|b$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|b$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|b$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|b$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|b$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|b$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|b$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|b$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|b$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/a|b$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com^$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/測定 #~+-"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/測定 #~+-$xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/測定 #~+-$ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/測定 #~+-$xmlhttprequest,3p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/測定 #~+-$1p"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/測定 #~+-$third-party"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/測定 #~+-$badfilter"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/測定 #~+-$domain=x.com"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/測定 #~+-$important,redirect=nooptext"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/測定 #~+-$xhr,ping"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/測定 #~+-$~xhr"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||evilx.com/測定 #~+-$"
+      ],
+      "expected": []
+    },
+    {
+      "input": [
+        "||x.com/a$xhr\n||x.com/a$ping\n||x.com/a\n||x.com/a$xhr",
+        "||twitter.com/b^$3p,xhr"
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*twitter\\.com(?::\\d+)?/b(?:[^A-Za-z0-9_.%-]|$)",
+          "request_types": [
+            "XHR"
+          ]
+        },
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a",
+          "request_types": [
+            "Ping"
+          ]
+        },
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a",
+          "request_types": [
+            "XHR"
+          ]
+        },
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/a",
+          "request_types": [
+            "XHR",
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "! comment\n@@||x.com/jot$xhr\n##cosmetic\n  ||x.com/z$ping  "
+      ],
+      "expected": [
+        {
+          "regex_pattern": "^https?://(?:[^/?#]+\\.)*x\\.com(?::\\d+)?/z",
+          "request_types": [
+            "Ping"
+          ]
+        }
+      ]
+    },
+    {
+      "input": [
+        "||x.com/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      ],
+      "error": true
+    }
+  ],
+  "user_agents": [
+    {
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0.0.0",
+      "platform": "Windows",
+      "expected": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0.0.0"
+    },
+    {
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0.0.0",
+      "platform": "macOS",
+      "expected": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/140.0.0.0"
+    },
+    {
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0.0.0",
+      "platform": "Linux",
+      "expected": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140.0.0.0"
+    },
+    {
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0.0.0",
+      "platform": "Android",
+      "expected": null
+    },
+    {
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0.0.0",
+      "platform": "",
+      "expected": null
+    },
+    {
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/140.0.0.0",
+      "platform": "Windows",
+      "expected": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) HeadlessChrome/140.0.0.0"
+    },
+    {
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/140.0.0.0",
+      "platform": "macOS",
+      "expected": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) HeadlessChrome/140.0.0.0"
+    },
+    {
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/140.0.0.0",
+      "platform": "Linux",
+      "expected": "Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/140.0.0.0"
+    },
+    {
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/140.0.0.0",
+      "platform": "Android",
+      "expected": null
+    },
+    {
+      "user_agent": "Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/140.0.0.0",
+      "platform": "",
+      "expected": null
+    },
+    {
+      "user_agent": "Unexpected agent",
+      "platform": "Windows",
+      "expected": null
+    },
+    {
+      "user_agent": "Unexpected agent",
+      "platform": "macOS",
+      "expected": null
+    },
+    {
+      "user_agent": "Unexpected agent",
+      "platform": "Linux",
+      "expected": null
+    },
+    {
+      "user_agent": "Unexpected agent",
+      "platform": "Android",
+      "expected": null
+    },
+    {
+      "user_agent": "Unexpected agent",
+      "platform": "",
+      "expected": null
+    },
+    {
+      "user_agent": "Mozilla/5.0 () Chrome/1",
+      "platform": "Windows",
+      "expected": null
+    },
+    {
+      "user_agent": "Mozilla/5.0 () Chrome/1",
+      "platform": "macOS",
+      "expected": null
+    },
+    {
+      "user_agent": "Mozilla/5.0 () Chrome/1",
+      "platform": "Linux",
+      "expected": null
+    },
+    {
+      "user_agent": "Mozilla/5.0 () Chrome/1",
+      "platform": "Android",
+      "expected": null
+    },
+    {
+      "user_agent": "Mozilla/5.0 () Chrome/1",
+      "platform": "",
+      "expected": null
+    }
+  ],
+  "languages": [
+    {
+      "input": null,
+      "expected": null
+    },
+    {
+      "input": "",
+      "expected": null
+    },
+    {
+      "input": [],
+      "expected": null
+    },
+    {
+      "input": [
+        "ja",
+        "en"
+      ],
+      "expected": "ja,en"
+    },
+    {
+      "input": [
+        " ja ",
+        "",
+        null,
+        3,
+        "en;q=0.9"
+      ],
+      "expected": "ja,en;q=0.9"
+    },
+    {
+      "input": [
+        "　ja ",
+        "\t"
+      ],
+      "expected": "ja"
+    },
+    {
+      "input": {
+        "language": "ja"
+      },
+      "expected": null
+    },
+    {
+      "input": [
+        "ja",
+        "ja"
+      ],
+      "expected": "ja,ja"
+    }
+  ],
+  "cookies": [
+    {
+      "input": [],
+      "expected": "# Netscape HTTP Cookie File\n# https://curl.haxx.se/rfc/cookie_spec.html\n# This is a generated file! Do not edit.\n"
+    },
+    {
+      "input": [
+        {
+          "name": "auth_token",
+          "value": "local",
+          "domain": ".x.com",
+          "path": "/",
+          "secure": true,
+          "expires": -1.0
+        }
+      ],
+      "expected": "# Netscape HTTP Cookie File\n# https://curl.haxx.se/rfc/cookie_spec.html\n# This is a generated file! Do not edit.\n\n.x.com\tTRUE\t/\tTRUE\t-1\tauth_token\tlocal"
+    },
+    {
+      "input": [
+        {
+          "name": "session",
+          "value": "a",
+          "domain": "x.com",
+          "path": "/a",
+          "secure": false,
+          "expires": null
+        },
+        {
+          "name": "other",
+          "value": "b",
+          "domain": "example.com",
+          "path": "/",
+          "secure": true,
+          "expires": 12.0
+        },
+        {
+          "name": "unicode",
+          "value": "日本語",
+          "domain": "a.x.com",
+          "path": "/",
+          "secure": true,
+          "expires": 1234.99
+        }
+      ],
+      "expected": "# Netscape HTTP Cookie File\n# https://curl.haxx.se/rfc/cookie_spec.html\n# This is a generated file! Do not edit.\n\nx.com\tFALSE\t/a\tFALSE\t0\tsession\ta\na.x.com\tFALSE\t/\tTRUE\t1234\tunicode\t日本語"
+    }
+  ],
+  "scripts": [
+    {
+      "name": "modal_ready",
+      "arguments": [],
+      "expected": "\n                new Promise((resolve, reject) => {\n                    const timeout = setTimeout(() => reject(new Error('Timeout: compose modal not opened')), 10000);\n                    const check = () => {\n                        const isComposeUrl = location.pathname === '/compose/post';\n                        const textarea = document.querySelector('[role=\"dialog\"] [data-testid=\"tweetTextarea_0\"]');\n                        if (isComposeUrl && textarea) {\n                            clearTimeout(timeout);\n                            resolve(true);\n                        } else {\n                            requestAnimationFrame(check);\n                        }\n                    };\n                    check();\n                })\n                "
+    },
+    {
+      "name": "button_ready",
+      "arguments": [],
+      "expected": "\n                new Promise((resolve, reject) => {\n                    const timeout = setTimeout(() => reject(new Error('Timeout: tweetButton not enabled')), 30000);\n                    const check = () => {\n                        const btn = document.querySelector('[role=\"dialog\"] [data-testid=\"tweetButton\"]');\n                        if (btn && btn.getAttribute('aria-disabled') !== 'true') {\n                            clearTimeout(timeout);\n                            resolve(true);\n                        } else {\n                            setTimeout(check, 300);\n                        }\n                    };\n                    check();\n                })\n                "
+    },
+    {
+      "name": "focus",
+      "arguments": [],
+      "expected": "\n                (() => {\n                    const textarea = document.querySelector('[role=\"dialog\"] [data-testid=\"tweetTextarea_0\"]');\n                    if (!textarea) {\n                        return false;\n                    }\n                    if (document.activeElement !== textarea) {\n                        textarea.focus();\n                    }\n                    return document.activeElement === textarea;\n                })()\n                "
+    },
+    {
+      "name": "discard",
+      "arguments": [],
+      "expected": "\n                    (() => {\n                        const discardBtn = document.querySelector('[data-testid=\"confirmationSheetConfirm\"]');\n                        if (discardBtn) {\n                            discardBtn.click();\n                            return true;\n                        }\n                        return false;\n                    })()\n                    "
+    },
+    {
+      "name": "reply",
+      "arguments": [
+        {
+          "state": {
+            "inReplyToStatusId": "123450"
+          },
+          "key": "abc123"
+        },
+        "123450"
+      ],
+      "expected": "\n                    (() => {\n                        const wrappedState = {\"state\": {\"inReplyToStatusId\": \"123450\"}, \"key\": \"abc123\"};\n                        const composeUrl = `/compose/post?in_reply_to=${encodeURIComponent(\"123450\")}`;\n                        window.history.pushState(wrappedState, '', composeUrl);\n                        window.dispatchEvent(new PopStateEvent('popstate', { state: wrappedState }));\n                    })()\n                    "
+    },
+    {
+      "name": "paste",
+      "arguments": [
+        "日本語\n\"<>__KONOMITV_JSON_0__"
+      ],
+      "expected": "\n                    (() => {\n                        // ツイート送信モーダル内の tweetTextarea_0 を対象にする (タイムラインのインライン投稿欄ではなくモーダルのもの)\n                        const textarea = document.querySelector('[role=\"dialog\"] [data-testid=\"tweetTextarea_0\"]');\n                        if (!textarea) return false;\n                        textarea.focus();\n                        const dt = new DataTransfer();\n                        dt.setData('text/plain', \"日本語\\n\\\"<>__KONOMITV_JSON_0__\");\n                        const pasteEvent = new ClipboardEvent('paste', {\n                            bubbles: true,\n                            cancelable: true,\n                            clipboardData: dt,\n                        });\n                        textarea.dispatchEvent(pasteEvent);\n                        return true;\n                    })()\n                    "
+    },
+    {
+      "name": "attach",
+      "arguments": [],
+      "expected": "\n                    (() => {\n                        const images = window.__preloadedImages;\n                        delete window.__preloadedImages;\n                        if (!images) return 'preloaded images not found';\n                        const fileInput = document.querySelector('[role=\"dialog\"] [data-testid=\"fileInput\"]');\n                        if (!fileInput) return 'fileInput not found';\n                        const dt = new DataTransfer();\n                        for (const img of images) {\n                            const binaryString = atob(img.base64);\n                            const bytes = new Uint8Array(binaryString.length);\n                            for (let i = 0; i < binaryString.length; i++) {\n                                bytes[i] = binaryString.charCodeAt(i);\n                            }\n                            const file = new File([bytes], img.fileName, { type: img.mimeType });\n                            dt.items.add(file);\n                        }\n                        fileInput.files = dt.files;\n                        fileInput.dispatchEvent(new Event('change', { bubbles: true }));\n                        return true;\n                    })()\n                    "
+    },
+    {
+      "name": "following",
+      "arguments": [],
+      "expected": "\n                        new Promise((resolve, reject) => {\n                            const timeout = setTimeout(() => reject(new Error('Timeout: Following tab not found')), 10000);\n                            const check = () => {\n                                // タイムラインタブリストの2番目のタブ (「フォロー中」) を探す\n                                const tabList = document.querySelector('nav div[role=\"tablist\"]');\n                                if (!tabList) {\n                                    requestAnimationFrame(check);\n                                    return;\n                                }\n                                const followingTab = tabList.querySelector('div:nth-child(2) > [role=\"tab\"]');\n                                if (!followingTab) {\n                                    requestAnimationFrame(check);\n                                    return;\n                                }\n                                // 既に「フォロー中」タブが選択されている場合はそのまま完了\n                                if (followingTab.getAttribute('aria-selected') === 'true') {\n                                    clearTimeout(timeout);\n                                    resolve('already_selected');\n                                    return;\n                                }\n                                // 「フォロー中」タブをクリックして切り替える\n                                followingTab.click();\n                                clearTimeout(timeout);\n                                resolve('switched');\n                            };\n                            check();\n                        })\n                        "
+    },
+    {
+      "name": "preload",
+      "arguments": [
+        [
+          {
+            "base64": "QQ==",
+            "mimeType": "image/png",
+            "fileName": "画像.png"
+          }
+        ]
+      ],
+      "expected": "window.__preloadedImages = [{\"base64\": \"QQ==\", \"mimeType\": \"image/png\", \"fileName\": \"画像.png\"}]"
+    }
+  ],
+  "setup_script_sha256": "4629f90214fb5e4a37426e504e0d0020d0e49f7b95aa911ae3d1e34c92743fd4"
+}
