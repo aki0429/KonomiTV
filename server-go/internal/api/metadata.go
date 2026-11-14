@@ -132,7 +132,7 @@ func (s *Server) handleMetadataVideoThumbnailRegenerate(w http.ResponseWriter, r
 		return
 	}
 	service := s.newMetadataService()
-	// DriveIOLimiter (同一 HDD への同時実行制限) は Go 版では未移植。
+	// GenerateAndSave 内で背景解析・キャプチャと共有するドライブ枠を取得する。
 	err := service.Thumbnails.GenerateAndSave(r.Context(), detail.Video.FilePath, detail.Video.Duration)
 	if err != nil {
 		s.logger.Error("[VideoThumbnailRegenerateAPI] Failed to regenerate thumbnails.", "video_id", videoID, "error", err)

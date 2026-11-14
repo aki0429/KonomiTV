@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aki0429/KonomiTV/server-go/internal/constants"
+	"github.com/aki0429/KonomiTV/server-go/internal/worklimit"
 )
 
 // FileAnalyzer は録画ファイルを解析して番組情報を返す。
@@ -486,6 +487,11 @@ func (s *Service) forgetRecordingFile(filePath string) {
 // runBackgroundAnalysis は録画完了後のバックグラウンド解析 (CM 区間検出・サムネイル生成) を実行する。
 // 移植元: RecordedScanTask.__runBackgroundAnalysis()
 func (s *Service) runBackgroundAnalysis(ctx context.Context, filePath string, durationSec float64) {
+	release, err := worklimit.AcquireBackground(ctx, worklimit.ResolvePath(filePath))
+	if err != nil {
+		return
+	}
+	defer release()
 	s.logger().Info("Starting background analysis task...", "file_path", filePath)
 	rows, err := s.Store.FindVideoSummariesByPaths(ctx, []string{filePath})
 	if err != nil || len(rows) == 0 {
@@ -545,6 +551,11 @@ func (s *Service) RunBackgroundAnalysis(ctx context.Context) error {
 				return err
 			}
 			defer unlock()
+			release, err := worklimit.AcquireBackground(ctx, worklimit.ResolvePath(row.FilePath))
+			if err != nil {
+				return err
+			}
+			defer release()
 			// 一覧取得からロック取得までにパスが移ったりコピーが完成していることがある。
 			current, err := s.Store.backgroundVideo(ctx, row.ID, row.FilePath)
 			if err != nil || current == nil {

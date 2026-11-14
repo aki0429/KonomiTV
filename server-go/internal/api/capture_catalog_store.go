@@ -19,6 +19,7 @@ import (
 
 	"github.com/aki0429/KonomiTV/server-go/internal/database"
 	"github.com/aki0429/KonomiTV/server-go/internal/metadata"
+	"github.com/aki0429/KonomiTV/server-go/internal/worklimit"
 )
 
 type catalogTaskStatus struct {
@@ -138,6 +139,12 @@ func (c *captureCatalog) registerLocked(ctx context.Context, path string, data [
 		return existing.CaptureID.Int64, nil
 	}
 	defer c.sectionsGeneration.Add(1)
+	// 同じローカルドライブの録画解析と共通1枠、ネットワーク保存先は最大4枠。
+	release, err := worklimit.AcquireDrive(ctx, worklimit.ResolvePath(path), 4)
+	if err != nil {
+		return 0, err
+	}
+	defer release()
 	if data == nil {
 		data, err = os.ReadFile(path)
 		if err != nil {

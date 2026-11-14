@@ -1,7 +1,6 @@
 // konomitv-go は KonomiTV サーバーの Go 版エントリーポイント。
 //
-// 段階的な移行のため、未実装の API は Python 版サーバー (uvicorn) へリバースプロキシする。
-// Python 版サーバーは server.port + 10 (デフォルト: 7010) で 127.0.0.77 にリッスンしている。
+// -no-proxy では全APIをGo単独で提供する。既存Python版との比較用プロキシも保持する。
 package main
 
 import (

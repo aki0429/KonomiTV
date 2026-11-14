@@ -79,8 +79,7 @@ func (s *Server) resolveVideoStream(w http.ResponseWriter, r *http.Request, v *f
 }
 
 // handleVideoStreamOffline はオフライン保存 API を処理する。
-// Python の session_id 非必須・品質検証・Recording 拒否を移植し、
-// KTVODLP 本体の未実装は 501 で区別する。
+// session_id 非必須・品質検証・Recording 拒否に続き、GoでKTVODLPを生成する。
 func (s *Server) handleVideoStreamOffline(w http.ResponseWriter, r *http.Request) {
 	// Python の VideoOfflineStreamAPI はパスパラメータ以外を取らないため、検証はパス型のみ。
 	v := newFastAPIValidation(r)

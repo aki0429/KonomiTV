@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+
+	"github.com/aki0429/KonomiTV/server-go/internal/worklimit"
 )
 
 // ThumbnailRenderParams はサムネイル描画に必要な入力。
@@ -75,6 +77,11 @@ func (g *ThumbnailGenerator) GenerateAndSave(ctx context.Context, filePath strin
 	if durationSec <= 0 {
 		return fmt.Errorf("invalid duration: %f", durationSec)
 	}
+	release, err := worklimit.AcquireDrive(ctx, worklimit.ResolvePath(filePath), 1)
+	if err != nil {
+		return err
+	}
+	defer release()
 	fileHash, err := g.fileHashFor(filePath)
 	if err != nil {
 		return err

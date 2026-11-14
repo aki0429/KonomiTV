@@ -90,7 +90,7 @@ type Options struct {
 	// LiveStreams はライブストリームのマネージャー。nil の場合は内部で生成する。
 	LiveStreams *stream.Manager
 	// PythonBackendURL は未移行 API の転送先 (例: http://127.0.0.77:7010/) 。
-	// 空文字の場合はプロキシを無効化し、未実装の API は 404 を返す。
+	// 空文字の場合は比較用プロキシを無効化し、未知の API は 404 を返す。
 	PythonBackendURL string
 	// AccessLogWriters はアクセスログの出力先 (省略時は標準出力のみ) 。
 	AccessLogWriters []io.Writer
@@ -172,7 +172,7 @@ func (s *Server) Handler() http.Handler {
 	// ***** Go 実装済みのルート *****
 	mux.HandleFunc("GET /api/version", s.handleVersion)
 
-	// 認証 (読み取り系のみ。書き込み系は Python 版へプロキシする)
+	// 認証・アカウント作成と更新
 	mux.HandleFunc("POST /api/users", s.handleUserCreate)
 	mux.HandleFunc("POST /api/users/token", s.handleUserAccessToken)
 	mux.HandleFunc("GET /api/users", s.handleUsers)
@@ -198,7 +198,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/channels/{channel_id}/jikkyo", s.handleChannelJikkyo)
 
 	// 番組表・番組検索
-	// POST /api/programs/search は EDCB バックエンド専用のため、Go 側ではバックエンドのチェックのみ行う
+	// POST /api/programs/search は EDCB の SearchPg へ接続する。
 	mux.HandleFunc("POST /api/programs/search", s.handleProgramSearch)
 	mux.HandleFunc("GET /api/programs/timetable", s.handleProgramTimeTable)
 	mux.HandleFunc("GET /api/programs/toru-counts", s.handleToruCounts)
@@ -210,7 +210,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/series/{series_id}", s.handleSeries)
 
 	// 録画番組
-	// メタデータ再解析とサムネイル画像再生成は Go 版では未実装のため、Python 版へプロキシする
+	// メタデータ再解析とサムネイル画像再生成は registerMetadataRoutes で登録する。
 	mux.HandleFunc("GET /api/videos", s.handleVideos)
 	mux.HandleFunc("GET /api/videos/search", s.handleVideosSearch)
 	mux.HandleFunc("GET /api/videos/{video_id}", s.handleVideo)
@@ -234,9 +234,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/streams/live/{display_channel_id}/{quality}/psi-archived-data", s.handleLiveStreamPSIArchivedData)
 	mux.HandleFunc("GET /api/streams/live/{display_channel_id}/{quality}/mpegts", s.handleLiveStreamMPEGTS)
 
-	// 録画ストリーミング (playlist / keep-alive / buffer はセッション管理のみ Go で処理する。
-	// segment はエンコーダー (SetVideoSegmentEncoderFactory) 登録までは 500 を返す。
-	// offline-stream はネイティブ検証のみ実装済みで、KTVODLP 本体は未実装のため 501 を返す)
+	// 録画ストリーミング。起動時に同梱エンコーダーを登録し、HLS と KTVODLP を生成する。
 	mux.HandleFunc("GET /api/streams/video/{video_id}/{quality}/playlist", s.handleVideoStreamPlaylist)
 	mux.HandleFunc("GET /api/streams/video/{video_id}/{quality}/segment", s.handleVideoStreamSegment)
 	mux.HandleFunc("GET /api/streams/video/{video_id}/{quality}/buffer", s.handleVideoStreamBuffer)
@@ -275,8 +273,7 @@ func (s *Server) Handler() http.Handler {
 	s.registerMaintenanceTaskRoutes(mux)
 
 	// メンテナンス
-	// データベース更新 (EDCB / Mirakurun バックエンド) 、一括スキャン、バックグラウンド解析は
-	// Go 版では未実装のため Python 版へプロキシする
+	// データベース更新は EDCB / Mirakurun と接続し、録画解析は metadata.go で扱う。
 	mux.HandleFunc("GET /api/maintenance/logs/{log_type}", s.handleMaintenanceLogs)
 	mux.HandleFunc("POST /api/maintenance/update-database", s.handleMaintenanceUpdateDatabase)
 	mux.HandleFunc("POST /api/maintenance/restart", s.handleMaintenanceRestart)
@@ -296,7 +293,7 @@ func (s *Server) Handler() http.Handler {
 	// ***** 静的ファイル *****
 	// Python 版の app.mount('/assets', StaticFiles(...)) 相当
 	mux.HandleFunc("/assets/", s.handleAssets)
-	// それ以外のすべて (未移行 API のプロキシと SPA 配信)
+	// それ以外のすべて (比較モードの API プロキシと SPA 配信)
 	mux.HandleFunc("/", s.handleRoot)
 
 	// データ放送のリクエストプロキシは転送先 URL をパスに含む ("//" を含む) ため、

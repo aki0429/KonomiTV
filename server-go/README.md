@@ -27,7 +27,7 @@ Python と併走する移行モードでは、型と保存先を検証し、使�
 | `POST`/`DELETE /api/users/me/account-links` (Twitter / Bluesky 紐付け) | ✅ Go 実装済み |
 | `/api/twitter/*` (Cookie認証・タイムライン・検索・投稿・画像・返信・いいね等) | Go実装。Chrome / Braveを直接操作する。実ブラウザーとローカル模擬ページで検証、実アカウントへの投稿は未実施 |
 | `GET /api/channels/{channel_id}` (チャンネル情報、現在/次の番組を含む) | ✅ Go 実装済み |
-| `GET /api/channels/{channel_id}/logo` (チャンネルロゴ) | ✅ Go 実装済み (IPTV の配信元ロゴも Go で取得) |
+| `GET /api/channels/{channel_id}/logo` (チャンネルロゴ) | ✅ Go 実装済み (同梱・EDCB・Mirakurun・IPTV のロゴを取得) |
 | `GET /api/channels/{channel_id}/jikkyo` (ニコニコ実況 WebSocket URL) | ✅ Go 実装済み (ニコニコアカウント連携時のニコ生セッション取得・トークン更新含む) |
 | `GET /api/channels` (チャンネル一覧、現在/次の番組・IPTV 疑似チャンネル含む) | ✅ Go 実装済み |
 | `GET /api/programs/timetable` (番組表) | ✅ Go 実装済み (EDCB の録画中・無効・競合状態、EID 不一致時の時間照合、EDCB/Mirakurun の詳細文の継続を含む) |
@@ -169,7 +169,7 @@ curl http://127.0.0.77:7002/api/version
 | --- | --- | --- |
 | `-listen` | `127.0.0.77:7002` | Go 版サーバーのリッスンアドレス |
 | `-python-backend` | `http://127.0.0.77:<server.port+10>/` | 未移行 API の転送先 |
-| `-no-proxy` | `false` | プロキシを無効化し、未実装 API は 404 を返す |
+| `-no-proxy` | `false` | 比較用プロキシを無効化し、未知の API は 404 を返す |
 | `-server-dir` | 自動検出 | Python 版サーバーのディレクトリ (`<repo>/server`) |
 | `-debug` | `false` | デバッグログを出力 (config.yaml の `general.debug` より優先) |
 | `-version` | | バージョンを表示して終了 |
