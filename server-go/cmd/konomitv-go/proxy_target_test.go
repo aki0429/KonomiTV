@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"net"
 	"net/netip"
 	"net/url"
@@ -485,7 +486,8 @@ func TestMainNoProxyOverridesExplicitBackend(t *testing.T) {
 	if err := os.MkdirAll(serverDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "config.yaml"), []byte("server:\n  port: 7000\n"), 0o600); err != nil {
+	prepareStartupEncoder(t, serverDir)
+	if err := os.WriteFile(filepath.Join(root, "config.yaml"), []byte(fmt.Sprintf("general: {backend: IPTV}\nserver: {port: %d}\n", startupFixturePort(t))), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	// 空 DB は Go が新規作成できるため、開けないパスを明示して検証後に停止させる。

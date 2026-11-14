@@ -62,6 +62,13 @@ func (r *FFMpegThumbnailRenderer) SaveRepresentativeFromImage(ctx context.Contex
 	if info, err := os.Stat(temporary); err != nil || info.Size() == 0 {
 		return fmt.Errorf("capture thumbnail output is missing or empty")
 	}
+	// 同じ内容を参照する別の録画 ID から同時に更新されることがある。
+	// Windows の置換同士の共有違反を避け、公開先のパスごとに置換を直列化する。
+	unlock, err := acquireRecordedPath(ctx, output)
+	if err != nil {
+		return err
+	}
+	defer unlock()
 	if err := os.Rename(temporary, output); err != nil {
 		return fmt.Errorf("failed to replace thumbnail: %w", err)
 	}

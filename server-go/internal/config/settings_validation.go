@@ -251,6 +251,9 @@ func (v *settingsValidator) value(input any, schema *settingsFieldSchema, path [
 	}
 	if len(schema.Enum) > 0 {
 		text, ok := input.(string)
+		if ok && text == "IPTV" && v.server != nil && v.server.options.AllowLegacyIPTV && len(path) == 3 && path[1] == "general" && path[2] == "backend" {
+			return text
+		}
 		if ok && containsString(schema.Enum, text) {
 			return text
 		}
@@ -325,7 +328,7 @@ func (v *settingsValidator) value(input any, schema *settingsFieldSchema, path [
 		}
 		return result
 	case "string":
-		if text, ok := input.(string); ok {
+		if text, ok := settingsText(input); ok {
 			return text
 		}
 		v.add("string_type", "Input should be a valid string", path, input, nil)
@@ -335,7 +338,7 @@ func (v *settingsValidator) value(input any, schema *settingsFieldSchema, path [
 			return boolean
 		}
 		kind, message := "bool_type", "Input should be a valid boolean"
-		if text, ok := input.(string); ok {
+		if text, ok := settingsText(input); ok {
 			switch strings.ToLower(text) {
 			case "1", "true", "t", "yes", "y", "on":
 				return true
@@ -355,7 +358,7 @@ func (v *settingsValidator) value(input any, schema *settingsFieldSchema, path [
 		number, ok := settingsFloat(input, !schema.Strict)
 		if !ok {
 			kind, message := "float_type", "Input should be a valid number"
-			if _, text := input.(string); text && !schema.Strict {
+			if _, text := settingsText(input); text && !schema.Strict {
 				kind, message = "float_parsing", "Input should be a valid number, unable to parse string as a number"
 			}
 			v.add(kind, message, path, input, nil)
@@ -405,6 +408,10 @@ var settingsIntegerText = regexp.MustCompile(`^[+-]?[0-9](?:_?[0-9])*(?:\.0+)?$`
 
 func settingsFloat(input any, coerce bool) (float64, bool) {
 	switch value := input.(type) {
+	case settingsYAMLBinary:
+		if coerce {
+			return settingsFloat(string(value), true)
+		}
 	case float64:
 		return value, true
 	case json.Number:
@@ -440,6 +447,8 @@ func settingsFloat(input any, coerce bool) (float64, bool) {
 
 func settingsInteger(input any) (*big.Int, string) {
 	switch value := input.(type) {
+	case settingsYAMLBinary:
+		return settingsInteger(string(value))
 	case bool:
 		if value {
 			return big.NewInt(1), ""

@@ -37,6 +37,8 @@ type SettingsListener struct {
 // ServerSettingsValidationOptions は設定に明示された項目の実機検査に使う依存関係。
 // BypassEnvironment は起動前の移行・検査用で、型・パスの存在検証は省略しない。
 type ServerSettingsValidationOptions struct {
+	// AllowLegacyIPTV は旧 Go 設定の読み込み専用。設定 API では指定しない。
+	AllowLegacyIPTV       bool
 	BypassEnvironment     bool
 	Logger                *slog.Logger
 	Architecture          string
@@ -103,6 +105,9 @@ func (s *serverSettingsValidation) valueError(v *settingsValidator, path []any, 
 
 func (s *serverSettingsValidation) formattedValue(v *settingsValidator, input any, schema *settingsFieldSchema, path []any) any {
 	text, ok := input.(string)
+	if schema.Format == "uri" {
+		text, ok = settingsText(input)
+	}
 	if !ok {
 		kind, message := "path_type", "Input is not a valid path for <class 'pathlib._local.Path'>"
 		if schema.Format == "uri" {
@@ -457,6 +462,9 @@ func MarshalServerSettingsResponse(settings map[string]any) (string, error) {
 // ServerSettingsSnapshot は起動時にロードした設定のうち本家の公開項目だけを返す。
 // 設定の保存後もこの値を変更しない。本家と同様、反映には再起動が必要になる。
 func (config *Config) ServerSettingsSnapshot() map[string]any {
+	if config.startupSettings != nil {
+		return deepCopyMap(config.startupSettings)
+	}
 	return map[string]any{
 		"general": map[string]any{"backend": config.General.Backend, "always_receive_tv_from_mirakurun": config.General.AlwaysReceiveTVFromMirakurun, "edcb_url": config.General.EDCBURL, "mirakurun_url": config.General.MirakurunURL, "encoder": config.General.Encoder, "program_update_interval": config.General.ProgramUpdateInterval, "debug": config.General.Debug, "debug_encoder": config.General.DebugEncoder},
 		"server":  map[string]any{"port": config.Server.Port, "custom_https_certificate": config.Server.CustomHTTPSCertificate, "custom_https_private_key": config.Server.CustomHTTPSPrivateKey},

@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -26,6 +27,7 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/database"
 	"github.com/aki0429/KonomiTV/server-go/internal/iptv"
 	"github.com/aki0429/KonomiTV/server-go/internal/logging"
+	"github.com/aki0429/KonomiTV/server-go/internal/reservations"
 	"github.com/aki0429/KonomiTV/server-go/internal/stream"
 	"github.com/aki0429/KonomiTV/server-go/internal/videostream"
 )
@@ -58,29 +60,10 @@ func main() {
 	}
 	paths := constants.NewPaths(serverDir)
 
-	cfg, err := config.Load(paths.ConfigYAMLPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "[Fatal] Failed to load server settings: %v\n", err)
-		os.Exit(1)
-	}
-
-	// ***** プロキシ先の決定と自己転送の拒否 *****
-	// 誤設定は DB やバックグラウンド処理を開始する前に停止する。
-	backendURL := *pythonBackend
-	if *noProxy {
-		backendURL = ""
-	} else if backendURL == "" {
-		backendURL = cfg.BackendAPIURL()
-	}
-	if err := validateProxyTarget(*listenAddress, backendURL); err != nil {
-		fmt.Fprintf(os.Stderr, "[Fatal] Invalid proxy configuration: %v\n", err)
-		os.Exit(1)
-	}
-
 	// ***** ロガーの初期化 *****
 
 	logLevel := slog.LevelInfo
-	if *debugLog || cfg.General.Debug {
+	if *debugLog {
 		logLevel = slog.LevelDebug
 	}
 	// サーバーログは標準出力と server/logs/KonomiTV-Server.log の両方に出力する
@@ -95,6 +78,45 @@ func main() {
 		logWriters = append(logWriters, serverLogWriter)
 	}
 	logger := slog.New(logging.NewPythonHandler(logWriters, logLevel))
+	// 単独運転では既定値を含む全設定を検証し、接続先・エンコーダー・使用ポートが
+	// 不正なら DB を開く前に終了する。Python と併走する移行モードでは、その Python が
+	// 既に使っているポートと衝突させないため実機検査だけを省略する。
+	_, dockerError := os.Stat("/.dockerenv")
+	cfg, err := config.LoadValidated(context.Background(), paths.ConfigYAMLPath, config.ServerSettingsLoadOptions{
+		Docker: runtime.GOOS == "linux" && dockerError == nil, AllowLegacyIPTV: true,
+		Validation: config.ServerSettingsValidationOptions{BypassEnvironment: !*noProxy, Logger: logger, LibraryPath: paths.LibraryPath,
+			RequestHeaders: http.Header{"User-Agent": []string{"KonomiTV/" + constants.Version}},
+			EDCBStatus: func(ctx context.Context, url string) string {
+				client, err := reservations.NewClientFromURLContext(ctx, url)
+				if err != nil {
+					return "Unknown"
+				}
+				return client.ServerStatus()
+			},
+		},
+	})
+	if err != nil {
+		logger.Error("Failed to load server settings.", "error", err)
+		fmt.Fprintf(os.Stderr, "[Fatal] Failed to load server settings: %v\n", err)
+		os.Exit(1)
+	}
+	if cfg.General.Debug && logLevel != slog.LevelDebug {
+		logLevel = slog.LevelDebug
+		logger = slog.New(logging.NewPythonHandler(logWriters, logLevel))
+	}
+
+	// ***** プロキシ先の決定と自己転送の拒否 *****
+	// 誤設定は DB やバックグラウンド処理を開始する前に停止する。
+	backendURL := *pythonBackend
+	if *noProxy {
+		backendURL = ""
+	} else if backendURL == "" {
+		backendURL = cfg.BackendAPIURL()
+	}
+	if err := validateProxyTarget(*listenAddress, backendURL); err != nil {
+		fmt.Fprintf(os.Stderr, "[Fatal] Invalid proxy configuration: %v\n", err)
+		os.Exit(1)
+	}
 
 	// アクセスログは標準出力と server/logs/KonomiTV-Access.log の両方に出力する
 	accessLogWriters := []io.Writer{os.Stdout}

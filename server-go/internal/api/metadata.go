@@ -35,9 +35,10 @@ func (s *Server) newMetadataService() *metadata.Service {
 		Store: store,
 		Moves: &s.recordingMoves,
 		Config: metadata.ServiceConfig{
-			RecordedFolders:  s.config.Video.RecordedFolders,
-			ExcludeScanPaths: s.config.Video.ExcludeScanPaths,
-			ThumbnailsDir:    s.paths.ThumbnailsDir,
+			RecordedFolders:                s.config.Video.RecordedFolders,
+			ExcludeScanPaths:               s.config.Video.ExcludeScanPaths,
+			RecordedFoldersPollingInterval: s.config.Video.RecordedFoldersPollingInterval,
+			ThumbnailsDir:                  s.paths.ThumbnailsDir,
 		},
 		Analyzer: analyzer,
 		Thumbnails: &metadata.ThumbnailGenerator{
@@ -58,7 +59,7 @@ func (s *Server) newMetadataService() *metadata.Service {
 func (s *Server) RunRecordedFolderMonitoring(ctx context.Context) {
 	service := s.newMetadataService()
 	var workers sync.WaitGroup
-	workers.Go(func() { service.RunRecordingMonitor(ctx, 10*time.Second) })
+	workers.Go(func() { service.RunRecordingMonitor(ctx, 0) })
 	workers.Go(func() {
 		if _, err := service.RunBatchScan(ctx); err != nil && !errors.Is(err, metadata.ErrBatchScanRunning) && ctx.Err() == nil {
 			s.logger.Error("Initial recording folder scan failed.", "error", err)

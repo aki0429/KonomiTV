@@ -1,0 +1,1340 @@
+{
+  "upstream_commit": "687b904bb0a2cbb329596fd7b0368c09afe19a6c",
+  "scan_sha256": "6a8eac6bd4abbabb5f2f8d32e1d7d79e37822a518e4d1e7bd7441d2e67836685",
+  "watchfiles_version": "1.3.0",
+  "watchfiles_source_sha256": "520b73b467a13dc31f2c21d86d0da68112654d611511b3de82d18534b43c339b",
+  "cases": [
+    {
+      "name": "basic local and network",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "filesystem/cifs",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "cifs"
+        ]
+      ],
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "filesystem/smb",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "smb"
+        ]
+      ],
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "filesystem/smbfs",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "smbfs"
+        ]
+      ],
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "filesystem/smb3",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "smb3"
+        ]
+      ],
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "filesystem/nfs",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "filesystem/nfs4",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs4"
+        ]
+      ],
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "filesystem/fuse.sshfs",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "fuse.sshfs"
+        ]
+      ],
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "filesystem/NFS4",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "NFS4"
+        ]
+      ],
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "filesystem/fuse",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "fuse"
+        ]
+      ],
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "filesystem/ext4",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "ext4"
+        ]
+      ],
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "path component boundaries",
+      "platform": "linux",
+      "folders": [
+        "/mnt/hdd0",
+        "/mnt/hdd01",
+        "/mnt/hdd0/child"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/mnt/hdd0",
+          "nfs"
+        ]
+      ],
+      "native": [
+        "/mnt/hdd01"
+      ],
+      "polling": [
+        "/mnt/hdd0",
+        "/mnt/hdd0/child"
+      ],
+      "effective_polling": [
+        "/mnt/hdd0",
+        "/mnt/hdd0/child"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "deepest local child mount",
+      "platform": "linux",
+      "folders": [
+        "/record/nas",
+        "/record/nas/local",
+        "/record/nas/local/child"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ],
+        [
+          "/record/nas/local",
+          "ext4"
+        ]
+      ],
+      "native": [
+        "/record/nas/local",
+        "/record/nas/local/child"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "local parent with network submount",
+      "platform": "linux",
+      "folders": [
+        "/record",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "cifs"
+        ]
+      ],
+      "native": [],
+      "polling": [
+        "/record",
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record",
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "last duplicate mount is local",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ],
+        [
+          "/record/nas",
+          "ext4"
+        ]
+      ],
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "last duplicate mount is network",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "cifs"
+        ]
+      ],
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "symlink points to network",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "resolve": {
+        "/record/local": "/record/nas/sub",
+        "/record/nas": "/record/nas"
+      },
+      "native": [],
+      "polling": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "symlink points to local",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "resolve": {
+        "/record/nas": "/local/record"
+      },
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "failed resolution uses native watch",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "resolve": {
+        "/record/nas": null
+      },
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "failed mount enumeration uses native watch",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "mount_error": true,
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "force polling/'false'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "force": "false",
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "force polling/'FALSE'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "force": "FALSE",
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "force polling/'disable'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "force": "disable",
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "force polling/'disabled'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "force": "disabled",
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "force polling/'0'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "force": "0",
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "force polling/'true'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "force": "true",
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "force polling/'1'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "force": "1",
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "force polling/' false '",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "force": " false ",
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "force polling/''",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "force": "",
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "poll delay/'1000'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "poll_delay": "1000",
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 1000
+    },
+    {
+      "name": "poll delay/'0'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "poll_delay": "0",
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 0
+    },
+    {
+      "name": "poll delay/'１５'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "poll_delay": "１５",
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 15
+    },
+    {
+      "name": "poll delay/'١٢'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "poll_delay": "١٢",
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 12
+    },
+    {
+      "name": "poll delay/'12.5'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "poll_delay": "12.5",
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "poll delay/'-1'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "poll_delay": "-1",
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "poll delay/'+1'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "poll_delay": "+1",
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "poll delay/' 12'",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "poll_delay": " 12",
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "poll delay/''",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "poll_delay": "",
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "fractional minutes/0.1",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "minutes": 0.1,
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 6000
+    },
+    {
+      "name": "fractional minutes/0.125",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "minutes": 0.125,
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 7500
+    },
+    {
+      "name": "fractional minutes/0.100025",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "minutes": 0.100025,
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 6002
+    },
+    {
+      "name": "fractional minutes/0.10000833333333334",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "minutes": 0.10000833333333334,
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 6001
+    },
+    {
+      "name": "fractional minutes/2.75",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "minutes": 2.75,
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/nas"
+      ],
+      "poll_delay_ms": 165000
+    },
+    {
+      "name": "WSL automatic polling",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "kernel": "6.6.87.2-microsoft-standard-WSL2",
+      "native": [
+        "/record/local"
+      ],
+      "polling": [
+        "/record/nas"
+      ],
+      "effective_polling": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "WSL explicitly disables polling",
+      "platform": "linux",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "kernel": "microsoft-standard",
+      "force": "disabled",
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "windows",
+      "platform": "windows",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [],
+      "poll_delay_ms": 300000
+    },
+    {
+      "name": "darwin",
+      "platform": "darwin",
+      "folders": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "mounts": [
+        [
+          "/",
+          "ext4"
+        ],
+        [
+          "/record/nas",
+          "nfs"
+        ]
+      ],
+      "native": [
+        "/record/local",
+        "/record/nas"
+      ],
+      "polling": [],
+      "effective_polling": [],
+      "poll_delay_ms": 300000
+    }
+  ]
+}

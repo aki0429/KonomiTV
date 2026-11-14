@@ -1,8 +1,7 @@
 // Package config は KonomiTV の config.yaml (server/app/config.py 互換) を読み込む。
 //
-// 注意: Python 版の LoadConfig() はバックエンド (EDCB/Mirakurun) への接続確認まで行うが、
-// Go 版ではサーバー単体で起動できることを優先し、接続確認は行わない。
-// 接続確認が必要になった時点でオプションとして実装する。
+// 起動時は LoadValidated で本家と同じ型・実機検査を行う。
+// Load は旧ツール向けの構造体ロードとして保持する。
 package config
 
 import (
@@ -17,12 +16,13 @@ import (
 // Config は config.yaml 全体のうち、Go 版サーバーが利用する設定値のみを保持する。
 // config.yaml に存在しない設定値は Python 版と同じデフォルト値で補完される。
 type Config struct {
-	General GeneralConfig `yaml:"general"`
-	Server  ServerConfig  `yaml:"server"`
-	TV      TVConfig      `yaml:"tv"`
-	Video   VideoConfig   `yaml:"video"`
-	Capture CaptureConfig `yaml:"capture"`
-	IPTV    IPTVConfig    `yaml:"iptv"`
+	General         GeneralConfig `yaml:"general"`
+	Server          ServerConfig  `yaml:"server"`
+	TV              TVConfig      `yaml:"tv"`
+	Video           VideoConfig   `yaml:"video"`
+	Capture         CaptureConfig `yaml:"capture"`
+	IPTV            IPTVConfig    `yaml:"iptv"`
+	startupSettings map[string]any
 }
 
 // GeneralConfig は general セクションの設定。

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/png"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -22,6 +23,7 @@ import (
 func thumbnailUpdateFixture(t *testing.T) (*Server, int64, int64, string) {
 	t.Helper()
 	c, s, folder, _ := newCatalogTest(t)
+	s.logger = slog.New(slog.NewTextHandler(thumbnailTestErrors{t}, &slog.HandlerOptions{Level: slog.LevelError}))
 	file := filepath.Join(folder, "source.jpg")
 	if err := os.WriteFile(file, catalogJPEG(t, catalogMetadataFixture(), 60), 0600); err != nil {
 		t.Fatal(err)
@@ -43,6 +45,13 @@ func thumbnailUpdateFixture(t *testing.T) (*Server, int64, int64, string) {
 		return os.WriteFile(args[len(args)-1], []byte("converted capture"), 0600)
 	}
 	return s, program, capture, file
+}
+
+type thumbnailTestErrors struct{ t *testing.T }
+
+func (w thumbnailTestErrors) Write(data []byte) (int, error) {
+	w.t.Logf("thumbnail error: %s", data)
+	return len(data), nil
 }
 
 func TestVideoThumbnailUpdateAvailableCopyAndSharedRevision(t *testing.T) {

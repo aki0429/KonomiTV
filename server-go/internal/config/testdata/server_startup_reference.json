@@ -1,0 +1,2070 @@
+{
+  "upstream_commit": "687b904bb0a2cbb329596fd7b0368c09afe19a6c",
+  "source_sha256": "3baf9b79644eb64475cd547861e7b552758f055dd5f85668602207a83f11fc24",
+  "runtime": {
+    "fastapi": "0.162.0",
+    "pydantic": "2.14.3",
+    "starlette": "1.10.0",
+    "tortoise-orm": "1.1.9",
+    "httpx": "0.28.1",
+    "python": "3.13.16"
+  },
+  "ruamel_yaml": "0.18.12",
+  "cases": [
+    {
+      "name": "defaults",
+      "input": "{}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "missing document",
+      "input": "",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [],
+      "valid": false
+    },
+    {
+      "name": "null document",
+      "input": "null",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [],
+      "valid": false
+    },
+    {
+      "name": "empty string root",
+      "input": "''",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "empty list root",
+      "input": "[]",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "pair sequence root",
+      "input": "- [general, {debug: true}]",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":true,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "invalid root",
+      "input": "42",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [],
+      "valid": false
+    },
+    {
+      "name": "invalid root sequence",
+      "input": "[one]",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [],
+      "valid": false
+    },
+    {
+      "name": "null section",
+      "input": "video: null",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "model_type"
+      ],
+      "error_locs": [
+        [
+          "video"
+        ]
+      ]
+    },
+    {
+      "name": "duplicate setting",
+      "input": "general: {debug: true, debug: false}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [],
+      "valid": false
+    },
+    {
+      "name": "unknown sections",
+      "input": "extra: [a,b]\niptv: {enabled: false}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "general/program_update_interval/null",
+      "input": "general: {program_update_interval: null}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "float_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "program_update_interval"
+        ]
+      ]
+    },
+    {
+      "name": "general/program_update_interval/false",
+      "input": "general: {program_update_interval: false}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":0.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "general/program_update_interval/1.25",
+      "input": "general: {program_update_interval: 1.25}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":1.25,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "general/program_update_interval/0",
+      "input": "general: {program_update_interval: 0}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":0.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "general/program_update_interval/-1",
+      "input": "general: {program_update_interval: -1}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":-1.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "general/program_update_interval/\"5\"",
+      "input": "general: {program_update_interval: \"5\"}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "general/program_update_interval/.nan",
+      "input": "general: {program_update_interval: .nan}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":null,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "general/program_update_interval/.inf",
+      "input": "general: {program_update_interval: .inf}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":null,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "general/program_update_interval/!!binary RkZtcGVn",
+      "input": "general: {program_update_interval: !!binary RkZtcGVn}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "float_parsing"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "program_update_interval"
+        ]
+      ]
+    },
+    {
+      "name": "general/program_update_interval/2026-11-14",
+      "input": "general: {program_update_interval: 2026-11-14}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "float_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "program_update_interval"
+        ]
+      ]
+    },
+    {
+      "name": "general/debug/null",
+      "input": "general: {debug: null}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "bool_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "debug"
+        ]
+      ]
+    },
+    {
+      "name": "general/debug/false",
+      "input": "general: {debug: false}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "general/debug/1.25",
+      "input": "general: {debug: 1.25}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "bool_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "debug"
+        ]
+      ]
+    },
+    {
+      "name": "general/debug/0",
+      "input": "general: {debug: 0}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "general/debug/-1",
+      "input": "general: {debug: -1}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "bool_parsing"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "debug"
+        ]
+      ]
+    },
+    {
+      "name": "general/debug/\"5\"",
+      "input": "general: {debug: \"5\"}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "bool_parsing"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "debug"
+        ]
+      ]
+    },
+    {
+      "name": "general/debug/.nan",
+      "input": "general: {debug: .nan}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "bool_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "debug"
+        ]
+      ]
+    },
+    {
+      "name": "general/debug/.inf",
+      "input": "general: {debug: .inf}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "bool_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "debug"
+        ]
+      ]
+    },
+    {
+      "name": "general/debug/!!binary RkZtcGVn",
+      "input": "general: {debug: !!binary RkZtcGVn}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "bool_parsing"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "debug"
+        ]
+      ]
+    },
+    {
+      "name": "general/debug/2026-11-14",
+      "input": "general: {debug: 2026-11-14}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "bool_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "debug"
+        ]
+      ]
+    },
+    {
+      "name": "general/backend/null",
+      "input": "general: {backend: null}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "backend"
+        ]
+      ]
+    },
+    {
+      "name": "general/backend/false",
+      "input": "general: {backend: false}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "backend"
+        ]
+      ]
+    },
+    {
+      "name": "general/backend/1.25",
+      "input": "general: {backend: 1.25}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "backend"
+        ]
+      ]
+    },
+    {
+      "name": "general/backend/0",
+      "input": "general: {backend: 0}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "backend"
+        ]
+      ]
+    },
+    {
+      "name": "general/backend/-1",
+      "input": "general: {backend: -1}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "backend"
+        ]
+      ]
+    },
+    {
+      "name": "general/backend/\"5\"",
+      "input": "general: {backend: \"5\"}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "backend"
+        ]
+      ]
+    },
+    {
+      "name": "general/backend/.nan",
+      "input": "general: {backend: .nan}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "backend"
+        ]
+      ]
+    },
+    {
+      "name": "general/backend/.inf",
+      "input": "general: {backend: .inf}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "backend"
+        ]
+      ]
+    },
+    {
+      "name": "general/backend/!!binary RkZtcGVn",
+      "input": "general: {backend: !!binary RkZtcGVn}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "backend"
+        ]
+      ]
+    },
+    {
+      "name": "general/backend/2026-11-14",
+      "input": "general: {backend: 2026-11-14}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "backend"
+        ]
+      ]
+    },
+    {
+      "name": "general/edcb_url/null",
+      "input": "general: {edcb_url: null}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "url_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "edcb_url"
+        ]
+      ]
+    },
+    {
+      "name": "general/edcb_url/false",
+      "input": "general: {edcb_url: false}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "url_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "edcb_url"
+        ]
+      ]
+    },
+    {
+      "name": "general/edcb_url/1.25",
+      "input": "general: {edcb_url: 1.25}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "url_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "edcb_url"
+        ]
+      ]
+    },
+    {
+      "name": "general/edcb_url/0",
+      "input": "general: {edcb_url: 0}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "url_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "edcb_url"
+        ]
+      ]
+    },
+    {
+      "name": "general/edcb_url/-1",
+      "input": "general: {edcb_url: -1}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "url_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "edcb_url"
+        ]
+      ]
+    },
+    {
+      "name": "general/edcb_url/\"5\"",
+      "input": "general: {edcb_url: \"5\"}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false
+    },
+    {
+      "name": "general/edcb_url/.nan",
+      "input": "general: {edcb_url: .nan}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "url_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "edcb_url"
+        ]
+      ]
+    },
+    {
+      "name": "general/edcb_url/.inf",
+      "input": "general: {edcb_url: .inf}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "url_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "edcb_url"
+        ]
+      ]
+    },
+    {
+      "name": "general/edcb_url/!!binary RkZtcGVn",
+      "input": "general: {edcb_url: !!binary RkZtcGVn}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false
+    },
+    {
+      "name": "general/edcb_url/2026-11-14",
+      "input": "general: {edcb_url: 2026-11-14}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "url_type"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "edcb_url"
+        ]
+      ]
+    },
+    {
+      "name": "general/encoder/null",
+      "input": "general: {encoder: null}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "encoder"
+        ]
+      ]
+    },
+    {
+      "name": "general/encoder/false",
+      "input": "general: {encoder: false}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "encoder"
+        ]
+      ]
+    },
+    {
+      "name": "general/encoder/1.25",
+      "input": "general: {encoder: 1.25}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "encoder"
+        ]
+      ]
+    },
+    {
+      "name": "general/encoder/0",
+      "input": "general: {encoder: 0}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "encoder"
+        ]
+      ]
+    },
+    {
+      "name": "general/encoder/-1",
+      "input": "general: {encoder: -1}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "encoder"
+        ]
+      ]
+    },
+    {
+      "name": "general/encoder/\"5\"",
+      "input": "general: {encoder: \"5\"}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "encoder"
+        ]
+      ]
+    },
+    {
+      "name": "general/encoder/.nan",
+      "input": "general: {encoder: .nan}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "encoder"
+        ]
+      ]
+    },
+    {
+      "name": "general/encoder/.inf",
+      "input": "general: {encoder: .inf}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "encoder"
+        ]
+      ]
+    },
+    {
+      "name": "general/encoder/!!binary RkZtcGVn",
+      "input": "general: {encoder: !!binary RkZtcGVn}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "encoder"
+        ]
+      ]
+    },
+    {
+      "name": "general/encoder/2026-11-14",
+      "input": "general: {encoder: 2026-11-14}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/"
+      ],
+      "valid": false,
+      "error_types": [
+        "literal_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "encoder"
+        ]
+      ]
+    },
+    {
+      "name": "video/recorded_folders_polling_interval/0",
+      "input": "video: {recorded_folders_polling_interval: 0}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "greater_than_equal"
+      ],
+      "error_locs": [
+        [
+          "video",
+          "recorded_folders_polling_interval"
+        ]
+      ]
+    },
+    {
+      "name": "video/recorded_folders_polling_interval/0.1",
+      "input": "video: {recorded_folders_polling_interval: 0.1}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":0.1},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "video/recorded_folders_polling_interval/\"0.1\"",
+      "input": "video: {recorded_folders_polling_interval: \"0.1\"}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "float_type"
+      ],
+      "error_locs": [
+        [
+          "video",
+          "recorded_folders_polling_interval"
+        ]
+      ]
+    },
+    {
+      "name": "video/recorded_folders_polling_interval/.nan",
+      "input": "video: {recorded_folders_polling_interval: .nan}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "finite_number"
+      ],
+      "error_locs": [
+        [
+          "video",
+          "recorded_folders_polling_interval"
+        ]
+      ]
+    },
+    {
+      "name": "video/recorded_folders_polling_interval/.inf",
+      "input": "video: {recorded_folders_polling_interval: .inf}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "finite_number"
+      ],
+      "error_locs": [
+        [
+          "video",
+          "recorded_folders_polling_interval"
+        ]
+      ]
+    },
+    {
+      "name": "video/recorded_folders_polling_interval/false",
+      "input": "video: {recorded_folders_polling_interval: false}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "float_type"
+      ],
+      "error_locs": [
+        [
+          "video",
+          "recorded_folders_polling_interval"
+        ]
+      ]
+    },
+    {
+      "name": "video/recorded_folders_polling_interval/!!binary MC4x",
+      "input": "video: {recorded_folders_polling_interval: !!binary MC4x}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "float_type"
+      ],
+      "error_locs": [
+        [
+          "video",
+          "recorded_folders_polling_interval"
+        ]
+      ]
+    },
+    {
+      "name": "port/0",
+      "input": "server: {port: 0}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "greater_than"
+      ],
+      "error_locs": [
+        [
+          "server",
+          "port"
+        ]
+      ]
+    },
+    {
+      "name": "port/1023",
+      "input": "server: {port: 1023}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "value_error"
+      ],
+      "error_locs": [
+        [
+          "server",
+          "port"
+        ]
+      ]
+    },
+    {
+      "name": "port/1024",
+      "input": "server: {port: 1024}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":1024,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "port/65525",
+      "input": "server: {port: 65525}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":65525,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "port/65526",
+      "input": "server: {port: 65526}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "value_error"
+      ],
+      "error_locs": [
+        [
+          "server",
+          "port"
+        ]
+      ]
+    },
+    {
+      "name": "port/\"7000\"",
+      "input": "server: {port: \"7000\"}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "port/true",
+      "input": "server: {port: true}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "value_error"
+      ],
+      "error_locs": [
+        [
+          "server",
+          "port"
+        ]
+      ]
+    },
+    {
+      "name": "port/1.5",
+      "input": "server: {port: 1.5}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "int_from_float"
+      ],
+      "error_locs": [
+        [
+          "server",
+          "port"
+        ]
+      ]
+    },
+    {
+      "name": "max_alive_time/1.5",
+      "input": "tv: {max_alive_time: 1.5}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "int_from_float"
+      ],
+      "error_locs": [
+        [
+          "tv",
+          "max_alive_time"
+        ]
+      ]
+    },
+    {
+      "name": "max_alive_time/0",
+      "input": "tv: {max_alive_time: 0}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "greater_than"
+      ],
+      "error_locs": [
+        [
+          "tv",
+          "max_alive_time"
+        ]
+      ]
+    },
+    {
+      "name": "max_alive_time/\"15.0\"",
+      "input": "tv: {max_alive_time: \"15.0\"}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":15,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "max_alive_time/0x10",
+      "input": "tv: {max_alive_time: 0x10}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":16,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "max_alive_time/0o20",
+      "input": "tv: {max_alive_time: 0o20}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":16,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "max_alive_time/0123",
+      "input": "tv: {max_alive_time: 0123}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":123,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "max_alive_time/1234567890123456789012345678901234567890",
+      "input": "tv: {max_alive_time: 1234567890123456789012345678901234567890}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":1234567890123456789012345678901234567890,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "max_alive_time/!!binary MTU=",
+      "input": "tv: {max_alive_time: !!binary MTU=}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":15,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "path/video/['settings-dir']",
+      "input": "video: {recorded_folders: ['settings-dir']}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[\"settings-dir\"],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "path/video/['settings-file.ts']",
+      "input": "video: {recorded_folders: ['settings-file.ts']}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "path_not_directory"
+      ],
+      "error_locs": [
+        [
+          "video",
+          "recorded_folders",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "path/video/['missing']",
+      "input": "video: {recorded_folders: ['missing']}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "path_not_directory"
+      ],
+      "error_locs": [
+        [
+          "video",
+          "recorded_folders",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "path/video/['denied']",
+      "input": "video: {recorded_folders: ['denied']}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "value_error"
+      ],
+      "error_locs": [
+        [
+          "video",
+          "recorded_folders"
+        ]
+      ]
+    },
+    {
+      "name": "path/video/[1]",
+      "input": "video: {recorded_folders: [1]}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "path_type"
+      ],
+      "error_locs": [
+        [
+          "video",
+          "recorded_folders",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "path/video/\"settings-dir\"",
+      "input": "video: {recorded_folders: \"settings-dir\"}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "list_type"
+      ],
+      "error_locs": [
+        [
+          "video",
+          "recorded_folders"
+        ]
+      ]
+    },
+    {
+      "name": "path/capture/['settings-dir']",
+      "input": "capture: {upload_folders: ['settings-dir']}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[\"settings-dir\"],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "path/capture/['settings-file.ts']",
+      "input": "capture: {upload_folders: ['settings-file.ts']}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "path_not_directory"
+      ],
+      "error_locs": [
+        [
+          "capture",
+          "upload_folders",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "path/capture/['missing']",
+      "input": "capture: {upload_folders: ['missing']}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "path_not_directory"
+      ],
+      "error_locs": [
+        [
+          "capture",
+          "upload_folders",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "path/capture/['denied']",
+      "input": "capture: {upload_folders: ['denied']}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "value_error"
+      ],
+      "error_locs": [
+        [
+          "capture",
+          "upload_folders"
+        ]
+      ]
+    },
+    {
+      "name": "path/capture/[1]",
+      "input": "capture: {upload_folders: [1]}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "path_type"
+      ],
+      "error_locs": [
+        [
+          "capture",
+          "upload_folders",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "path/capture/\"settings-dir\"",
+      "input": "capture: {upload_folders: \"settings-dir\"}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "list_type"
+      ],
+      "error_locs": [
+        [
+          "capture",
+          "upload_folders"
+        ]
+      ]
+    },
+    {
+      "name": "file/settings-file.ts",
+      "input": "tv: {debug_mode_ts_path: settings-file.ts}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":\"settings-file.ts\"},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "file/settings-dir",
+      "input": "tv: {debug_mode_ts_path: settings-dir}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "path_not_file"
+      ],
+      "error_locs": [
+        [
+          "tv",
+          "debug_mode_ts_path"
+        ]
+      ]
+    },
+    {
+      "name": "file/missing",
+      "input": "tv: {debug_mode_ts_path: missing}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "path_not_file"
+      ],
+      "error_locs": [
+        [
+          "tv",
+          "debug_mode_ts_path"
+        ]
+      ]
+    },
+    {
+      "name": "anchor and merge",
+      "input": "base: &base {port: 7100}\nserver: {<<: *base, custom_https_certificate: settings-file.ts}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7100,\"custom_https_certificate\":\"settings-file.ts\",\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "malformed unknown extension is ignored",
+      "input": "iptv: wrong-type",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "binary URL",
+      "input": "general: {edcb_url: !!binary dGNwOi8vaG9zdDo0NTEwLw==}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://host:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://host:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "binary boolean",
+      "input": "general: {debug: !!binary dHJ1ZQ==}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":true,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "binary float",
+      "input": "general: {program_update_interval: !!binary NS4w}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "binary file path",
+      "input": "tv: {debug_mode_ts_path: !!binary c2V0dGluZ3MtZmlsZS50cw==}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "path_type"
+      ],
+      "error_locs": [
+        [
+          "tv",
+          "debug_mode_ts_path"
+        ]
+      ]
+    },
+    {
+      "name": "binary directory path",
+      "input": "video: {recorded_folders: [!!binary c2V0dGluZ3MtZGly]}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "path_type"
+      ],
+      "error_locs": [
+        [
+          "video",
+          "recorded_folders",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "binary string list",
+      "input": "video: {exclude_scan_paths: [!!binary Y2Fw]}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[\"cap\"],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "bypass still validates types",
+      "input": "video: {recorded_folders_polling_interval: \"5\"}",
+      "options": {},
+      "bypass": true,
+      "docker": false,
+      "calls": [],
+      "valid": false
+    },
+    {
+      "name": "bypass skips default external checks",
+      "input": "{}",
+      "options": {},
+      "bypass": true,
+      "docker": false,
+      "calls": [],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "default backend unreachable",
+      "input": "{}",
+      "options": {
+        "edcb_status": "Unknown"
+      },
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "value_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "edcb_url"
+        ]
+      ]
+    },
+    {
+      "name": "explicit Mirakurun",
+      "input": "general: {backend: Mirakurun}",
+      "options": {},
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "http:http://127.0.0.1:40772/api/tuners",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"Mirakurun\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":null},\"video\":{\"recorded_folders\":[],\"exclude_scan_paths\":[],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "Mirakurun unreachable",
+      "input": "general: {backend: Mirakurun}",
+      "options": {
+        "mirakurun_error": true
+      },
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "http:http://127.0.0.1:40772/api/tuners",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "value_error"
+      ],
+      "error_locs": [
+        [
+          "general",
+          "mirakurun_url"
+        ]
+      ]
+    },
+    {
+      "name": "default encoder missing",
+      "input": "{}",
+      "options": {
+        "encoder_error": true
+      },
+      "bypass": false,
+      "docker": false,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false
+    },
+    {
+      "name": "docker paths",
+      "input": "video: {recorded_folders: [/recordings], exclude_scan_paths: [\"  /private  \", \"  \", 1, /other]}\ncapture: {upload_folders: [/captures]}\ntv: {debug_mode_ts_path: /sample.ts}",
+      "options": {},
+      "bypass": false,
+      "docker": true,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": true,
+      "body": "{\"general\":{\"backend\":\"EDCB\",\"always_receive_tv_from_mirakurun\":false,\"edcb_url\":\"tcp://127.0.0.1:4510/\",\"mirakurun_url\":\"http://127.0.0.1:40772/\",\"encoder\":\"FFmpeg\",\"program_update_interval\":5.0,\"debug\":false,\"debug_encoder\":false},\"server\":{\"port\":7000,\"custom_https_certificate\":null,\"custom_https_private_key\":null},\"tv\":{\"preferred_terrestrial_region\":null,\"max_alive_time\":10,\"debug_mode_ts_path\":\"\\\\host-rootfs\\\\sample.ts\"},\"video\":{\"recorded_folders\":[\"\\\\host-rootfs\\\\recordings\"],\"exclude_scan_paths\":[\"/host-rootfs/private\",\"/host-rootfs/other\"],\"recorded_folders_polling_interval\":5.0},\"capture\":{\"upload_folders\":[\"\\\\host-rootfs\\\\captures\"],\"upload_folders_polling_interval\":0.0}}"
+    },
+    {
+      "name": "docker malformed recorded list",
+      "input": "video: {recorded_folders: [1]}",
+      "options": {},
+      "bypass": false,
+      "docker": true,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "path_type"
+      ],
+      "error_locs": [
+        [
+          "video",
+          "recorded_folders",
+          0
+        ]
+      ]
+    },
+    {
+      "name": "docker malformed section",
+      "input": "video: null",
+      "options": {},
+      "bypass": false,
+      "docker": true,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "model_type"
+      ],
+      "error_locs": [
+        [
+          "video"
+        ]
+      ]
+    },
+    {
+      "name": "docker partial conversion",
+      "input": "video: {recorded_folders: [/recordings], exclude_scan_paths: 1}\ncapture: {upload_folders: [/captures]}",
+      "options": {},
+      "bypass": false,
+      "docker": true,
+      "calls": [
+        "edcb:tcp://127.0.0.1:4510/",
+        "encoder:FFmpeg:--version"
+      ],
+      "valid": false,
+      "error_types": [
+        "list_type",
+        "path_not_directory"
+      ],
+      "error_locs": [
+        [
+          "video",
+          "exclude_scan_paths"
+        ],
+        [
+          "capture",
+          "upload_folders",
+          0
+        ]
+      ]
+    }
+  ]
+}

@@ -53,6 +53,8 @@ type ServiceConfig struct {
 	RecordedFolders []string
 	// ExcludeScanPaths は録画フォルダのスキャンから除外するパスの一覧。
 	ExcludeScanPaths []string
+	// RecordedFoldersPollingInterval はネットワーク保存先の再列挙間隔 (分、未指定は 5)。
+	RecordedFoldersPollingInterval float64
 	// ThumbnailsDir はサムネイル画像ディレクトリ。
 	ThumbnailsDir string
 }
