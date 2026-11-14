@@ -26,6 +26,7 @@ var settingsValidationSchemaJSON []byte
 
 type settingsFieldSchema struct {
 	Type                 string                          `json:"type"`
+	Format               string                          `json:"format"`
 	Title                string                          `json:"title"`
 	Ref                  string                          `json:"$ref"`
 	Properties           map[string]*settingsFieldSchema `json:"properties"`
@@ -61,6 +62,8 @@ type settingsValidator struct {
 	model  settingsModelSchema
 	order  map[string][]string
 	errors []SettingsValidationError
+	server *serverSettingsValidation
+	fatal  error
 }
 
 // settingsOrderedObject はユーザーが指定した辞書の挿入順を保存・再取得後も保持する。
@@ -80,6 +83,17 @@ func MarshalClientSettingsResponse(settings map[string]any) (string, error) {
 
 func settingsResponseValue(input any) any {
 	switch value := input.(type) {
+	case *string:
+		if value == nil {
+			return nil
+		}
+		return *value
+	case []string:
+		result := make([]any, len(value))
+		for i, item := range value {
+			result[i] = item
+		}
+		return result
 	case float64:
 		if math.IsNaN(value) || math.IsInf(value, 0) {
 			return nil
@@ -158,9 +172,26 @@ func (v *settingsValidator) orderedValue(input any, path []any) any {
 // ValidateClientSettingsJSON は本家 ClientSettings の全フィールドを宣言順に検証する。
 // 未指定項目には既定値を入れ、未知の項目は破棄する。誤った値は保存せず全エラーを返す。
 func ValidateClientSettingsJSON(raw []byte) (map[string]any, []SettingsValidationError) {
+	body, details := parseSettingsJSON(raw)
+	if len(details) > 0 {
+		return nil, details
+	}
+	validator := settingsValidator{model: settingsValidationModels["ClientSettings"], order: body.order}
+	return body.validate(&validator)
+}
+
+// SettingsBody は認証前の本文デコードと、認証後の設定検証を分離する。
+// 辞書順序を含むデコード結果を保持し、外部機器の検査を未認証で実行しない。
+type SettingsBody struct {
+	input   any
+	order   map[string][]string
+	missing bool
+}
+
+func parseSettingsJSON(raw []byte) (*SettingsBody, []SettingsValidationError) {
 	parser := settingsJSONParser{data: string(raw), order: map[string][]string{}}
 	if len(raw) == 0 {
-		return nil, []SettingsValidationError{{Type: "missing", Loc: []any{"body"}, Msg: "Field required", Input: nil}}
+		return &SettingsBody{missing: true}, nil
 	}
 	input := parser.value([]any{"body"})
 	parser.space()
@@ -170,9 +201,15 @@ func ValidateClientSettingsJSON(raw []byte) (map[string]any, []SettingsValidatio
 	if parser.err != nil {
 		return nil, []SettingsValidationError{*parser.err}
 	}
-	validator := settingsValidator{model: settingsValidationModels["ClientSettings"], order: parser.order}
-	result := validator.value(input, validator.model.Schema, []any{"body"})
-	if len(validator.errors) > 0 {
+	return &SettingsBody{input: input, order: parser.order}, nil
+}
+
+func (body *SettingsBody) validate(validator *settingsValidator) (map[string]any, []SettingsValidationError) {
+	if body.missing {
+		return nil, []SettingsValidationError{{Type: "missing", Loc: []any{"body"}, Msg: "Field required", Input: nil}}
+	}
+	result := validator.value(body.input, validator.model.Schema, []any{"body"})
+	if len(validator.errors) > 0 || validator.fatal != nil {
 		return nil, validator.errors
 	}
 	return result.(map[string]any), nil
@@ -194,6 +231,9 @@ func settingLiteralExpected(values []string) string {
 }
 
 func (v *settingsValidator) value(input any, schema *settingsFieldSchema, path []any) any {
+	if v.fatal != nil {
+		return nil
+	}
 	if schema.Ref != "" {
 		return v.value(input, v.model.Schema.Definitions[strings.TrimPrefix(schema.Ref, "#/$defs/")], path)
 	}
@@ -218,6 +258,9 @@ func (v *settingsValidator) value(input any, schema *settingsFieldSchema, path [
 		v.add("literal_error", "Input should be "+expected, path, input, map[string]any{"expected": expected})
 		return nil
 	}
+	if schema.Format != "" && v.server != nil {
+		return v.server.formattedValue(v, input, schema, path)
+	}
 	switch schema.Type {
 	case "object":
 		object, ok := input.(map[string]any)
@@ -234,7 +277,21 @@ func (v *settingsValidator) value(input any, schema *settingsFieldSchema, path [
 			for _, name := range v.model.FieldOrder[schema.Title] {
 				field := schema.Properties[name]
 				if value, exists := object[name]; exists {
-					result[name] = v.value(value, field, settingsChild(path, name))
+					fieldPath := settingsChild(path, name)
+					before := len(v.errors)
+					if v.server != nil && !v.server.beforeField(v, value, fieldPath) {
+						continue
+					}
+					normalized := v.value(value, field, fieldPath)
+					if len(v.errors) != before || v.fatal != nil {
+						continue
+					}
+					if v.server != nil {
+						normalized = v.server.afterField(v, value, normalized, fieldPath, result)
+					}
+					if len(v.errors) == before && v.fatal == nil {
+						result[name] = normalized
+					}
 				} else if field.Default != nil {
 					decoder := json.NewDecoder(strings.NewReader(string(field.Default)))
 					decoder.UseNumber()
@@ -306,7 +363,9 @@ func (v *settingsValidator) value(input any, schema *settingsFieldSchema, path [
 		}
 		if schema.AllowInfNan != nil && !*schema.AllowInfNan && (math.IsInf(number, 0) || math.IsNaN(number)) {
 			v.add("finite_number", "Input should be a finite number", path, input, nil)
+			return nil
 		}
+		v.numberBounds(number, schema, path, input)
 		return number
 	case "integer":
 		number, kind := settingsInteger(input)
@@ -315,10 +374,29 @@ func (v *settingsValidator) value(input any, schema *settingsFieldSchema, path [
 			v.add(kind, message, path, input, nil)
 			return nil
 		}
+		asFloat, _ := new(big.Float).SetInt(number).Float64()
+		v.numberBounds(asFloat, schema, path, input)
 		return json.Number(number.String())
 	default:
 		// list[dict[str, Any]] の値は、配列・辞書・数値も変換せずに保持する。
 		return v.orderedValue(input, path)
+	}
+}
+
+func (v *settingsValidator) numberBounds(number float64, schema *settingsFieldSchema, path []any, input any) {
+	for _, bound := range []struct {
+		value              *float64
+		key, kind, message string
+		invalid            func(float64) bool
+	}{
+		{schema.ExclusiveMinimum, "gt", "greater_than", "Input should be greater than ", func(limit float64) bool { return !(number > limit) }},
+		{schema.Minimum, "ge", "greater_than_equal", "Input should be greater than or equal to ", func(limit float64) bool { return !(number >= limit) }},
+		{schema.Maximum, "le", "less_than_equal", "Input should be less than or equal to ", func(limit float64) bool { return !(number <= limit) }},
+	} {
+		if bound.value != nil && bound.invalid(*bound.value) {
+			v.add(bound.kind, bound.message+strconv.FormatFloat(*bound.value, 'g', -1, 64), path, input, map[string]any{bound.key: *bound.value})
+			return
+		}
 	}
 }
 

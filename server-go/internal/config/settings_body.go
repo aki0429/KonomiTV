@@ -22,19 +22,29 @@ func (value settingsBodyBytes) MarshalJSON() ([]byte, error) {
 // ValidateClientSettingsBody は FastAPI と同じ Content-Type 判定・本文の文字コード検出後に検証する。
 // 保存済みの JSON 文字列の検査とは分け、HTTP 本文としてだけ UTF BOM・UTF-16/32 を受理する。
 func ValidateClientSettingsBody(raw []byte, contentType string) (map[string]any, []SettingsValidationError) {
+	body, details := ParseSettingsBody(raw, contentType)
+	if len(details) > 0 {
+		return nil, details
+	}
+	validator := settingsValidator{model: settingsValidationModels["ClientSettings"], order: body.order}
+	return body.validate(&validator)
+}
+
+// ParseSettingsBody は構文・文字コードのみを検査する。型・実機の検査は認証後に実行する。
+func ParseSettingsBody(raw []byte, contentType string) (*SettingsBody, []SettingsValidationError) {
 	if len(raw) == 0 {
-		return ValidateClientSettingsJSON(raw)
+		return parseSettingsJSON(raw)
 	}
 	media := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
 	isJSON := media == "application/json" || (strings.Count(media, "/") == 1 && strings.HasPrefix(media, "application/") && strings.HasSuffix(media, "+json"))
 	if !isJSON {
-		return nil, []SettingsValidationError{{Type: "model_attributes_type", Loc: []any{"body"}, Msg: "Input should be a valid dictionary or object to extract fields from", Input: settingsBodyBytes(raw)}}
+		return &SettingsBody{input: settingsBodyBytes(raw)}, nil
 	}
 	decoded, ok := decodeSettingsBody(raw)
 	if !ok {
 		return nil, []SettingsValidationError{{Type: "body_error", Msg: "There was an error parsing the body"}}
 	}
-	return ValidateClientSettingsJSON(decoded)
+	return parseSettingsJSON(decoded)
 }
 
 // decodeSettingsBody は Python json.detect_encoding() と同じ BOM と先頭のゼロバイトを調べる。

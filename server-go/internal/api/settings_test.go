@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -8,6 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/aki0429/KonomiTV/server-go/internal/config"
+	"gopkg.in/yaml.v3"
 )
 
 // setupSettingsTestServer は設定 API のテスト用サーバーを構築する。
@@ -23,6 +27,8 @@ func setupSettingsTestServer(t *testing.T) (*Server, *sql.DB, string) {
 		t.Fatal(err)
 	}
 	server.paths.ConfigYAMLPath = configPath
+	server.config = config.Default()
+	server.serverSettingsValidation = &config.ServerSettingsValidationOptions{Listeners: func(context.Context) ([]config.SettingsListener, error) { return nil, nil }}
 	return server, db, configPath
 }
 
@@ -168,9 +174,10 @@ func TestServerSettingsAPI(t *testing.T) {
 	if general["program_update_interval"] != 5.0 {
 		t.Errorf("program_update_interval = %v, want 5", general["program_update_interval"])
 	}
-	if settings["iptv"].(map[string]any)["enabled"] != true {
-		t.Errorf("iptv.enabled = %v, want true", settings["iptv"].(map[string]any)["enabled"])
+	if len(settings) != 5 || settings["iptv"] != nil {
+		t.Errorf("settings must contain the five upstream sections: %v", settings)
 	}
+	initialResponse := response.Body.String()
 
 	// 一般ユーザーは更新できない
 	response = doJSONRequest(t, handler, http.MethodPut, "/api/settings/server", `{}`, userToken, "application/json")
@@ -180,7 +187,7 @@ func TestServerSettingsAPI(t *testing.T) {
 
 	// 管理者は更新できる
 	updated := map[string]any{
-		"general": map[string]any{"backend": "IPTV", "debug": true},
+		"general": map[string]any{"backend": "Mirakurun", "debug": true},
 		"server":  map[string]any{"port": 7200},
 		"iptv":    map[string]any{"sources": []any{"https://example.com/playlist.m3u"}, "cache_ttl": 60},
 	}
@@ -193,26 +200,25 @@ func TestServerSettingsAPI(t *testing.T) {
 		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
 	}
 
-	// 保存された内容を確認する
+	// 保存後も GET は起動時の設定を返す。ファイルの変更は再起動時に反映する。
 	response = doJSONRequest(t, handler, http.MethodGet, "/api/settings/server", "", "", "")
 	settings = map[string]any{}
 	if err := json.Unmarshal(response.Body.Bytes(), &settings); err != nil {
 		t.Fatal(err)
 	}
 	general = settings["general"].(map[string]any)
-	if general["backend"] != "IPTV" || general["debug"] != true {
+	if general["backend"] != "EDCB" || general["debug"] != false {
 		t.Errorf("general = %+v", general)
 	}
 	// 送信しなかった項目はデフォルト値で補完される
 	if general["encoder"] != "FFmpeg" {
 		t.Errorf("encoder = %v", general["encoder"])
 	}
-	if port := settings["server"].(map[string]any)["port"]; port != 7200.0 {
+	if port := settings["server"].(map[string]any)["port"]; port != 7000.0 {
 		t.Errorf("port = %v", port)
 	}
-	sources := settings["iptv"].(map[string]any)["sources"].([]any)
-	if len(sources) != 1 || sources[0] != "https://example.com/playlist.m3u" {
-		t.Errorf("sources = %+v", sources)
+	if response.Body.String() != initialResponse {
+		t.Errorf("GET changed before restart: %s", response.Body.String())
 	}
 
 	// config.yaml が書き換えられ、コメントや他の項目が保持されている
@@ -220,7 +226,11 @@ func TestServerSettingsAPI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(data), "backend: 'IPTV'") {
+	var saved map[string]any
+	if err := yaml.Unmarshal(data, &saved); err != nil {
+		t.Fatal(err)
+	}
+	if saved["general"].(map[string]any)["backend"] != "Mirakurun" || saved["server"].(map[string]any)["port"] != 7200 || strings.Contains(string(data), "example.com/playlist") {
 		t.Errorf("config.yaml = %s", data)
 	}
 

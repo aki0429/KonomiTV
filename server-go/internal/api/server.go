@@ -59,6 +59,10 @@ type Server struct {
 	jikkyoChannelsOnce sync.Once
 	// updateDatabaseMu は update-database の EDCB 更新を直列化する (SQLite の書き込み競合を避ける) 。
 	updateDatabaseMu sync.Mutex
+	// settingsSaveMu は並行 PUT が同じ設定ファイルの一時保存と競合するのを防ぐ。
+	settingsSaveMu sync.Mutex
+	// serverSettingsValidation は設定 API の実機検査をテスト時だけ差し替える。
+	serverSettingsValidation *config.ServerSettingsValidationOptions
 	// jikkyoStatuses は実況チャンネルごとの最新の実況勢い (Python: JikkyoClient のクラス変数) 。
 	jikkyoStatuses epgupdate.JikkyoStatuses
 	// toruCounts は全地域の取得に成功したトル数を保持する。

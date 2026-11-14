@@ -71,6 +71,8 @@ type VideoConfig struct {
 	RecordedFolders []string `yaml:"recorded_folders"`
 	// ExcludeScanPaths は録画フォルダのスキャンから除外するパスの一覧。
 	ExcludeScanPaths []string `yaml:"exclude_scan_paths"`
+	// RecordedFoldersPollingInterval はネットワーク録画フォルダの再走査間隔 (分)。
+	RecordedFoldersPollingInterval float64 `yaml:"recorded_folders_polling_interval"`
 }
 
 // CaptureConfig は capture セクションの設定。
@@ -113,6 +115,7 @@ func Default() *Config {
 	config.TV.MaxAliveTime = 10
 	config.Video.RecordedFolders = []string{}
 	config.Video.ExcludeScanPaths = []string{}
+	config.Video.RecordedFoldersPollingInterval = 5.0
 	config.Capture.UploadFolders = []string{}
 	config.IPTV.Enabled = true
 	config.IPTV.CacheTTL = 3600

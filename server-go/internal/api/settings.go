@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/aki0429/KonomiTV/server-go/internal/config"
 	"github.com/aki0429/KonomiTV/server-go/internal/database"
+	"github.com/aki0429/KonomiTV/server-go/internal/reservations"
 )
 
 // handleClientSettings はクライアント設定取得 API (GET /api/settings/client) を処理する。
@@ -113,14 +115,9 @@ func writeSettingsInternalError(w http.ResponseWriter) {
 // handleServerSettings はサーバー設定取得 API (GET /api/settings/server) を処理する。
 // 現在稼働中の KonomiTV サーバーのサーバー設定を取得する。
 func (s *Server) handleServerSettings(w http.ResponseWriter, r *http.Request) {
-	settings, err := config.LoadServerSettings(s.paths.ConfigYAMLPath)
-	if err != nil {
-		s.logger.Error("[ServerSettingsAPI] Failed to load config.yaml.", "error", err)
-		writeError(w, http.StatusInternalServerError, "Failed to load config.yaml")
-		return
-	}
+	settings := s.config.ServerSettingsSnapshot()
 	// Python 版 (Pydantic) と同じく、フィールドの定義順・浮動小数点数の形式で出力する
-	serialized, err := config.MarshalServerSettings(settings)
+	serialized, err := config.MarshalServerSettingsResponse(settings)
 	if err != nil {
 		s.logger.Error("[ServerSettingsAPI] Failed to serialize the server settings.", "error", err)
 		writeError(w, http.StatusInternalServerError, "Internal Server Error")
@@ -134,52 +131,59 @@ func (s *Server) handleServerSettings(w http.ResponseWriter, r *http.Request) {
 // handleServerSettingsUpdate はサーバー設定更新 API (PUT /api/settings/server) を処理する。
 // バリデーションが完了したサーバー設定を config.yaml に保存する。
 func (s *Server) handleServerSettingsUpdate(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "There was an error parsing the body")
+		return
+	}
+	parsed, details := config.ParseSettingsBody(body, r.Header.Get("Content-Type"))
+	if len(details) > 0 {
+		if details[0].Type == "body_error" {
+			writeError(w, http.StatusBadRequest, details[0].Msg)
+		} else {
+			s.writeSettingsValidation(w, details)
+		}
+		return
+	}
 	if _, ok := s.requireCurrentAdminUser(w, r); !ok {
 		return
 	}
-
-	body, err := io.ReadAll(r.Body)
+	options := config.ServerSettingsValidationOptions{Logger: s.logger, LibraryPath: s.paths.LibraryPath,
+		RequestHeaders: http.Header{"User-Agent": []string{dataBroadcastingUserAgent}},
+		EDCBStatus: func(ctx context.Context, url string) string {
+			client, err := reservations.NewClientFromURLContext(ctx, url)
+			if err != nil {
+				return "Unknown"
+			}
+			return client.ServerStatus()
+		},
+	}
+	if s.serverSettingsValidation != nil {
+		options = *s.serverSettingsValidation
+	}
+	normalized, details, fatal := parsed.ServerSettings(r.Context(), options)
+	if fatal != nil {
+		s.logger.Error("[ServerSettingsUpdateAPI] Settings validation failed.", "error", fatal)
+		writeSettingsInternalError(w)
+		return
+	}
+	if len(details) > 0 {
+		s.writeSettingsValidation(w, details)
+		return
+	}
+	docker := false
+	if environment := platformEnvironment(); environment != nil {
+		docker = *environment == "Linux-Docker"
+	}
+	s.settingsSaveMu.Lock()
+	err = config.SaveValidatedServerSettings(s.paths.ConfigYAMLPath, normalized, docker)
+	s.settingsSaveMu.Unlock()
 	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, "Invalid JSON body")
-		return
-	}
-	var settings map[string]any
-	if err := json.Unmarshal(body, &settings); err != nil {
-		writeError(w, http.StatusUnprocessableEntity, "Invalid JSON body")
-		return
-	}
-
-	// デフォルト値で補完してからバリデーションする (クライアントはすべての項目を送信するが、
-	// 項目が欠けていても Python 版と同じくデフォルト値で補完される) 。
-	merged := mergeSettingsWithDefaults(config.DefaultServerSettings(), settings)
-	normalized, detail := config.ValidateServerSettings(merged)
-	if detail != "" {
-		s.logger.Error("[ServerSettingsUpdateAPI] " + detail)
-		writeError(w, http.StatusUnprocessableEntity, detail)
-		return
-	}
-
-	if err := config.SaveServerSettings(s.paths.ConfigYAMLPath, normalized); err != nil {
 		s.logger.Error("[ServerSettingsUpdateAPI] Failed to save config.yaml.", "error", err)
 		writeError(w, http.StatusInternalServerError, "Failed to save config.yaml")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// mergeSettingsWithDefaults はデフォルト設定にリクエストの設定をマージする。
-func mergeSettingsWithDefaults(base map[string]any, override map[string]any) map[string]any {
-	for key, value := range override {
-		baseValue, ok := base[key]
-		baseMap, baseIsMap := baseValue.(map[string]any)
-		overrideMap, overrideIsMap := value.(map[string]any)
-		if ok && baseIsMap && overrideIsMap {
-			base[key] = mergeSettingsWithDefaults(baseMap, overrideMap)
-			continue
-		}
-		base[key] = value
-	}
-	return base
 }
 
 // numberField は JSON オブジェクトから数値フィールドを取り出す。

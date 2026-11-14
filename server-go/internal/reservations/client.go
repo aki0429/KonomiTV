@@ -22,20 +22,21 @@ const (
 	cmdSuccess = 1
 	cmdVersion = 5
 
-	cmdEnumReserve2 = 2011
-	cmdAddReserve2  = 2013
-	cmdChgReserve2  = 2015
-	cmdDelReserve   = 1014
-	cmdEnumService  = 1021
-	cmdEnumPgInfoEx = 1029
-	cmdFileCopy     = 1060
-	cmdFileCopy2    = 2060
-	cmdNWPlayTFOpen = 1087
-	cmdNWPlayClose  = 1081
-	cmdEnumAutoAdd2 = 2131
-	cmdAddAutoAdd2  = 2132
-	cmdChgAutoAdd2  = 2134
-	cmdDelAutoAdd   = 1033
+	cmdEnumReserve2      = 2011
+	cmdAddReserve2       = 2013
+	cmdChgReserve2       = 2015
+	cmdDelReserve        = 1014
+	cmdEnumService       = 1021
+	cmdEnumPgInfoEx      = 1029
+	cmdFileCopy          = 1060
+	cmdFileCopy2         = 2060
+	cmdNWPlayTFOpen      = 1087
+	cmdNWPlayClose       = 1081
+	cmdEnumAutoAdd2      = 2131
+	cmdAddAutoAdd2       = 2132
+	cmdChgAutoAdd2       = 2134
+	cmdDelAutoAdd        = 1033
+	cmdGetNotifySrvInfo2 = 2200
 
 	// cmdNwTVIDSetCh は NetworkTV モードの View アプリのチャンネルを切り替え、または起動を確認するコマンド。
 	cmdNwTVIDSetCh = 1073
@@ -329,6 +330,45 @@ func decodeResponse[T any](decode func() T) (value T, ok bool) {
 		}
 	}()
 	return decode(), true
+}
+
+// ServerStatus は通知コマンドで EpgTimerSrv の現在の状態を確認する。
+// 全構造体を読み取り、不正・途中で切れた応答を接続成功とみなさない。
+func (c *Client) ServerStatus() string {
+	response, ok := c.sendCmd2(cmdGetNotifySrvInfo2, func(w *wireWriter) { w.writeUint(0) })
+	if !ok || response.Code != cmdSuccess {
+		return "Unknown"
+	}
+	state, ok := decodeResponse(func() int {
+		r := &wireReader{buf: response.Data}
+		end := len(response.Data)
+		if r.readUshort(end) < cmdVersion {
+			panic(readError{})
+		}
+		end = r.readStructIntro(end)
+		r.readUint(end)
+		r.readSystemTime(end)
+		state := r.readUint(end)
+		r.readUint(end)
+		r.readUint(end)
+		r.readString(end)
+		r.readString(end)
+		r.readString(end)
+		return state
+	})
+	if !ok {
+		return "Unknown"
+	}
+	switch state {
+	case 0:
+		return "Normal"
+	case 1:
+		return "Recording"
+	case 2:
+		return "EPGGathering"
+	default:
+		return "Unknown"
+	}
 }
 
 // EnumReserve は予約一覧を取得する (CMD_EPG_SRV_ENUM_RESERVE2) 。
