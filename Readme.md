@@ -1,6 +1,11 @@
 
 # <img width="350" src="https://user-images.githubusercontent.com/39271166/134050201-8110f076-a939-4b62-8c86-7beaa3d4728c.png" alt="KonomiTV Logo">　<!-- omit in toc -->
 
+このブランチはGo版バックエンドの移植・検証用です。
+Go版の導入・常駐・更新は[サービス管理手順](server-go/SERVICE.md)、APIと使い方は[Go版README](server-go/README.md)、
+本家との照合と実機で確認した範囲は[移行記録](server-go/MIGRATION.md)を参照してください。
+以降は本家の紹介・Python版の導入説明を参照資料として保持しています。
+
 <img width="100%" src="https://github.com/user-attachments/assets/6971f354-0418-4305-bf6d-b061142ffec6">
 <video controls src="https://github.com/user-attachments/assets/ee0b6df0-3bb0-40da-99f4-798437aa2f9c"></video>
 

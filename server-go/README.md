@@ -34,7 +34,7 @@ Python と併走する移行モードでは、型と保存先を検証し、使�
 | `GET /api/programs/toru-counts`・`GET /api/programs/toru-ranking` | Go 実装済み (本家 TorneClient の合成実行結果と照合。初回 EPG 更新後と 3 時間ごとに取得) |
 | `/api/captures/tags`・`/api/captures/tags/{tag_id}`・`.../items`・`/api/captures/favorites` | Go 実装済み (本人のタグ CRUD、タグ付け、お気に入り。一括追加は全 ID 検証後に変更) |
 | `POST /api/programs/search` (番組検索) | Go 実装 (`-no-proxy` 時は EDCB SearchPg 1025、EDCB 以外は本家同様422。プロキシモードも保持) |
-| `/api/recording/reservations`・`/api/recording/reservation-conditions`・`/api/recording/presets` | Go 実装 (EDCBの予約・自動予約条件・録画設定) |
+| `/api/recording/reservations`・`/api/recording/conditions`・`/api/recording/presets` | Go 実装 (EDCBの予約・自動予約条件・録画設定) |
 | `GET /api/series`・`GET /api/series/search`・`GET /api/series/{series_id}` (シリーズ番組) | ✅ Go 実装済み (録画番組・録画ファイル・チャンネルまで展開) |
 | `GET /api/iptv/channels`・`/countries`・`/groups`・`/playlist.m3u` (IPTV チャンネル一覧・国・グループ・プレイリスト出力) | ✅ Go 実装済み (実データ 11152 チャンネルで Python 版と完全一致を検証済み) |
 | `GET`/`POST`/`DELETE /api/iptv/sources`・`POST /api/iptv/sources/enabled` (プレイリストソース管理・有効/無効切替) | ✅ Go 実装済み |
