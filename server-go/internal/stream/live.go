@@ -33,7 +33,7 @@ type LiveStreamClient struct {
 	queue chan []byte
 	// closed は既に切断済みかどうか。
 	closed bool
-	// mu は streamDataReadAt を保護する。
+	// mu はキューへの書き込み・切断と streamDataReadAt を保護する。
 	mu sync.Mutex
 	// streamDataReadAt はストリームデータの最終読み取り時刻 (Unix 時間) 。
 	streamDataReadAt float64
@@ -83,6 +83,11 @@ func (c *LiveStreamClient) writeStreamData(data []byte) {
 	if c.ClientType != "mpegts" {
 		return
 	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed {
+		return
+	}
 	select {
 	case c.queue <- data:
 	default:
@@ -95,6 +100,8 @@ func (c *LiveStreamClient) writeStreamData(data []byte) {
 
 // closeQueue はキューを閉じてエンコードタスクの終了を通知する。
 func (c *LiveStreamClient) closeQueue() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if c.closed {
 		return
 	}
@@ -515,11 +522,6 @@ func (m *Manager) Connect(liveStream *LiveStream, clientType string) *LiveStream
 		m.releaseIdlingLiveStreams()
 	}
 
-	// エンコードタスクを非同期で実行する。
-	if shouldStartTask && m.startTask != nil {
-		m.startTask(liveStream)
-	}
-
 	// ライブストリームクライアントのインスタンスを生成・登録する。
 	client := &LiveStreamClient{
 		ID:               "MPEGTS-" + buildClientID(),
@@ -531,6 +533,11 @@ func (m *Manager) Connect(liveStream *LiveStream, clientType string) *LiveStream
 	liveStream.clients = append(liveStream.clients, client)
 	liveStream.mu.Unlock()
 	m.logger.Info(liveStream.LogPrefix()+" Client Connected. Client ID: "+client.ID, "live_stream_id", liveStream.ID)
+
+	// 起動直後にエンコーダーが失敗しても終了通知を受け取れるよう、登録を先に完了する。
+	if shouldStartTask && m.startTask != nil {
+		m.startTask(liveStream)
+	}
 
 	// ライブストリームが Idling 状態な場合、ONAir 状態に戻す (アイドリングから復帰) 。
 	if currentStatus == "Idling" {
