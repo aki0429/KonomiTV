@@ -438,18 +438,27 @@ func UpdateProgramsFromMirakurun(ctx context.Context, db *sql.DB, mirakurun Mira
 			continue
 		}
 		var record programRecord
-		record.Title = strings.TrimSpace(reservations.FormatString(*info.Name))
+		record.Title = reservations.FormatProgramText(*info.Name)
 		if info.Description != nil {
-			record.Description = strings.TrimSpace(reservations.FormatString(*info.Description))
+			record.Description = reservations.FormatProgramText(*info.Description)
 		}
 		var detail orderedDetail
 		if len(info.Extended) > 0 && string(info.Extended) != "null" {
 			if err = iterateJSONObject(info.Extended, func(head, text string) {
-				heading := strings.TrimSpace(strings.ReplaceAll(reservations.FormatString(head), "◇", ""))
+				heading := reservations.FormatProgramText(strings.ReplaceAll(head, "◇", ""))
+				body := reservations.FormatProgramText(text)
+				// 空白見出しの項目は直前の本文の続き。概要は独立項目からだけ補完する。
+				if heading == "" && len(detail.entries) > 0 {
+					last := &detail.entries[len(detail.entries)-1]
+					if strings.HasPrefix(body, "【") {
+						last.Value += "\n"
+					}
+					last.Value += body
+					return
+				}
 				if heading == "" {
 					heading = "番組内容"
 				}
-				body := strings.TrimSpace(reservations.FormatString(text))
 				detail.set(heading, body)
 				if strings.TrimSpace(record.Description) == "" {
 					record.Description = body

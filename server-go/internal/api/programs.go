@@ -155,18 +155,13 @@ func decodeSearchEvent(event reservations.EventInfo) programResponse {
 	}
 	p := programResponse{ID: fmt.Sprintf("NID%d-SID%03d-EID%d", event.Onid, event.Sid, event.Eid), ChannelID: fmt.Sprintf("NID%d-SID%03d", event.Onid, event.Sid), NetworkID: event.Onid, ServiceID: event.Sid, EventID: event.Eid, StartTime: database.FormatJSONTime(start), EndTime: database.FormatJSONTime(start.Add(time.Duration(duration) * time.Second)), Duration: pydanticFloat64(duration), IsFree: event.FreeCaFlag == 0, Genres: json.RawMessage("[]")}
 	if event.ShortInfo != nil {
-		p.Title = strings.TrimSpace(reservations.FormatString(event.ShortInfo.EventName))
-		p.Description = strings.TrimSpace(reservations.FormatString(event.ShortInfo.TextChar))
+		p.Title = reservations.FormatProgramText(event.ShortInfo.EventName)
+		p.Description = reservations.FormatProgramText(event.ShortInfo.TextChar)
 	}
 	// 見出し重複はタブを足して保持し、概要が空の時だけ最初の本文で補う。
 	var detail reservations.ProgramDetail
 	if event.ExtInfo != nil {
-		detail = reservations.ParseProgramExtendedText(event.ExtInfo.TextChar).Normalized()
-		for _, entry := range detail.Entries() {
-			if strings.TrimSpace(p.Description) == "" {
-				p.Description = entry.Body
-			}
-		}
+		detail = reservations.ParseProgramExtendedText(event.ExtInfo.TextChar).Normalized(&p.Description)
 	}
 	// 空テキストは Python 版でも項目を作らない。明示的な空見出しは保持する。
 	p.Detail, _ = json.Marshal(detail)

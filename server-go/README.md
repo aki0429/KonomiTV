@@ -26,7 +26,7 @@ Go 単独運転 (`-no-proxy`) では、Python を起動せずに DB を作成で
 | `GET /api/channels/{channel_id}/logo` (チャンネルロゴ) | ✅ Go 実装済み (IPTV 疑似チャンネルは Python 版へプロキシ) |
 | `GET /api/channels/{channel_id}/jikkyo` (ニコニコ実況 WebSocket URL) | ✅ Go 実装済み (ニコニコアカウント連携時のニコ生セッション取得・トークン更新含む) |
 | `GET /api/channels` (チャンネル一覧、現在/次の番組・IPTV 疑似チャンネル含む) | ✅ Go 実装済み |
-| `GET /api/programs/timetable` (番組表) | ✅ Go 実装済み (EDCB の録画中・無効・競合状態、EID 不一致時の時間照合を含む) |
+| `GET /api/programs/timetable` (番組表) | ✅ Go 実装済み (EDCB の録画中・無効・競合状態、EID 不一致時の時間照合、EDCB/Mirakurun の詳細文の継続を含む) |
 | `GET /api/programs/toru-counts`・`GET /api/programs/toru-ranking` | Go 実装済み (本家 TorneClient の合成実行結果と照合。初回 EPG 更新後と 3 時間ごとに取得) |
 | `/api/captures/tags`・`/api/captures/tags/{tag_id}`・`.../items`・`/api/captures/favorites` | Go 実装済み (本人のタグ CRUD、タグ付け、お気に入り。一括追加は全 ID 検証後に変更) |
 | `POST /api/programs/search` (番組検索) | 🚧 Go native 完成候補 (EDCB 以外は 422。`-no-proxy` 時は SearchPg 1025、有効時は既存 Python 転送を維持。実機・親受入れ未実施) |

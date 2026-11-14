@@ -92,17 +92,11 @@ func loadExistingPrograms(ctx context.Context, tx *sql.Tx) (map[string]existingP
 // decodeProgram は Program.updateFromEDCB() の EventInfo → Program 変換を移植したもの。
 func decodeProgram(event reservations.EventInfo) (record programRecord, detail reservations.ProgramDetail) {
 	if event.ShortInfo != nil {
-		record.Title = strings.TrimSpace(reservations.FormatString(event.ShortInfo.EventName))
-		record.Description = strings.TrimSpace(reservations.FormatString(event.ShortInfo.TextChar))
+		record.Title = reservations.FormatProgramText(event.ShortInfo.EventName)
+		record.Description = reservations.FormatProgramText(event.ShortInfo.TextChar)
 	}
 	if event.ExtInfo != nil {
-		detail = reservations.ParseProgramExtendedText(event.ExtInfo.TextChar).Normalized()
-		// 番組概要が空の場合、番組詳細の最初の本文を概要として使う
-		for _, entry := range detail.Entries() {
-			if strings.TrimSpace(record.Description) == "" {
-				record.Description = entry.Body
-			}
-		}
+		detail = reservations.ParseProgramExtendedText(event.ExtInfo.TextChar).Normalized(&record.Description)
 	}
 	entries := make([]metadata.DetailEntry, 0, detail.Len())
 	for _, entry := range detail.Entries() {

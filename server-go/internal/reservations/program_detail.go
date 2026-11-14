@@ -97,22 +97,42 @@ func ParseProgramExtendedText(text string) ProgramDetail {
 	return detail
 }
 
-// Normalized は Program.updateFromEDCB / DecodeEDCBEventInfo の見出し・本文整形と、
-// 二段階目の重複処理を適用する。
-func (detail ProgramDetail) Normalized() ProgramDetail {
+// Normalized は Program.updateFromEDCB / DecodeEDCBEventInfo の見出し・本文整形、
+// 空見出しの継続、二段階目の重複処理を適用する。description が空なら最初の独立項目で補う。
+func (detail ProgramDetail) Normalized(description *string) ProgramDetail {
 	var result ProgramDetail
 	for _, entry := range detail.entries {
 		head := strings.Trim(strings.ReplaceAll(FormatString(entry.Heading), "◇", ""), " \r\n")
+		body := FormatProgramText(entry.Body)
+		// WOWOW 等の分割本文は直前の辞書項目へ結合する。通常の分割位置には改行を足さない。
+		if pyStrip(head) == "" && len(result.entries) > 0 {
+			last := &result.entries[len(result.entries)-1]
+			if strings.HasPrefix(body, "【") {
+				last.Body += "\n"
+			}
+			last.Body += body
+			continue
+		}
+		// 最初の空見出しだけ固定名にする。その後、整形で衝突した見出しもタブで保持する。
+		if pyStrip(head) == "" {
+			head = "番組内容"
+		}
 		for result.contains(head) {
 			head += "\t"
 		}
-		// Python は fallback の後では重複判定せず、既存「番組内容」を上書きする場合がある。
-		if head == "" {
-			head = "番組内容"
+		result.set(head, body)
+		// 継続項目は概要の補完に使わないため、結合後の本文からの再計算は行わない。
+		if description != nil && pyStrip(*description) == "" {
+			*description = body
 		}
-		result.set(head, strings.TrimSpace(FormatString(entry.Body)))
 	}
 	return result
+}
+
+// FormatProgramText は本家の formatString().strip() に合わせ、制御文字の空白も取り除く。
+// 見出しの重複を表すタブを残す場合はこの関数を使わず、明示された文字だけを除去する。
+func FormatProgramText(text string) string {
+	return pyStrip(FormatString(text))
 }
 
 // MarshalJSON はソートせず挿入順に JSON object を生成する。

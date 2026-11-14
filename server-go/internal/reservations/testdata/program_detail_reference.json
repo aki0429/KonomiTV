@@ -1,0 +1,781 @@
+{
+  "upstream_commit": "687b904bb0a2cbb329596fd7b0368c09afe19a6c",
+  "source_sha256": {
+    "server/app/models/Program.py": "2f241e8e651b0cbe85cdd177f343d81a41a3e23d3dd92c903dfa086b91719cd0",
+    "server/app/routers/ProgramsRouter.py": "1b80c7e66225f2896e5523b735c4b86b70b264108794c51b39be1347716e6a6c",
+    "server/app/utils/TSInformation.py": "d204bd3fabfd1b3f11ac02366c9216d031c58826b3de1813c1065cf720e2a5d1",
+    "server/app/utils/edcb/EDCBUtil.py": "dd22e5e069cdcc78a003f5aeabd84793646f635376fb50de6bc3c8bcb1eb9e56"
+  },
+  "cases": [
+    {
+      "name": "normal continuation",
+      "entries": [
+        [
+          "◇ 内容",
+          "ＡＢ"
+        ],
+        [
+          " ",
+          "ＣＤ"
+        ]
+      ],
+      "extended_text": "- ◇ 内容\nＡＢ\n-  \nＣＤ\n",
+      "description": "",
+      "edcb": {
+        "detail": [
+          [
+            "内容",
+            "ABCD"
+          ]
+        ],
+        "description": "AB"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "内容",
+            "ABCD"
+          ]
+        ],
+        "description": "AB"
+      },
+      "api": {
+        "detail": [
+          [
+            "内容",
+            "ABCD"
+          ]
+        ],
+        "description": "AB"
+      }
+    },
+    {
+      "name": "heading continuation",
+      "entries": [
+        [
+          "内容",
+          "前半"
+        ],
+        [
+          " ",
+          "【後半】\n続き"
+        ]
+      ],
+      "extended_text": "- 内容\n前半\n-  \n【後半】\n続き\n",
+      "description": "",
+      "edcb": {
+        "detail": [
+          [
+            "内容",
+            "前半\n【後半】\n続き"
+          ]
+        ],
+        "description": "前半"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "内容",
+            "前半\n【後半】\n続き"
+          ]
+        ],
+        "description": "前半"
+      },
+      "api": {
+        "detail": [
+          [
+            "内容",
+            "前半\n【後半】\n続き"
+          ]
+        ],
+        "description": "前半"
+      }
+    },
+    {
+      "name": "first blank",
+      "entries": [
+        [
+          "",
+          "前半"
+        ],
+        [
+          " ",
+          "後半"
+        ]
+      ],
+      "extended_text": "- \n前半\n-  \n後半\n",
+      "description": "",
+      "edcb": {
+        "detail": [
+          [
+            "番組内容",
+            "前半後半"
+          ]
+        ],
+        "description": "前半"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "番組内容",
+            "前半後半"
+          ]
+        ],
+        "description": "前半"
+      },
+      "api": {
+        "detail": [
+          [
+            "番組内容",
+            "前半後半"
+          ]
+        ],
+        "description": "前半"
+      }
+    },
+    {
+      "name": "tabs and repeated blanks",
+      "entries": [
+        [
+          "内容",
+          "Ａ"
+        ],
+        [
+          " ",
+          "Ｂ"
+        ],
+        [
+          "\t",
+          "Ｃ"
+        ],
+        [
+          "  ",
+          "Ｄ"
+        ]
+      ],
+      "extended_text": "- 内容\nＡ\n-  \nＢ\n- \t\nＣ\n-   \nＤ\n",
+      "description": "",
+      "edcb": {
+        "detail": [
+          [
+            "内容",
+            "ABCD"
+          ]
+        ],
+        "description": "A"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "内容",
+            "ABCD"
+          ]
+        ],
+        "description": "A"
+      },
+      "api": {
+        "detail": [
+          [
+            "内容",
+            "ABCD"
+          ]
+        ],
+        "description": "A"
+      }
+    },
+    {
+      "name": "multiple sections",
+      "entries": [
+        [
+          "内容",
+          "Ａ"
+        ],
+        [
+          " ",
+          "Ｂ"
+        ],
+        [
+          "出演",
+          "Ｃ"
+        ],
+        [
+          "  ",
+          "Ｄ"
+        ]
+      ],
+      "extended_text": "- 内容\nＡ\n-  \nＢ\n- 出演\nＣ\n-   \nＤ\n",
+      "description": "",
+      "edcb": {
+        "detail": [
+          [
+            "内容",
+            "AB"
+          ],
+          [
+            "出演",
+            "CD"
+          ]
+        ],
+        "description": "A"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "内容",
+            "AB"
+          ],
+          [
+            "出演",
+            "CD"
+          ]
+        ],
+        "description": "A"
+      },
+      "api": {
+        "detail": [
+          [
+            "内容",
+            "AB"
+          ],
+          [
+            "出演",
+            "CD"
+          ]
+        ],
+        "description": "A"
+      }
+    },
+    {
+      "name": "preserved description",
+      "entries": [
+        [
+          "内容",
+          "Ａ"
+        ],
+        [
+          " ",
+          "Ｂ"
+        ]
+      ],
+      "extended_text": "- 内容\nＡ\n-  \nＢ\n",
+      "description": "既存概要",
+      "edcb": {
+        "detail": [
+          [
+            "内容",
+            "AB"
+          ]
+        ],
+        "description": "既存概要"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "内容",
+            "AB"
+          ]
+        ],
+        "description": "既存概要"
+      },
+      "api": {
+        "detail": [
+          [
+            "内容",
+            "AB"
+          ]
+        ],
+        "description": "既存概要"
+      }
+    },
+    {
+      "name": "empty first body",
+      "entries": [
+        [
+          "内容",
+          ""
+        ],
+        [
+          " ",
+          "続き"
+        ]
+      ],
+      "extended_text": "- 内容\n\n-  \n続き\n",
+      "description": "",
+      "edcb": {
+        "detail": [
+          [
+            "内容",
+            "続き"
+          ]
+        ],
+        "description": ""
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "内容",
+            "続き"
+          ]
+        ],
+        "description": ""
+      },
+      "api": {
+        "detail": [
+          [
+            "内容",
+            "続き"
+          ]
+        ],
+        "description": ""
+      }
+    },
+    {
+      "name": "empty first then next section",
+      "entries": [
+        [
+          "内容",
+          ""
+        ],
+        [
+          " ",
+          "続き"
+        ],
+        [
+          "出演",
+          "別の概要"
+        ]
+      ],
+      "extended_text": "- 内容\n\n-  \n続き\n- 出演\n別の概要\n",
+      "description": "",
+      "edcb": {
+        "detail": [
+          [
+            "内容",
+            "続き"
+          ],
+          [
+            "出演",
+            "別の概要"
+          ]
+        ],
+        "description": "別の概要"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "内容",
+            "続き"
+          ],
+          [
+            "出演",
+            "別の概要"
+          ]
+        ],
+        "description": "別の概要"
+      },
+      "api": {
+        "detail": [
+          [
+            "内容",
+            "続き"
+          ],
+          [
+            "出演",
+            "別の概要"
+          ]
+        ],
+        "description": "別の概要"
+      }
+    },
+    {
+      "name": "diamond and ideographic spaces",
+      "entries": [
+        [
+          "　◇　",
+          "前半"
+        ],
+        [
+          "◇　 ",
+          "【見出し】後半"
+        ]
+      ],
+      "extended_text": "- 　◇　\n前半\n- ◇　 \n【見出し】後半\n",
+      "description": "",
+      "edcb": {
+        "detail": [
+          [
+            "番組内容",
+            "前半\n【見出し】後半"
+          ]
+        ],
+        "description": "前半"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "番組内容",
+            "前半\n【見出し】後半"
+          ]
+        ],
+        "description": "前半"
+      },
+      "api": {
+        "detail": [
+          [
+            "番組内容",
+            "前半\n【見出し】後半"
+          ]
+        ],
+        "description": "前半"
+      }
+    },
+    {
+      "name": "empty continuation",
+      "entries": [
+        [
+          "内容",
+          "本編"
+        ],
+        [
+          " ",
+          " \t\r\n"
+        ]
+      ],
+      "extended_text": "- 内容\n本編\n-  \n \t\r\n\n",
+      "description": "",
+      "edcb": {
+        "detail": [
+          [
+            "内容",
+            "本編"
+          ]
+        ],
+        "description": "本編"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "内容",
+            "本編"
+          ]
+        ],
+        "description": "本編"
+      },
+      "api": {
+        "detail": [
+          [
+            "内容",
+            "本編"
+          ]
+        ],
+        "description": "本編"
+      }
+    },
+    {
+      "name": "format collision",
+      "entries": [
+        [
+          "Ａ",
+          "最初"
+        ],
+        [
+          "B",
+          "最後のキー"
+        ],
+        [
+          "A",
+          "上書き"
+        ],
+        [
+          " ",
+          "続き"
+        ]
+      ],
+      "extended_text": "- Ａ\n最初\n- B\n最後のキー\n- A\n上書き\n-  \n続き\n",
+      "description": "",
+      "edcb": {
+        "detail": [
+          [
+            "A",
+            "最初"
+          ],
+          [
+            "B",
+            "最後のキー"
+          ],
+          [
+            "A\t",
+            "上書き続き"
+          ]
+        ],
+        "description": "最初"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "A",
+            "上書き"
+          ],
+          [
+            "B",
+            "最後のキー続き"
+          ]
+        ],
+        "description": "最初"
+      },
+      "api": {
+        "detail": [
+          [
+            "A",
+            "最初"
+          ],
+          [
+            "B",
+            "最後のキー"
+          ],
+          [
+            "A\t",
+            "上書き続き"
+          ]
+        ],
+        "description": "最初"
+      }
+    },
+    {
+      "name": "fallback name collision",
+      "entries": [
+        [
+          "",
+          "最初"
+        ],
+        [
+          "番組内容",
+          "別項目"
+        ],
+        [
+          " ",
+          "続き"
+        ]
+      ],
+      "extended_text": "- \n最初\n- 番組内容\n別項目\n-  \n続き\n",
+      "description": "",
+      "edcb": {
+        "detail": [
+          [
+            "番組内容",
+            "最初"
+          ],
+          [
+            "番組内容\t",
+            "別項目続き"
+          ]
+        ],
+        "description": "最初"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "番組内容",
+            "別項目続き"
+          ]
+        ],
+        "description": "最初"
+      },
+      "api": {
+        "detail": [
+          [
+            "番組内容",
+            "最初"
+          ],
+          [
+            "番組内容\t",
+            "別項目続き"
+          ]
+        ],
+        "description": "最初"
+      }
+    },
+    {
+      "name": "trimming",
+      "entries": [
+        [
+          "　見出し　",
+          "　Ａ\r\n"
+        ],
+        [
+          " ",
+          "\t Ｂ　"
+        ]
+      ],
+      "extended_text": "- 　見出し　\n　Ａ\r\n\n-  \n\t Ｂ　\n",
+      "description": " \t\n",
+      "edcb": {
+        "detail": [
+          [
+            "見出し",
+            "AB"
+          ]
+        ],
+        "description": "A"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "見出し",
+            "AB"
+          ]
+        ],
+        "description": "A"
+      },
+      "api": {
+        "detail": [
+          [
+            "見出し",
+            "AB"
+          ]
+        ],
+        "description": "A"
+      }
+    },
+    {
+      "name": "no details",
+      "entries": [],
+      "extended_text": "",
+      "description": "",
+      "edcb": {
+        "detail": [],
+        "description": ""
+      },
+      "mirakurun": {
+        "detail": [],
+        "description": ""
+      },
+      "api": {
+        "detail": [],
+        "description": ""
+      }
+    },
+    {
+      "name": "control whitespace first",
+      "entries": [
+        [
+          "\u001c",
+          "one"
+        ],
+        [
+          "",
+          "two"
+        ]
+      ],
+      "extended_text": "- \u001c\none\n- \ntwo\n",
+      "description": "",
+      "edcb": {
+        "detail": [
+          [
+            "番組内容",
+            "onetwo"
+          ]
+        ],
+        "description": "one"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "番組内容",
+            "onetwo"
+          ]
+        ],
+        "description": "one"
+      },
+      "api": {
+        "detail": [
+          [
+            "番組内容",
+            "onetwo"
+          ]
+        ],
+        "description": "one"
+      }
+    },
+    {
+      "name": "control whitespace continuation",
+      "entries": [
+        [
+          "内容",
+          "\u001cＡ\u001f"
+        ],
+        [
+          "\u001d",
+          "\u001eＢ\u001f"
+        ]
+      ],
+      "extended_text": "- 内容\n\u001cＡ\u001f\n- \u001d\n\u001eＢ\u001f\n",
+      "description": "",
+      "edcb": {
+        "detail": [
+          [
+            "内容",
+            "AB"
+          ]
+        ],
+        "description": "A"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "内容",
+            "AB"
+          ]
+        ],
+        "description": "A"
+      },
+      "api": {
+        "detail": [
+          [
+            "内容",
+            "AB"
+          ]
+        ],
+        "description": "A"
+      }
+    },
+    {
+      "name": "control whitespace description",
+      "entries": [
+        [
+          "内容",
+          "本文"
+        ]
+      ],
+      "extended_text": "- 内容\n本文\n",
+      "description": "\u001c\u001d",
+      "edcb": {
+        "detail": [
+          [
+            "内容",
+            "本文"
+          ]
+        ],
+        "description": "本文"
+      },
+      "mirakurun": {
+        "detail": [
+          [
+            "内容",
+            "本文"
+          ]
+        ],
+        "description": "本文"
+      },
+      "api": {
+        "detail": [
+          [
+            "内容",
+            "本文"
+          ]
+        ],
+        "description": "本文"
+      }
+    }
+  ]
+}
