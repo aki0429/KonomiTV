@@ -200,7 +200,7 @@ func TestAnalyzerNilProbeValidResultsStillRejectMissingStreams(t *testing.T) {
 	}{
 		{"unsupported_video", strings.ReplaceAll(nilProbeFullJSON, `"h264"`, `"vp9"`), nilProbeFullJSON},
 		{"unsupported_audio", nilProbeFullJSON, strings.ReplaceAll(nilProbeFullJSON, `"aac"`, `"ac3"`)},
-		{"unsupported_packet_size", strings.ReplaceAll(nilProbeFullJSON, `"188"`, `"192"`), nilProbeFullJSON},
+		{"unsupported_packet_size", strings.ReplaceAll(nilProbeFullJSON, `"188"`, `"204"`), nilProbeFullJSON},
 		{"scrambled_video", nilProbeFullJSON, `{"streams":[{"index":0,"codec_type":"video"},{"index":1,"codec_type":"audio","codec_name":"aac","channels":2,"sample_rate":"48000"}]}`},
 		{"scrambled_audio", nilProbeFullJSON, `{"streams":[{"index":0,"codec_type":"video","codec_name":"h264","width":1920,"height":1080,"avg_frame_rate":"30/1","r_frame_rate":"30/1"},{"index":1,"codec_type":"audio"}]}`},
 		{"absent_full_streams", `{"format":{"format_name":"mpegts","duration":"60"},"streams":[]}`, nilProbeFullJSON},

@@ -8,21 +8,23 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/tsinfo/psi"
 )
 
-// Cache each bounded source window once. PAT/SDT/NIT/TOT share the beginning;
-// PMT/PID frequency/EIT share the 20% window. Source I/O is at most 64 MiB for
-// normal analysis, regardless of table absence or number of PAT services.
+// PAT/SDT/NIT/TOT/SIT は先頭、PMT/PID頻度/EIT は20%位置の窓を共有する。
+// それぞれ正規化後32MiBまでを一度だけ読み、192バイト形式では追加ヘッダー分も必要になる。
+// 番組長未定のSITは、別途末尾から一定パケット数ずつ探索する。
 type tsinfoReadWindow struct {
 	offset int64
 	data   []byte
 }
 type tsinfoWindowReader struct {
-	windows  []tsinfoReadWindow
-	position int64
+	windows     []tsinfoReadWindow
+	position    int64
+	eventOffset *int64
 }
 
 func tsinfoReadWindows(ctx context.Context, source io.ReadSeeker, end int64) (*tsinfoWindowReader, error) {
-	r := &tsinfoWindowReader{}
-	for _, offset := range []int64{0, closestMultiple(end/5, psi.PacketSize)} {
+	eventOffset := tsinfoTwentyPercent(source, end)
+	r := &tsinfoWindowReader{eventOffset: &eventOffset}
+	for _, offset := range []int64{0, eventOffset} {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}

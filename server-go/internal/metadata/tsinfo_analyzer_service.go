@@ -41,7 +41,7 @@ func tsinfoPMTs(ctx context.Context, r io.ReadSeeker, end int64, pat *psi.PAT) (
 	}
 	found := make(map[uint16]*psi.PMT)
 	checks := 0
-	err := tsinfoScan(ctx, r, end, closestMultiple(end/5, psi.PacketSize), pids, func(s psi.Section) error {
+	err := tsinfoScan(ctx, r, end, tsinfoTwentyPercent(r, end), pids, func(s psi.Section) error {
 		pmt, err := psi.DecodePMT(s)
 		if err != nil || !pmt.Header.Current {
 			return nil
@@ -67,7 +67,7 @@ func tsinfoSelectService(ctx context.Context, r io.ReadSeeker, end int64, pat *p
 	if err != nil || len(pmts) == 0 || end < 100*psi.PacketSize {
 		return nil, err
 	}
-	offset := closestMultiple(end/5, psi.PacketSize)
+	offset := tsinfoTwentyPercent(r, end)
 	n := min(closestMultiple(6<<20, psi.PacketSize), end-offset)
 	if n < 100*psi.PacketSize {
 		return nil, nil

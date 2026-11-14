@@ -65,14 +65,14 @@ func (a *Analyzer) Analyze(ctx context.Context, path string) (*RecordedProgram, 
 		return nil, nil
 	}
 
-	// MPEG-TS の TS パケットサイズが 188 以外であれば弾く (BDAV 等は非対応)
+	// 通常TSの188とBDAVの192を受け入れ、204などは本家と同じく除外する。
 	if fullProbe.Format.FormatName == "mpegts" {
 		for _, stream := range fullProbe.Streams {
 			packetSize := stream.tsPacketSize()
 			if packetSize == nil {
 				continue
 			}
-			if size, err := strconv.Atoi(strings.TrimSpace(*packetSize)); err == nil && size != 188 {
+			if size, err := strconv.Atoi(strings.TrimSpace(*packetSize)); err == nil && size != 188 && size != 192 {
 				logger.Warn("Unsupported TS packet size detected.", "path", path, "size", size)
 				return nil, nil
 			}

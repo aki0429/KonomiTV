@@ -53,18 +53,33 @@ func (r independentTSProbeRunner) Run(ctx context.Context, name string, args []s
 	result.Stdout, err = json.Marshal(data)
 	return result, err
 }
-func TestIndependentReviewFilenameFallbackDoesNotAdoptOldTOT(t *testing.T) {
-	s := psi.PATProgram{ServiceID: 101, PMTPID: 0x100}
-	cc := map[uint16]byte{}
-	oldClock := time.Date(2020, 1, 2, 3, 4, 5, 0, constants.JST)
-	data := tsinfoPCRPacket(0x200, 90000, 0)
-	data = append(data, tsinfoPackets(0x14, tsinfoTOT(oldClock), cc)...)
-	// Repeat just PAT/SDT/PMT so both bounded windows contain service data,
-	// while no EIT is present. No broadcast or user data is involved.
-	for len(data) < 4<<20 {
-		data = append(data, tsinfoPackets(0, tsinfoPAT(1, s), cc)...)
-		data = append(data, tsinfoPackets(0x11, tsinfoSDT(1, 4, s), cc)...)
-		data = append(data, tsinfoPackets(0x100, tsinfoPMT(101, 0x200, 0x200, 0x201), cc)...)
+
+// 同じファイルのTOTは、EITがなくても更新日時と独立した録画時計として使う。
+// 本家MetadataAnalyzerを実行した結果を比較し、別ファイルのキャッシュとは区別する。
+func TestPinnedSourceFilenameFallbackUsesClockWithoutEIT(t *testing.T) {
+	data := loadBDAVFixture(t, "tot-no-eit")
+	reference, err := os.ReadFile("testdata/bdav/reference.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fixture struct {
+		Cases []struct {
+			Name     string
+			Fallback string `json:"filename_fallback_start"`
+		}
+	}
+	if err := json.Unmarshal(reference, &fixture); err != nil {
+		t.Fatal(err)
+	}
+	var expected string
+	for _, tc := range fixture.Cases {
+		if tc.Name == "tot-no-eit" {
+			expected = tc.Fallback
+		}
+	}
+	want, err := time.Parse(time.RFC3339Nano, expected)
+	if err != nil {
+		t.Fatal(err)
 	}
 	path := filepath.Join(t.TempDir(), "synthetic-fallback.ts")
 	if err := os.WriteFile(path, data, 0600); err != nil {
@@ -79,9 +94,8 @@ func TestIndependentReviewFilenameFallbackDoesNotAdoptOldTOT(t *testing.T) {
 	if err != nil || p == nil {
 		t.Fatalf("fixture failed before fallback: %v", err)
 	}
-	want := modified.Add(-time.Minute)
-	if !p.StartTime.Equal(want) || p.Video.RecordingStartTime != nil {
-		t.Fatalf("no EIT, filename fallback: expected mtime-duration=%s with unknown recording clock; got start=%s, recording_start=%v", want.Format(time.RFC3339Nano), p.StartTime.Format(time.RFC3339Nano), p.Video.RecordingStartTime)
+	if !p.StartTime.Equal(want) || p.Video.RecordingStartTime == nil || !p.Video.RecordingStartTime.Equal(want) || p.Video.RecordingEndTime == nil || !p.Video.RecordingEndTime.Equal(want.Add(time.Minute)) {
+		t.Fatalf("filename fallback differs from pinned source: expected start=%s; got start=%s, recording_start=%v", want.Format(time.RFC3339Nano), p.StartTime.Format(time.RFC3339Nano), p.Video.RecordingStartTime)
 	}
 }
 

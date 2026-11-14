@@ -20,7 +20,7 @@ const tsinfoWindowBytes int64 = 32 << 20
 
 func tsinfoChannelID(nid, sid int) string { return fmt.Sprintf("NID%d-SID%03d", nid, sid) }
 
-// TSInfoProgramAnalyzer は MPEG-TS と MPEG-4 付属の PSI/SI 書庫から番組情報を読む。
+// TSInfoProgramAnalyzer は通常TS・BDAVのSIT・MPEG-4付属のPSI/SI書庫から番組情報を読む。
 // 解析状態は呼び出しごとに持ち、録画時刻を共有の最終結果キャッシュへ残さない。
 type TSInfoProgramAnalyzer struct {
 	DB     *sql.DB
@@ -61,7 +61,29 @@ func (a *TSInfoProgramAnalyzer) AnalyzeProgramContext(ctx context.Context, video
 	if endTSOffset != nil {
 		end = min(end, *endTSOffset)
 	}
-	return a.analyzeTSInfo(ctx, f, video, end, preferredServiceID)
+	packetSize, err := tsPacketSizeAt(f)
+	if err != nil {
+		a.logFailure(err)
+		return nil, false
+	}
+	if packetSize == 192 {
+		reader := newM2TSReader(f, end)
+		return a.analyzeTSSource(ctx, reader, video, reader.end, preferredServiceID)
+	}
+	return a.analyzeTSSource(ctx, f, video, end, preferredServiceID)
+}
+
+type tsinfoClockResult struct{ start, finish *time.Time }
+
+// 番組情報が欠けても、先に取得した有効な時計は本家と同じくフォールバックへ渡す。
+// 保存先はこの呼び出しだけに所有され、共有の最終結果キャッシュには残さない。
+func (a *TSInfoProgramAnalyzer) analyzeTSSource(ctx context.Context, r io.ReadSeeker, video *RecordedVideo, end int64, preferred *int) (*RecordedProgram, bool) {
+	var clocks tsinfoClockResult
+	program, ok := a.analyzeTSInfoWithClock(ctx, r, video, end, preferred, &clocks)
+	if ctx.Err() == nil && clocks.start != nil && clocks.finish != nil {
+		video.RecordingStartTime, video.RecordingEndTime = clocks.start, clocks.finish
+	}
+	return program, ok
 }
 
 func (a *TSInfoProgramAnalyzer) logFailure(err error) {
@@ -80,6 +102,10 @@ func tsinfoScan(ctx context.Context, r io.ReadSeeker, end, offset int64, pids []
 }
 
 func (a *TSInfoProgramAnalyzer) analyzeTSInfo(ctx context.Context, r io.ReadSeeker, video *RecordedVideo, end int64, preferred *int) (*RecordedProgram, bool) {
+	return a.analyzeTSInfoWithClock(ctx, r, video, end, preferred, nil)
+}
+
+func (a *TSInfoProgramAnalyzer) analyzeTSInfoWithClock(ctx context.Context, r io.ReadSeeker, video *RecordedVideo, end int64, preferred *int, clocks *tsinfoClockResult) (*RecordedProgram, bool) {
 	if ctx == nil || video == nil || r == nil || end < psi.PacketSize || ctx.Err() != nil {
 		return nil, false
 	}
@@ -102,10 +128,16 @@ func (a *TSInfoProgramAnalyzer) analyzeTSInfo(ctx context.Context, r io.ReadSeek
 		return nil, false
 	}
 	r = cached
+	if clocks != nil && !isArchive {
+		clocks.start, clocks.finish = tsinfoRecordingTime(ctx, r, end, 0, video.Duration)
+		if clocks.start != nil && clocks.finish != nil {
+			video.RecordingStartTime, video.RecordingEndTime = clocks.start, clocks.finish
+		}
+	}
 	var pat *psi.PAT
-	var sdts []*psi.SDT
+	var serviceTables []tsinfoServiceSource
 	var nits []*psi.NIT
-	err = tsinfoScan(ctx, r, end, 0, []uint16{0, 0x10, 0x11}, func(s psi.Section) error {
+	err = tsinfoScan(ctx, r, end, 0, []uint16{0, 0x10, 0x11, 0x1f}, func(s psi.Section) error {
 		switch s.Raw[0] {
 		case 0:
 			if s.PID != 0 {
@@ -120,8 +152,16 @@ func (a *TSInfoProgramAnalyzer) analyzeTSInfo(ctx context.Context, r io.ReadSeek
 				return nil
 			}
 			v, err := psi.DecodeSDT(s)
-			if err == nil && v.Header.Current && len(sdts) < 256 {
-				sdts = append(sdts, v)
+			if err == nil && v.Header.Current && len(serviceTables) < 256 {
+				serviceTables = append(serviceTables, tsinfoServiceSource{sdt: v})
+			}
+		case 0x7f:
+			if s.PID != 0x1f {
+				return nil
+			}
+			v, err := psi.DecodeSIT(s)
+			if err == nil && v.Header.Current && len(serviceTables) < 256 {
+				serviceTables = append(serviceTables, tsinfoServiceSource{sit: v})
 			}
 		case 0x40:
 			if s.PID != 0x10 {
@@ -160,8 +200,16 @@ func (a *TSInfoProgramAnalyzer) analyzeTSInfo(ctx context.Context, r io.ReadSeek
 		}
 	}
 	var channel *Channel
-	for _, sdt := range sdts {
-		if sdt.TransportStreamID != pat.TransportStreamID {
+	for _, table := range serviceTables {
+		sdt := table.sdt
+		partial, partialRemocon := table.sit != nil, 0
+		if partial {
+			sdt, partialRemocon = tsinfoSITChannel(table.sit, sid)
+		}
+		if sdt == nil {
+			continue
+		}
+		if !partial && sdt.TransportStreamID != pat.TransportStreamID {
 			continue
 		}
 		kind := reservations.GetNetworkType(int(sdt.OriginalNetworkID))
@@ -172,12 +220,15 @@ func (a *TSInfoProgramAnalyzer) analyzeTSInfo(ctx context.Context, r io.ReadSeek
 			if service.ServiceID != sid || service.ServiceName == nil {
 				continue
 			}
-			onid, serviceID, tsid := int(sdt.OriginalNetworkID), int(sid), int(pat.TransportStreamID)
+			onid, serviceID, tsid := int(sdt.OriginalNetworkID), int(sid), int(sdt.TransportStreamID)
 			remocon := reservations.CalculateRemoconID(kind, serviceID)
 			if kind == "GR" {
-				remocon = 0
+				remocon = partialRemocon
 				found := false
 				for _, nit := range nits {
+					if partial {
+						break
+					}
 					for _, stream := range nit.TransportStreams {
 						if stream.TransportStreamID == pat.TransportStreamID && stream.OriginalNetworkID == sdt.OriginalNetworkID && stream.HasRemoteControlKeyID {
 							remocon, found = int(stream.RemoteControlKeyID), true
@@ -204,28 +255,46 @@ func (a *TSInfoProgramAnalyzer) analyzeTSInfo(ctx context.Context, r io.ReadSeek
 	if channel == nil {
 		return nil, false
 	}
-	if !isArchive {
-		pmts, err := tsinfoPMTs(ctx, r, end, pat)
-		if err != nil {
-			a.logFailure(err)
-			return nil, false
-		}
-		if pmt := pmts[sid]; pmt != nil {
-			start, finish := tsinfoRecordingTime(ctx, r, end, pmt.PCRPID, video.Duration)
-			if start != nil && finish != nil {
-				video.RecordingStartTime, video.RecordingEndTime = start, finish
-			}
+	if !isArchive && clocks == nil {
+		start, finish := tsinfoRecordingTime(ctx, r, end, 0, video.Duration)
+		if start != nil && finish != nil {
+			video.RecordingStartTime, video.RecordingEndTime = start, finish
 		}
 	}
 	var states [2]tsinfoEventState
 	var archiveStates [2]tsinfoArchiveEventState
-	offset := closestMultiple(end/5, psi.PacketSize)
+	partialSelected := false
+	offset := tsinfoTwentyPercent(r, end)
 	if isArchive {
 		offset = 0
 	}
 	visitEIT := func(s psi.Section) error {
 		if isArchive {
 			tsinfoArchiveEvent(s, video, channel, &states, &archiveStates)
+			return nil
+		}
+		if s.PID == 0x1f && len(s.Raw) > 0 && s.Raw[0] == 0x7f {
+			if states[0].program != nil {
+				return nil
+			}
+			table, err := psi.DecodeSIT(s)
+			if err != nil {
+				return nil
+			}
+			for _, service := range table.Services {
+				if !tsinfoServiceMatches(channel, service.ServiceID) {
+					continue
+				}
+				event, ok := tsinfoSITEvent(service)
+				if ok {
+					states[0].merge(video, channel, event)
+					partialSelected = true
+					break
+				}
+			}
+			return nil
+		}
+		if partialSelected {
 			return nil
 		}
 		eit, err := psi.DecodeEIT(s)
@@ -241,7 +310,7 @@ func (a *TSInfoProgramAnalyzer) analyzeTSInfo(ctx context.Context, r io.ReadSeek
 	if isArchive {
 		_, err = psi.ScanWindow(ctx, r, 0, psi.ScanOptions{MaxBytes: end, PIDs: []uint16{0x12, 0x26, 0x27}}, visitEIT)
 	} else {
-		err = tsinfoScan(ctx, r, end, offset, []uint16{0x12, 0x26, 0x27}, visitEIT)
+		err = tsinfoScan(ctx, r, end, offset, []uint16{0x12, 0x26, 0x27, 0x1f}, visitEIT)
 	}
 	if err != nil {
 		a.logFailure(err)
@@ -253,9 +322,15 @@ func (a *TSInfoProgramAnalyzer) analyzeTSInfo(ctx context.Context, r io.ReadSeek
 			return nil, false
 		}
 	}
-	// Three 8-MiB schedule probes cap total source I/O at 88 MiB.
+	if partialSelected {
+		if err := tsinfoSITEnd(ctx, source, end, offset, video, channel, &states[0]); err != nil {
+			a.logFailure(err)
+			return nil, false
+		}
+	}
+	// 通常EITの番組長未定は最大3つの追加窓を調べる。SITは上の末尾探索を使う。
 	for attempt := int64(0); attempt < 3; attempt++ {
-		if isArchive {
+		if isArchive || partialSelected {
 			break
 		}
 		unknown := false

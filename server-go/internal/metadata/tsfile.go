@@ -45,16 +45,22 @@ func calculateTSFileDuration(path string, searchBlockSize int64) (float64, int64
 		return 0, 0, false
 	}
 	defer func() { _ = file.Close() }()
+	packetSize, err := tsPacketSizeAt(file)
+	if err != nil {
+		return 0, 0, false
+	}
+	headerSize := packetSize - 188
 
 	// 先頭ブロックからの PCR 抽出
 	headData := make([]byte, searchBlockSize)
 	read, _ := io.ReadFull(file, headData)
 	headData = headData[:read]
-	if len(headData) > 0 && headData[0] != videostream.SyncByte {
+	if len(headData) > headerSize && headData[headerSize] != videostream.SyncByte {
 		correctedOffset := -1
-		for index, value := range headData {
+		for index := headerSize; index < len(headData); index++ {
+			value := headData[index]
 			if value == videostream.SyncByte {
-				correctedOffset = index
+				correctedOffset = index - headerSize
 				break
 			}
 		}
@@ -65,8 +71,8 @@ func calculateTSFileDuration(path string, searchBlockSize int64) (float64, int64
 	}
 
 	var firstTimestamp *float64
-	for index := 0; index+videostream.PacketSize <= len(headData); index += videostream.PacketSize {
-		packet := headData[index : index+videostream.PacketSize]
+	for index := 0; index+packetSize <= len(headData); index += packetSize {
+		packet := headData[index+headerSize : index+packetSize]
 		if packet[0] != videostream.SyncByte {
 			continue
 		}
@@ -116,7 +122,7 @@ func calculateTSFileDuration(path string, searchBlockSize int64) (float64, int64
 	if startOffset < 0 {
 		startOffset = 0
 	}
-	startOffset = (startOffset / videostream.PacketSize) * videostream.PacketSize
+	startOffset = (startOffset / int64(packetSize)) * int64(packetSize)
 	if _, err := file.Seek(startOffset, io.SeekStart); err != nil {
 		return 0, 0, false
 	}
@@ -125,18 +131,19 @@ func calculateTSFileDuration(path string, searchBlockSize int64) (float64, int64
 	tailChunk = tailChunk[:tailRead]
 
 	offsetInChunk := 0
-	if len(tailChunk) > 0 && tailChunk[0] != videostream.SyncByte {
-		for index, value := range tailChunk {
+	if len(tailChunk) > headerSize && tailChunk[headerSize] != videostream.SyncByte {
+		for index := headerSize; index < len(tailChunk); index++ {
+			value := tailChunk[index]
 			if value == videostream.SyncByte {
-				offsetInChunk = index
+				offsetInChunk = index - headerSize
 				break
 			}
 		}
 	}
 
 	validPCRs := []float64{}
-	for index := offsetInChunk; index+videostream.PacketSize <= len(tailChunk); index += videostream.PacketSize {
-		packet := tailChunk[index : index+videostream.PacketSize]
+	for index := offsetInChunk; index+packetSize <= len(tailChunk); index += packetSize {
+		packet := tailChunk[index+headerSize : index+packetSize]
 		if packet[0] != videostream.SyncByte {
 			continue
 		}
@@ -223,6 +230,10 @@ func calculateFileHash(path string, endTSOffset *int64) (string, error) {
 // detectTSVideoStreamChanges は録画 TS 内で映像 PID や映像コーデックが変化しているかを検出する。
 // 移植元: MetadataAnalyzer.__detectTSVideoStreamChanges()
 func detectTSVideoStreamChanges(path string, endTSOffset *int64) bool {
+	packetSize, err := detectTSPacketSize(path)
+	if err != nil {
+		return false
+	}
 	fileInfo, err := os.Stat(path)
 	if err != nil {
 		return false
@@ -232,7 +243,7 @@ func detectTSVideoStreamChanges(path string, endTSOffset *int64) bool {
 	if endTSOffset != nil && *endTSOffset < fileSize {
 		effectiveSize = *endTSOffset
 	}
-	if effectiveSize < videostream.PacketSize*100 {
+	if effectiveSize < int64(packetSize)*100 {
 		return false
 	}
 
@@ -249,15 +260,15 @@ func detectTSVideoStreamChanges(path string, endTSOffset *int64) bool {
 			if base < 0 {
 				base = 0
 			}
-			sampleOffset = closestMultiple(base, videostream.PacketSize)
+			sampleOffset = closestMultiple(base, int64(packetSize))
 		} else {
-			sampleOffset = closestMultiple(int64(float64(effectiveSize)*sampleRatio), videostream.PacketSize)
+			sampleOffset = closestMultiple(int64(float64(effectiveSize)*sampleRatio), int64(packetSize))
 		}
-		if sampleOffset > effectiveSize-videostream.PacketSize {
-			sampleOffset = closestMultiple(max(effectiveSize-videostream.PacketSize, 0), videostream.PacketSize)
+		if sampleOffset > effectiveSize-int64(packetSize) {
+			sampleOffset = closestMultiple(max(effectiveSize-int64(packetSize), 0), int64(packetSize))
 		}
-		if sampleOffset > effectiveSize-videostream.PacketSize {
-			sampleOffset = max(sampleOffset-videostream.PacketSize, 0)
+		if sampleOffset > effectiveSize-int64(packetSize) {
+			sampleOffset = max(sampleOffset-int64(packetSize), 0)
 		}
 		if selectedOffsets[sampleOffset] {
 			continue
@@ -282,7 +293,7 @@ func detectTSVideoStreamChanges(path string, endTSOffset *int64) bool {
 	return false
 }
 
-// readFirstSyncByteIsValid は録画ファイルの先頭 1 バイトが TS の sync_byte かどうかを返す。
+// readFirstSyncByteIsValid は追加ヘッダー直後が TS の sync_byte かどうかを返す。
 // 移植元: MetadataAnalyzer.analyze() の sync_byte チェック
 func readFirstSyncByteIsValid(path string) (bool, error) {
 	file, err := os.Open(path)
@@ -290,12 +301,18 @@ func readFirstSyncByteIsValid(path string) (bool, error) {
 		return false, err
 	}
 	defer func() { _ = file.Close() }()
-	buffer := make([]byte, 1)
-	if _, err := io.ReadFull(file, buffer); err != nil {
+	buffer := make([]byte, 384)
+	read, err := file.ReadAt(buffer, 0)
+	if err != nil && err != io.EOF {
+		return false, err
+	}
+	buffer = buffer[:read]
+	packetSize := tsPacketSize(buffer)
+	if len(buffer) <= packetSize-188 {
 		// 空ファイルは Python 側では IndexError → 解析失敗扱いになる
 		return false, fmt.Errorf("failed to read the first byte: %w", err)
 	}
-	return buffer[0] == videostream.SyncByte, nil
+	return buffer[packetSize-188] == videostream.SyncByte, nil
 }
 
 // extractSampleData は録画ファイルの 25% 位置から 30 秒程度 (18Mbps 想定) のデータを切り出す。
@@ -312,11 +329,15 @@ func extractSampleData(path string) ([]byte, *int64, error) {
 	}
 	defer func() { _ = file.Close() }()
 
-	offset := closestMultiple(int64(float64(fileSize)*0.25), videostream.PacketSize)
+	packetSize, err := tsPacketSizeAt(file)
+	if err != nil {
+		return nil, nil, err
+	}
+	offset := closestMultiple(int64(float64(fileSize)*0.25), int64(packetSize))
 	if _, err := file.Seek(offset, io.SeekStart); err != nil {
 		return nil, nil, err
 	}
-	sampleSize := closestMultiple(18*1024*1024*30/8, videostream.PacketSize)
+	sampleSize := closestMultiple(18*1024*1024*30/8, int64(packetSize))
 	sampleData := make([]byte, sampleSize)
 	read, _ := io.ReadFull(file, sampleData)
 	sampleData = sampleData[:read]
@@ -327,7 +348,7 @@ func extractSampleData(path string) ([]byte, *int64, error) {
 		if !ok {
 			return nil, nil, fmt.Errorf("failed to calculate duration")
 		}
-		offset = closestMultiple(int64(float64(endTSOffset)*0.25), videostream.PacketSize)
+		offset = closestMultiple(int64(float64(endTSOffset)*0.25), int64(packetSize))
 		if _, err := file.Seek(offset, io.SeekStart); err != nil {
 			return nil, nil, err
 		}
@@ -338,9 +359,9 @@ func extractSampleData(path string) ([]byte, *int64, error) {
 		sampleData = make([]byte, sampleSize)
 		read, _ = io.ReadFull(file, sampleData)
 		sampleData = sampleData[:read]
-		return sampleData, &endTSOffset, nil
+		return clearLeadingPartialAACFrames(sampleData, packetSize), &endTSOffset, nil
 	}
-	return sampleData, nil, nil
+	return clearLeadingPartialAACFrames(sampleData, packetSize), nil, nil
 }
 
 // isAllZero はバイト列が全て 0 かどうかを返す (空の場合は False = Python の all() と同じ) 。

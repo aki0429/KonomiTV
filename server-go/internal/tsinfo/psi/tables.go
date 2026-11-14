@@ -40,6 +40,8 @@ func DecodeSection(s Section) (any, error) {
 		return DecodeEIT(s)
 	case 0x73:
 		return DecodeTOT(s)
+	case 0x7f:
+		return DecodeSIT(s)
 	default:
 		return nil, ErrUnsupportedTable
 	}

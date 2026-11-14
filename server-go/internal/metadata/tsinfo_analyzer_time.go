@@ -36,7 +36,7 @@ func tsinfoRecordingTime(ctx context.Context, r io.ReadSeeker, end int64, _ uint
 	reader := bufio.NewReaderSize(io.LimitReader(r, min(end, tsinfoWindowBytes)), 32<<10)
 	// PCRPID を指定しないことで、Python と同じく全 PID の PCR を観測する。
 	// psi.Assembler は PCRPID が nil のとき a.current を全 PID で更新する。
-	assembler := psi.NewAssembler(psi.AssemblerOptions{PIDs: []uint16{0x14}})
+	assembler := psi.NewAssembler(psi.AssemblerOptions{PIDs: []uint16{0x14, 0x1f}})
 	// firstBase はファイル先頭から見て最初に観測した PCR base (90kHz, 全 PID 対象)。
 	var firstBase *uint64
 	var offset int64
@@ -62,11 +62,23 @@ func tsinfoRecordingTime(ctx context.Context, r io.ReadSeeker, end int64, _ uint
 			}
 			sections, _ := assembler.Push(packet)
 			for _, section := range sections {
-				tot, err := psi.DecodeTOT(section)
-				if err != nil || !tot.ClockValid || firstBase == nil || section.PCRAtPUSI == nil {
+				var clock time.Time
+				valid := false
+				if len(section.Raw) > 0 && section.Raw[0] == 0x7f {
+					sit, err := psi.DecodeSIT(section)
+					if err == nil {
+						clock, valid = sit.Clock, sit.ClockValid
+					}
+				} else {
+					tot, err := psi.DecodeTOT(section)
+					if err == nil {
+						clock, valid = tot.Clock, tot.ClockValid
+					}
+				}
+				if !valid || firstBase == nil || section.PCRAtPUSI == nil {
 					continue
 				}
-				start, finish := tsinfoRecordingClock(tot.Clock, *firstBase, section.PCRAtPUSI.Value.Base, duration)
+				start, finish := tsinfoRecordingClock(clock, *firstBase, section.PCRAtPUSI.Value.Base, duration)
 				if start == nil {
 					continue
 				}
