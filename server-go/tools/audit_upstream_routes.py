@@ -57,6 +57,9 @@ def audit(root: Path, ref: str) -> dict:
     # URL 全体をパスに含む web-bml は ServeMux による // 正規化を避けて直接ディスパッチする。
     for method in ("GET", "POST"):
         go_routes.add(key(method, "/api/data-broadcasting/request/{url}"))
+
+    # ServeMux の交差を避けた二変数の分岐は、image アクションだけを実装している。
+    go_routes.add(key("GET", "/api/captures/{capture_id}/image"))
     # AT URI のスラッシュを受ける Bluesky 専用 dispatcher の実装済み分岐。
     for method in ("PUT", "DELETE"):
         for action in ("like", "repost"):

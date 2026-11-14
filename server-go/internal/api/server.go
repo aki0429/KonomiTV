@@ -28,8 +28,9 @@ import (
 type Server struct {
 	config         *config.Config
 	paths          constants.Paths
-	db             *sql.DB // 読み取り専用
-	writeDB        *sql.DB // 書き込み用 (SQLite の書き込みを直列化するため別接続)
+	db             *sql.DB         // 読み取り専用
+	writeDB        *sql.DB         // 書き込み用 (SQLite の書き込みを直列化するため別接続)
+	captureCatalog *captureCatalog // キャプチャ画像の登録・保存場所の同期
 	auth           *auth.Manager
 	logger         *slog.Logger
 	iptv           *iptv.Manager
@@ -132,6 +133,7 @@ func New(options Options) (*Server, error) {
 		paths:            options.Paths,
 		db:               options.DB,
 		writeDB:          writeDB,
+		captureCatalog:   &captureCatalog{db: options.DB, writeDB: writeDB, logger: options.Logger, folders: options.Config.Capture.UploadFolders},
 		auth:             options.Auth,
 		logger:           options.Logger,
 		iptv:             iptvManager,
@@ -240,7 +242,7 @@ func (s *Server) Handler() http.Handler {
 	// キャプチャ
 	// 保存先フォルダのスキャン・EXIF メタデータの抽出・サムネイル生成・フォルダ管理を Go で行う
 	mux.HandleFunc("GET /api/captures", s.handleCaptures)
-	mux.HandleFunc("POST /api/captures", s.handleCaptureUpload)
+	mux.HandleFunc("POST /api/captures", s.handleCatalogUpload)
 	mux.HandleFunc("GET /api/captures/folders", s.handleCaptureFolderList)
 	mux.HandleFunc("POST /api/captures/folders", s.handleCaptureFolderCreate)
 	mux.HandleFunc("PUT /api/captures/folders/{folder_id}", s.handleCaptureFolderUpdate)
@@ -251,6 +253,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/captures/{filename}", s.handleCaptureImage)
 	mux.HandleFunc("DELETE /api/captures/{filename}", s.handleCaptureDelete)
 	s.registerCaptureTagRoutes(mux)
+	s.registerCaptureCatalogRoutes(mux)
 
 	// メンテナンス
 	// データベース更新 (EDCB / Mirakurun バックエンド) 、一括スキャン、バックグラウンド解析は

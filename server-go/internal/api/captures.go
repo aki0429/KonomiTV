@@ -82,6 +82,11 @@ func formatJSONTimeUTC(value time.Time) string {
 // handleCaptures はキャプチャ一覧 API (GET /api/captures) を処理する。
 // 移植元: server/app/routers/CapturesRouter.py の CaptureListAPI()
 func (s *Server) handleCaptures(w http.ResponseWriter, r *http.Request) {
+	// 旧クライアントから明示されたページ番号だけ従来形式で返す。
+	if !r.URL.Query().Has("page") && !r.URL.Query().Has("search") && r.URL.Query().Get("order") != "asc" && r.URL.Query().Get("order") != "desc" {
+		s.handleCatalogCaptures(w, r)
+		return
+	}
 	order := r.URL.Query().Get("order")
 	if order == "" {
 		order = "desc"
@@ -408,6 +413,11 @@ func (s *Server) handleCaptureFolderCaptureRemove(w http.ResponseWriter, r *http
 // handleCaptureImage はキャプチャ画像取得 API (GET /api/captures/{filename}) を処理する。
 // thumbnail=true が指定された場合は、サムネイル用に縮小した JPEG 画像を返す。
 func (s *Server) handleCaptureImage(w http.ResponseWriter, r *http.Request) {
+	// 旧形式の画像名を除き、本家と同じ数値 ID の詳細を返す。
+	if !strings.Contains(r.PathValue("filename"), ".") {
+		s.handleCatalogDetail(w, r)
+		return
+	}
 	// FastAPI はハンドラ本体より先にクエリパラメータを検証するため、ファイル存在確認 (404) より前に
 	// thumbnail の bool 検証を行い、解釈できない値なら検証エラー配列を返す
 	// (実機 Python でも GET /api/captures/sample?thumbnail=abc は 404 ではなく 422 になる) 。

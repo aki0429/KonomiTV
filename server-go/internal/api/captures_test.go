@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"image"
 	"mime/multipart"
@@ -14,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/aki0429/KonomiTV/server-go/internal/captures"
+	"github.com/aki0429/KonomiTV/server-go/internal/database"
 )
 
 // captureFixturePath はテスト用のキャプチャ画像 (EXIF メタデータ付き) のパス。
@@ -26,6 +28,10 @@ func setupCapturesTestServer(t *testing.T) (*Server, string) {
 	server, _ := newTestServer(t, "")
 	uploadFolder := t.TempDir()
 	server.config.Capture.UploadFolders = []string{uploadFolder}
+	server.captureCatalog.folders = []string{uploadFolder}
+	if err := database.EnsureSchema(context.Background(), server.writeDB); err != nil {
+		t.Fatal(err)
+	}
 	return server, uploadFolder
 }
 
@@ -52,7 +58,7 @@ func TestCapturesList(t *testing.T) {
 	}
 	handler := server.Handler()
 
-	response := doJSONRequest(t, handler, http.MethodGet, "/api/captures", "", "", "")
+	response := doJSONRequest(t, handler, http.MethodGet, "/api/captures?page=1", "", "", "")
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
 	}
@@ -227,20 +233,28 @@ func TestCaptureUpload(t *testing.T) {
 
 	// JPEG をアップロードする
 	response := uploadCapture(t, handler, "uploaded.jpg", captureFixturePath)
-	if response.Code != http.StatusNoContent {
+	if response.Code != http.StatusCreated {
 		t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
 	}
 	if _, err := os.Stat(filepath.Join(uploadFolder, "uploaded.jpg")); err != nil {
 		t.Fatalf("ファイルが保存されていません: %v", err)
 	}
 
-	// 同じファイル名を再度アップロードすると連番が付与される
+	// 同じ内容を再度アップロードした場合は、同じ ID を返し余分なファイルを作らない。
+	var first catalogCapture
+	if err := json.Unmarshal(response.Body.Bytes(), &first); err != nil {
+		t.Fatal(err)
+	}
 	response = uploadCapture(t, handler, "uploaded.jpg", captureFixturePath)
-	if response.Code != http.StatusNoContent {
+	if response.Code != http.StatusCreated {
 		t.Fatalf("status = %d", response.Code)
 	}
-	if _, err := os.Stat(filepath.Join(uploadFolder, "uploaded-1.jpg")); err != nil {
-		t.Fatalf("リネームされたファイルが保存されていません: %v", err)
+	var duplicate catalogCapture
+	if err := json.Unmarshal(response.Body.Bytes(), &duplicate); err != nil || duplicate.ID != first.ID {
+		t.Fatal("duplicate upload changed capture ID")
+	}
+	if _, err := os.Stat(filepath.Join(uploadFolder, "uploaded-1.jpg")); !os.IsNotExist(err) {
+		t.Fatal("duplicate upload created another file")
 	}
 
 	// JPEG / PNG 以外は 422
@@ -407,7 +421,7 @@ func TestCapturesResponseJSON(t *testing.T) {
 	copyCaptureFixture(t, uploadFolder, "capture.jpg")
 	handler := server.Handler()
 
-	response := doJSONRequest(t, handler, http.MethodGet, "/api/captures", "", "", "")
+	response := doJSONRequest(t, handler, http.MethodGet, "/api/captures?page=1", "", "", "")
 	body := response.Body.String()
 	// フィールドの並び順も Python 版 (schemas.Capture) と一致させる
 	expectedFields := []string{

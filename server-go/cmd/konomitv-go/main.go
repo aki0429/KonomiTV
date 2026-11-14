@@ -180,7 +180,9 @@ func main() {
 	// Python 版を併走させる移行モードでは二重監視を避け、Go 単独運転時だけ開始する。
 	monitorDone := make(chan struct{})
 	updatesDone := make(chan struct{})
+	capturesDone := make(chan struct{})
 	if *noProxy {
+		go func() { defer close(capturesDone); server.RunCaptureFolderMonitoring(ctx) }()
 		go func() {
 			defer close(monitorDone)
 			server.RunRecordedFolderMonitoring(ctx)
@@ -190,6 +192,7 @@ func main() {
 			server.RunBackgroundUpdates(ctx)
 		}()
 	} else {
+		close(capturesDone)
 		close(monitorDone)
 		close(updatesDone)
 	}
@@ -248,6 +251,11 @@ func main() {
 		logger.Warn("Background updates did not stop before shutdown timeout.")
 	}
 	// EDCB バックエンドで起動したチューナー (EpgDataCap_Bon) を全て終了する (Python 版 EDCBTuner.closeAll() 相当)
+	select {
+	case <-capturesDone:
+	case <-shutdownCtx.Done():
+		logger.Warn("Capture folder monitoring did not stop before shutdown timeout.")
+	}
 	stream.CloseAllEDCBTuners()
 	logger.Info("server stopped")
 }

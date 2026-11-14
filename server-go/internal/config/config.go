@@ -7,6 +7,7 @@ package config
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strings"
 
@@ -76,6 +77,8 @@ type VideoConfig struct {
 type CaptureConfig struct {
 	// UploadFolders はキャプチャ画像の保存先フォルダの一覧。
 	UploadFolders []string `yaml:"upload_folders"`
+	// UploadFoldersPollingInterval は Linux ネットワーク保存先の再走査間隔 (分、0 は無効)。
+	UploadFoldersPollingInterval float64 `yaml:"upload_folders_polling_interval"`
 }
 
 // IPTVConfig は iptv セクションの設定。
@@ -141,6 +144,9 @@ func Load(path string) (*Config, error) {
 
 // Validate は設定値の基本的な検証を行う。
 func (c *Config) Validate() error {
+	if c.Capture.UploadFoldersPollingInterval < 0 || math.IsNaN(c.Capture.UploadFoldersPollingInterval) || math.IsInf(c.Capture.UploadFoldersPollingInterval, 0) {
+		return fmt.Errorf("capture.upload_folders_polling_interval must be finite and nonnegative")
+	}
 	if !contains(validBackends, c.General.Backend) {
 		return fmt.Errorf("general.backend must be one of %s, but got %q", strings.Join(validBackends, ", "), c.General.Backend)
 	}
