@@ -138,7 +138,7 @@ func TestRecordedMoveRenamePreservesProgramAndDerivedData(t *testing.T) {
 			writeMoveFile(t, old)
 			source := saveMoveVideo(t, store, old, status)
 			// 実際に参照する親 ID と、ユーザー編集・解析済みデータが維持されることを検査する。
-			if _, err := store.DB.Exec(`CREATE TABLE watched_history (program_id INTEGER REFERENCES recorded_programs(id) ON DELETE CASCADE, position REAL); INSERT INTO watched_history VALUES (?,123.5); UPDATE recorded_programs SET title='edited title',is_series_manually_edited=1 WHERE id=?; UPDATE recorded_videos SET cm_sections='[{"start_time":1,"end_time":2}]',segment_map='[{"marker":"preserve"}]',thumbnail_info='{"marker":"preserve"}',missing_since='2026-10-06 00:00:00+09:00' WHERE id=?`, source.RecordedProgramID, source.RecordedProgramID, source.ID); err != nil {
+			if _, err := store.DB.Exec(`CREATE TABLE watched_history (program_id INTEGER REFERENCES recorded_programs(id) ON DELETE CASCADE, position REAL); INSERT INTO watched_history VALUES (?,123.5); UPDATE recorded_programs SET title='edited title',series_title='edited series' WHERE id=?; UPDATE recorded_videos SET cm_sections='[{"start_time":1,"end_time":2}]',segment_map='[{"marker":"preserve"}]',thumbnail_info='{"marker":"preserve"}',missing_since='2026-10-06 00:00:00+09:00' WHERE id=?`, source.RecordedProgramID, source.RecordedProgramID, source.ID); err != nil {
 				t.Fatal(err)
 			}
 			if err := os.Rename(old, path); err != nil {
@@ -150,14 +150,14 @@ func TestRecordedMoveRenamePreservesProgramAndDerivedData(t *testing.T) {
 				t.Fatal(err)
 			}
 			assertMoveIdentity(t, store, source, path)
-			var title, cm, segments, thumbnail string
+			var title, series, cm, segments, thumbnail string
 			var position float64
-			var cleared, edited bool
-			if err := store.DB.QueryRow(`SELECT p.title,p.is_series_manually_edited,v.cm_sections,v.segment_map,v.thumbnail_info,v.missing_since IS NULL,h.position FROM recorded_videos v JOIN recorded_programs p ON p.id=v.recorded_program_id JOIN watched_history h ON h.program_id=p.id WHERE v.id=?`, source.ID).Scan(&title, &edited, &cm, &segments, &thumbnail, &cleared, &position); err != nil {
+			var cleared bool
+			if err := store.DB.QueryRow(`SELECT p.title,p.series_title,v.cm_sections,v.segment_map,v.thumbnail_info,v.missing_since IS NULL,h.position FROM recorded_videos v JOIN recorded_programs p ON p.id=v.recorded_program_id JOIN watched_history h ON h.program_id=p.id WHERE v.id=?`, source.ID).Scan(&title, &series, &cm, &segments, &thumbnail, &cleared, &position); err != nil {
 				t.Fatal(err)
 			}
-			if title != "edited title" || !edited || position != 123.5 || !cleared || segments != `[{"marker":"preserve"}]` || thumbnail != `{"marker":"preserve"}` || cm != `[{"start_time":1,"end_time":2}]` || analyzer.calls.Load() != 0 {
-				t.Fatalf("modified preserved data: %q %v %v %v %q %q %q calls=%d", title, edited, position, cleared, segments, thumbnail, cm, analyzer.calls.Load())
+			if title != "edited title" || series != "edited series" || position != 123.5 || !cleared || segments != `[{"marker":"preserve"}]` || thumbnail != `{"marker":"preserve"}` || cm != `[{"start_time":1,"end_time":2}]` || analyzer.calls.Load() != 0 {
+				t.Fatalf("modified preserved data: %q %q %v %v %q %q %q calls=%d", title, series, position, cleared, segments, thumbnail, cm, analyzer.calls.Load())
 			}
 		})
 	}
