@@ -17,9 +17,7 @@ import (
 // ProgramAnalyzer は録画ファイルから番組情報・チャンネル情報を解析する。
 // 移植元: TSInfoAnalyzer
 //
-// Go 版では MPEG-TS の SDT/EIT 解析 (ARIB 仕様のデスクリプタ解析) は未移植のため、
-// 既定では nil となり番組情報はファイル名から生成される (Python 版の
-// 「SDT/EIT 解析に失敗した場合のフォールバック」と同じ経路) 。
+// 既定実装は TSInfoProgramAnalyzer。解析できなかった入力はファイル名へフォールバックする。
 type ProgramAnalyzer interface {
 	// AnalyzeProgram は録画ファイルから番組情報を解析する。
 	// 取得できなかった場合は (nil, false) を返す。
@@ -351,7 +349,7 @@ func (a *Analyzer) Analyze(ctx context.Context, path string) (*RecordedProgram, 
 	}
 	// 番組情報を取得できなかった場合、末尾の更新日時が近ければまだ録画中の可能性が高いため None を返す
 	if !analyzed {
-		if now.Sub(recordedVideo.FileModifiedAt).Seconds() < 30 {
+		if containerFormat == "MPEG-TS" && now.Sub(recordedVideo.FileModifiedAt).Seconds() < 30 {
 			logger.Warn("MPEG-TS SDT/EIT analysis failed. (still recording?)", "path", path)
 			return nil, nil
 		}

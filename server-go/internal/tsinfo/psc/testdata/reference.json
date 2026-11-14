@@ -1,0 +1,243 @@
+{
+  "source_sha256": "cc31837b5263266901b20e5f4da3f5a39f8e430835a6af0819542e8da99ed15f",
+  "cases": [
+    {
+      "name": "dictionary-carry-and-reuse",
+      "input": "UHNzYw0KmgoAAAMABAAEABgAAAAYAAAABAAAAAAAAADoAwCAAAABAPIrAQACAAIAAgAGABEAFAASAAACU0RUVE9URUlUaWdub3JlZAAQARACEAMQAAAAAFBzc2MNCpoKAAACAAIAAwAGAAAABgAAAAMAAAAAAAAA2i8AgAoAAgABEAMAEgBFSVQyABABEAIQAAAAAA==",
+      "pids": [
+        17,
+        18,
+        20
+      ],
+      "stop_after": 0,
+      "valid": true,
+      "sections": [
+        {
+          "time": 0.0,
+          "pid": 17,
+          "data": "U0RU"
+        },
+        {
+          "time": 0.0,
+          "pid": 20,
+          "data": "VE9U"
+        },
+        {
+          "time": 1.0,
+          "pid": 18,
+          "data": "RUlU"
+        },
+        {
+          "time": 1.000888888888889,
+          "pid": 20,
+          "data": "VE9U"
+        },
+        {
+          "time": 1.000888888888889,
+          "pid": 18,
+          "data": "RUlUMg=="
+        },
+        {
+          "time": 1.000888888888889,
+          "pid": 17,
+          "data": "U0RU"
+        }
+      ]
+    },
+    {
+      "name": "filter-empty",
+      "input": "UHNzYw0KmgoAAAMABAAEABgAAAAYAAAABAAAAAAAAADoAwCAAAABAPIrAQACAAIAAgAGABEAFAASAAACU0RUVE9URUlUaWdub3JlZAAQARACEAMQAAAAAA==",
+      "pids": [],
+      "stop_after": 0,
+      "valid": true,
+      "sections": []
+    },
+    {
+      "name": "clock-wrap-and-reset",
+      "input": "UHNzYw0KmgoAAAYAAQABAAYAAAAGAAAAAwAAAAAAAAAA//+/9AEAAP////8UAAAAAAEAgAAAAAADABQAV1JBUAAQABAAEAAA",
+      "pids": [
+        20
+      ],
+      "stop_after": 0,
+      "valid": true,
+      "sections": [
+        {
+          "time": 0.044444444444444446,
+          "pid": 20,
+          "data": "V1JBUA=="
+        },
+        {
+          "time": 0.02266666666666667,
+          "pid": 20,
+          "data": "V1JBUA=="
+        },
+        {
+          "time": 0.04551111111111111,
+          "pid": 20,
+          "data": "V1JBUA=="
+        }
+      ]
+    },
+    {
+      "name": "callback-stop",
+      "input": "UHNzYw0KmgoAAAMABAAEABgAAAAYAAAABAAAAAAAAADoAwCAAAABAPIrAQACAAIAAgAGABEAFAASAAACU0RUVE9URUlUaWdub3JlZAAQARACEAMQAAAAAA==",
+      "pids": [
+        17,
+        20
+      ],
+      "stop_after": 1,
+      "valid": false,
+      "sections": [
+        {
+          "time": 0.0,
+          "pid": 17,
+          "data": "U0RU"
+        }
+      ]
+    },
+    {
+      "name": "bad-reference",
+      "input": "UHNzYw0KmgoAAAIAAQABAAAAAAAAAAAAAQAAAAAAAAAAAACAAAAAAAkQABAAAAAA",
+      "pids": [
+        20
+      ],
+      "stop_after": 0,
+      "valid": false,
+      "sections": []
+    },
+    {
+      "name": "duplicate-reference",
+      "input": "UHNzYw0KmgoAAAMABAAEABgAAAAYAAAABAAAAAAAAADoAwCAAAABAPIrAQACAAIAAgAGABEAFAASAAACU0RUVE9URUlUaWdub3JlZAAQARACEAMQAAAAAFBzc2MNCpoKAAACAAIAAgAAAAAAAAAAAAEAAAAAAAAAAAAAgAAAAAAAEAAQABAAAA==",
+      "pids": [
+        17
+      ],
+      "stop_after": 0,
+      "valid": false,
+      "sections": [
+        {
+          "time": 0.0,
+          "pid": 17,
+          "data": "U0RU"
+        }
+      ]
+    },
+    {
+      "name": "bad-code",
+      "input": "UHNzYw0KmgoAAAIAAQABAAMAAAADAAAAAQAAAAAAAAAAAACAAAAAAAAAFABBAAcQAAAAAA==",
+      "pids": [
+        20
+      ],
+      "stop_after": 0,
+      "valid": false,
+      "sections": []
+    },
+    {
+      "name": "truncated-data",
+      "input": "UHNzYw0KmgoAAAMABAAEABgAAAAYAAAABAAAAAAAAADoAwCAAAABAPIrAQACAAIAAgAGABEAFA==",
+      "pids": [
+        17
+      ],
+      "stop_after": 0,
+      "valid": false,
+      "sections": []
+    },
+    {
+      "name": "truncated-trailer",
+      "input": "UHNzYw0KmgoAAAMABAAEABgAAAAYAAAABAAAAAAAAADoAwCAAAABAPIrAQACAAIAAgAGABEAFAASAAACU0RUVE9URUlUaWdub3JlZAAQARACEAMQAAAA",
+      "pids": [
+        17,
+        18,
+        20
+      ],
+      "stop_after": 0,
+      "valid": false,
+      "sections": [
+        {
+          "time": 0.0,
+          "pid": 17,
+          "data": "U0RU"
+        },
+        {
+          "time": 0.0,
+          "pid": 20,
+          "data": "VE9U"
+        },
+        {
+          "time": 1.0,
+          "pid": 18,
+          "data": "RUlU"
+        }
+      ]
+    },
+    {
+      "name": "header-only",
+      "input": "UHNzYw0KmgoAAAMABAAEABgAAAAYAAAABAAAAAAAAAA=",
+      "pids": [
+        17
+      ],
+      "stop_after": 0,
+      "valid": false,
+      "sections": []
+    },
+    {
+      "name": "empty",
+      "input": "",
+      "pids": [
+        17
+      ],
+      "stop_after": 0,
+      "valid": true,
+      "sections": []
+    },
+    {
+      "name": "short-header-is-end",
+      "input": "UHNzYw==",
+      "pids": [
+        17
+      ],
+      "stop_after": 0,
+      "valid": true,
+      "sections": []
+    },
+    {
+      "name": "unknown-header-is-end",
+      "input": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "pids": [
+        17
+      ],
+      "stop_after": 0,
+      "valid": true,
+      "sections": []
+    },
+    {
+      "name": "bad-window",
+      "input": "UHNzYw0KmgoAAAMABAAAABgAAAAYAAAABAAAAAAAAADoAwCAAAABAPIrAQACAAIAAgAGABEAFAASAAACU0RUVE9URUlUaWdub3JlZAAQARACEAMQAAAAAA==",
+      "pids": [
+        17
+      ],
+      "stop_after": 0,
+      "valid": false,
+      "sections": []
+    },
+    {
+      "name": "large-window",
+      "input": "UHNzYw0KmgoAAAMABAD//xgAAAAYAAAABAAAAAAAAADoAwCAAAABAPIrAQACAAIAAgAGABEAFAASAAACU0RUVE9URUlUaWdub3JlZAAQARACEAMQAAAAAA==",
+      "pids": [
+        17
+      ],
+      "stop_after": 0,
+      "valid": false,
+      "sections": []
+    },
+    {
+      "name": "bad-buffer-size",
+      "input": "UHNzYw0KmgoAAAMABAAEABgAAAAAAAAABAAAAAAAAADoAwCAAAABAPIrAQACAAIAAgAGABEAFAASAAACU0RUVE9URUlUaWdub3JlZAAQARACEAMQAAAAAA==",
+      "pids": [
+        17
+      ],
+      "stop_after": 0,
+      "valid": false,
+      "sections": []
+    }
+  ]
+}
