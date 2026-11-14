@@ -31,6 +31,7 @@ type Server struct {
 	db             *sql.DB         // 読み取り専用
 	writeDB        *sql.DB         // 書き込み用 (SQLite の書き込みを直列化するため別接続)
 	captureCatalog *captureCatalog // キャプチャ画像の登録・保存場所の同期
+	vacuumState    maintenanceVacuumState
 	auth           *auth.Manager
 	logger         *slog.Logger
 	iptv           *iptv.Manager
@@ -254,6 +255,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/captures/{filename}", s.handleCaptureDelete)
 	s.registerCaptureTagRoutes(mux)
 	s.registerCaptureCatalogRoutes(mux)
+	s.registerMaintenanceTaskRoutes(mux)
 
 	// メンテナンス
 	// データベース更新 (EDCB / Mirakurun バックエンド) 、一括スキャン、バックグラウンド解析は
