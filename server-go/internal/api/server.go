@@ -250,6 +250,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/captures/folders/{folder_id}/captures", s.handleCaptureFolderCaptureRemove)
 	mux.HandleFunc("GET /api/captures/{filename}", s.handleCaptureImage)
 	mux.HandleFunc("DELETE /api/captures/{filename}", s.handleCaptureDelete)
+	s.registerCaptureTagRoutes(mux)
 
 	// メンテナンス
 	// データベース更新 (EDCB / Mirakurun バックエンド) 、一括スキャン、バックグラウンド解析は
