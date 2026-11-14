@@ -1,0 +1,64 @@
+{
+  "upstream_revision": "687b904bb0a2cbb329596fd7b0368c09afe19a6c",
+  "source_sha256": "f5fd79e96a1e3a997fcdd41dfc5409a61afa1de6b5a53ff4259777dd0af203b5",
+  "av": "19.0.2",
+  "opencv": "5.0.0",
+  "numpy": "2.5.4",
+  "normalized_sha256": "2e3a501e363fed8f8a0dad5ab35c3dfbb6b8415c4e522ffa1f8aa9e1f37e496a",
+  "input_sha256": "203868e24f5c8c4fc38ed6914e2f09edf5c46037e192a40e31eea3aebdb73938",
+  "offsets": [
+    0,
+    2,
+    5,
+    6,
+    8,
+    11,
+    20
+  ],
+  "pixel_bgr": [
+    [
+      0,
+      0,
+      253
+    ],
+    [
+      0,
+      0,
+      253
+    ],
+    [
+      0,
+      0,
+      253
+    ],
+    [
+      254,
+      0,
+      0
+    ],
+    [
+      254,
+      0,
+      0
+    ],
+    [
+      254,
+      0,
+      0
+    ],
+    [
+      254,
+      0,
+      0
+    ]
+  ],
+  "expected_colors": [
+    "red",
+    "red",
+    "red",
+    "blue",
+    "blue",
+    "blue",
+    "blue"
+  ]
+}

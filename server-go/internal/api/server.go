@@ -144,9 +144,10 @@ func New(options Options) (*Server, error) {
 		writeDB:          writeDB,
 		captureCatalog:   &captureCatalog{db: options.DB, writeDB: writeDB, logger: options.Logger, folders: options.Config.Capture.UploadFolders},
 		thumbnailRenderer: &metadata.FFMpegThumbnailRenderer{
-			FFmpegPath:  options.Paths.LibraryPath("FFmpeg"),
-			LibraryPath: filepath.Dir(options.Paths.LibraryPath("FFmpeg")),
-			Logger:      options.Logger,
+			FFmpegPath:   options.Paths.LibraryPath("FFmpeg"),
+			TSReadExPath: options.Paths.LibraryPath("tsreadex"),
+			LibraryPath:  filepath.Dir(options.Paths.LibraryPath("FFmpeg")),
+			Logger:       options.Logger,
 		},
 		auth:             options.Auth,
 		logger:           options.Logger,

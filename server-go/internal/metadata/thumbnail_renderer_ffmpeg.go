@@ -68,10 +68,12 @@ func ExecCommandRunner(ctx context.Context, name string, args []string, env []st
 // TileCols x TileRows の格子に並べて 1 枚の WebP として保存する。
 // 採点用に 480x270 で抽出した同じフレームを使い、候補区間の最高得点を代表画像にする。
 //
-// HasVideoStreamChanges / ContainerFormat に応じた tsreadex 経由の抽出は別途移植する。
+// 映像ストリームが変化する MPEG-TS は tsreadex 経由で順次デコードする。
 type FFMpegThumbnailRenderer struct {
 	// FFmpegPath は FFmpeg 実行ファイルのパス (空の場合は PATH 上の "ffmpeg" を使う) 。
 	FFmpegPath string
+	// TSReadExPath は MPEG-TS の前処理ツール。空の場合は PATH 上の "tsreadex" を使う。
+	TSReadExPath string
 	// LibraryPath は FFmpeg の共有ライブラリがあるディレクトリ。
 	// 空でない場合のみ LD_LIBRARY_PATH として子プロセスに渡す (KonomiTV 同梱の ffmpeg.elf 用) 。
 	LibraryPath string
@@ -126,6 +128,12 @@ func (r *FFMpegThumbnailRenderer) Render(ctx context.Context, params ThumbnailRe
 
 	var scores []thumbnailFrameScore
 	var scoreIndices []int
+	sequential := params.HasVideoStreamChanges && params.ContainerFormat == "MPEG-TS"
+	if sequential {
+		if err := r.extractTSReadExFrames(ctx, params, offsets, temporaryDirectory); err != nil {
+			return fmt.Errorf("failed to extract frames through tsreadex: %w", err)
+		}
+	}
 	for index, offset := range offsets {
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("thumbnail rendering was canceled: %w", err)
@@ -140,15 +148,17 @@ func (r *FFMpegThumbnailRenderer) Render(ctx context.Context, params ThumbnailRe
 			"-f", "image2",
 			"-start_number", strconv.Itoa(index + 1),
 		}
-		if err := r.extractFrame(ctx, params.FilePath, offset, framePath, options); err != nil {
-			if errors.Is(err, errThumbnailFrameUnavailable) {
-				// 本家と同じく、読めなかった候補だけを黒画像にして他の候補を使う。
-				if err := writeBlackThumbnailFrame(framePath); err != nil {
-					return err
+		if !sequential {
+			if err := r.extractFrame(ctx, params.FilePath, offset, framePath, options); err != nil {
+				if errors.Is(err, errThumbnailFrameUnavailable) {
+					// 本家と同じく、読めなかった候補だけを黒画像にして他の候補を使う。
+					if err := writeBlackThumbnailFrame(framePath); err != nil {
+						return err
+					}
+					r.logger().Warn("Thumbnail frame unavailable; using black frame.", "offset", offset)
+				} else {
+					return fmt.Errorf("failed to extract frame %d/%d at %.3f sec: %w", index+1, len(offsets), offset, err)
 				}
-				r.logger().Warn("Thumbnail frame unavailable; using black frame.", "offset", offset)
-			} else {
-				return fmt.Errorf("failed to extract frame %d/%d at %.3f sec: %w", index+1, len(offsets), offset, err)
 			}
 		}
 		// 本家の判定時刻は抽出オフセットではなくタイル上の idx * interval。

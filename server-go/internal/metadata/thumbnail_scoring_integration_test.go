@@ -23,6 +23,8 @@ func TestThumbnailGeneratorUsesStoredProgramMetadata(t *testing.T) {
 	program.RecordingStartMargin, program.RecordingEndMargin = 60, 30
 	program.Genres = []Genre{{Major: "アニメ・特撮", Middle: "国内アニメ"}}
 	program.Video.HasVideoStreamChanges = true
+	serviceID := 101
+	program.ServiceID = &serviceID
 	if _, err := store.SaveRecordedMetadata(context.Background(), program, 0); err != nil {
 		t.Fatal(err)
 	}
@@ -31,11 +33,29 @@ func TestThumbnailGeneratorUsesStoredProgramMetadata(t *testing.T) {
 	if err := g.GenerateAndSave(context.Background(), program.Video.FilePath, 3600); err != nil {
 		t.Fatal(err)
 	}
-	if renderer.params.FaceDetectionMode != "Anime" || !renderer.params.HasVideoStreamChanges || renderer.params.ContainerFormat != "MPEG-TS" || !reflect.DeepEqual(renderer.params.CandidateTimeRanges, CandidateTimeRanges(3600, 60, 30)) {
+	if renderer.params.FaceDetectionMode != "Anime" || !renderer.params.HasVideoStreamChanges || renderer.params.ContainerFormat != "MPEG-TS" || renderer.params.ServiceID == nil || *renderer.params.ServiceID != 101 || !reflect.DeepEqual(renderer.params.CandidateTimeRanges, CandidateTimeRanges(3600, 60, 30)) {
 		t.Fatalf("unexpected render params: %+v", renderer.params)
 	}
 	if err := g.generateAndSave(context.Background(), program.Video.FilePath, "different-hash", 3600); err == nil {
 		t.Fatal("stale content hash accepted")
+	}
+	if _, err := store.DB.Exec(`UPDATE recorded_programs SET service_id=0`); err != nil {
+		t.Fatal(err)
+	}
+	if err := g.GenerateAndSave(context.Background(), program.Video.FilePath, 3600); err != nil {
+		t.Fatal(err)
+	}
+	if renderer.params.ServiceID == nil || *renderer.params.ServiceID != 0 {
+		t.Fatal("service ID zero was lost")
+	}
+	if _, err := store.DB.Exec(`UPDATE recorded_programs SET service_id=NULL`); err != nil {
+		t.Fatal(err)
+	}
+	if err := g.GenerateAndSave(context.Background(), program.Video.FilePath, 3600); err != nil {
+		t.Fatal(err)
+	}
+	if renderer.params.ServiceID != nil {
+		t.Fatal("null service ID became an explicit selection")
 	}
 }
 

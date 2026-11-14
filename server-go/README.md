@@ -247,7 +247,10 @@ curl http://127.0.0.77:7002/api/version
 画像採点の浮動小数点集約と色分布の Lab 丸め・k-means の固定乱数には OpenCV との差がある。
 31 画像の本家比較では人物・アニメ・補助人物の検出矩形、白黒変換、輪郭、黒帯が一致し、
 総合点の許容差は通常 0.003、アニメ 0.08 点で検証する。区間内に候補がなければ本家同様に無作為に選ぶ。
-映像 PID が途中で変化する TS の tsreadex 経由抽出と MPEG-4 の `.psc` を使う解析は引き続き移植する。
+映像 PID が途中で変化する MPEG-TS は、同梱 tsreadex のサービス選択・PID 固定を通して一度だけ順次デコードする。
+I フレームの整数 PTS と time_base から時刻を算出し、本家と同じ 1 ms の境界判定で直前の画像を選ぶ。
+末尾に届かない候補は最後の I フレーム、取得画像がない場合は黒画像で補完する。期限は 600 秒で、キャンセル時も子プロセスを回収する。
+通常経路の backward I フレーム選択・連続失敗時の打ち切りと、MPEG-4 の `.psc` を使う解析は引き続き移植する。
 同梱モデルと画像処理のライセンスは [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照。
 
 採点の比較データは固定した本家の `ThumbnailGenerator.py` の実メソッドで生成する。
@@ -257,6 +260,13 @@ curl http://127.0.0.77:7002/api/version
 ```powershell
 uv run --no-project --python 3.13 --with opencv-contrib-python-headless==5.0.0.93 --with numpy==2.5.4 python ../server-go/tools/generate_thumbnail_scoring_reference.py SOURCE.py astronaut.png
 ```
+
+順次抽出の比較データは `tools/generate_thumbnail_tsreadex_reference.py` で生成する。
+制御したフレーム 14 ケースのほか、`--normalized-media` に実 tsreadex の出力、`--media-input` に元の TS を渡すと、
+固定した本家の実メソッドを PyAV 19.0.2 で実行する。`--with av==19.0.2` を上記の依存指定に追加する。
+付属の `thumbnail_tsreadex_input.mpegts` は 640x360 / 25fps / MPEG-2 / B フレーム2枚 / GOP25 の赤・青各6秒を連結した合成データで、
+サービス101の映像PIDが256→512へ変化する。元動画・前処理出力の SHA-256 と本家が選んだ色を比較 JSON に記録する。
+実機試験は `KONOMITV_TEST_FFMPEG` と `KONOMITV_TEST_TSREADEX` を指定して有効にする。
 
 ### メンテナンス API (`/api/maintenance`)
 

@@ -81,7 +81,7 @@ python server-go/tools/audit_upstream_routes.py --ref upstream/master
 登録済みルートにも未完了の処理があるため、ルート数だけで完了と判定しない。
 
 - Twitter の実ブラウザー backend が `UnavailableBackend` のまま。
-- 映像 PID が変わる TS の tsreadex 経由サムネイル抽出、MPEG-4/PSC の解析、EDCB 名前付きパイプ受信。
+- サムネイル通常経路の backward I フレーム選択と連続失敗打ち切り、MPEG-4/PSC の解析、EDCB 名前付きパイプ受信。
 - 新しい録画監視下での初回スキャン・背景解析の完了と、残る実機動作を確認する。設定の起動時検証・巡回間隔は実装・実機導入済み。
 - 本家のクライアント更新、導入手順。
 - 実機のライブ・録画再生・保存・予約・外部アカウント連携を含む動作検証。

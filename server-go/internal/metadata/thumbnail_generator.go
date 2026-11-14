@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -29,6 +30,8 @@ type ThumbnailRenderParams struct {
 	HasVideoStreamChanges bool
 	// ContainerFormat はコンテナ形式 ("MPEG-TS" / "MPEG-4") 。
 	ContainerFormat string
+	// ServiceID は前処理で出力するサービス。nil の場合は tsreadex の自動選択を使う。
+	ServiceID *int
 
 	// TilePath はシークバー用タイル画像の出力先。
 	TilePath string
@@ -101,9 +104,10 @@ func (g *ThumbnailGenerator) generateAndSave(ctx context.Context, filePath, file
 		// 移動・再解析で別のファイルへ差し替わった場合は画像を公開しない。
 		var genres string
 		var startMargin, endMargin float64
-		if err := g.Store.DB.QueryRowContext(ctx, `SELECT rp.recording_start_margin,rp.recording_end_margin,rp.genres,rv.container_format,rv.has_video_stream_changes
+		var serviceID sql.NullInt64
+		if err := g.Store.DB.QueryRowContext(ctx, `SELECT rp.recording_start_margin,rp.recording_end_margin,rp.genres,rv.container_format,rv.has_video_stream_changes,rp.service_id
 			FROM recorded_videos rv JOIN recorded_programs rp ON rp.id=rv.recorded_program_id
-			WHERE rv.file_path=? AND rv.file_hash=?`, filePath, fileHash).Scan(&startMargin, &endMargin, &genres, &params.ContainerFormat, &params.HasVideoStreamChanges); err != nil {
+			WHERE rv.file_path=? AND rv.file_hash=?`, filePath, fileHash).Scan(&startMargin, &endMargin, &genres, &params.ContainerFormat, &params.HasVideoStreamChanges, &serviceID); err != nil {
 			return fmt.Errorf("load thumbnail program metadata: %w", err)
 		}
 		var values []Genre
@@ -112,6 +116,10 @@ func (g *ThumbnailGenerator) generateAndSave(ctx context.Context, filePath, file
 		}
 		params.CandidateTimeRanges = CandidateTimeRanges(durationSec, startMargin, endMargin)
 		params.FaceDetectionMode = DetermineFaceDetectionMode(values)
+		if serviceID.Valid {
+			id := int(serviceID.Int64)
+			params.ServiceID = &id
+		}
 	}
 	if g.Renderer == nil {
 		return fmt.Errorf("thumbnail renderer is not implemented")
