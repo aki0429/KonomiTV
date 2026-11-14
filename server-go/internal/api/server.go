@@ -20,6 +20,7 @@ import (
 	"github.com/aki0429/KonomiTV/server-go/internal/iptv"
 	"github.com/aki0429/KonomiTV/server-go/internal/jikkyo"
 	"github.com/aki0429/KonomiTV/server-go/internal/stream"
+	"github.com/aki0429/KonomiTV/server-go/internal/torne"
 	"github.com/aki0429/KonomiTV/server-go/internal/videostream"
 )
 
@@ -54,6 +55,8 @@ type Server struct {
 	updateDatabaseMu sync.Mutex
 	// jikkyoStatuses は実況チャンネルごとの最新の実況勢い (Python: JikkyoClient のクラス変数) 。
 	jikkyoStatuses epgupdate.JikkyoStatuses
+	// toruCounts は全地域の取得に成功したトル数を保持する。
+	toruCounts torne.Cache
 	// edcbUpdateSource はテスト用に差し替える EDCB クライアント (nil なら config の edcb_url に接続する) 。
 	edcbUpdateSource epgupdate.EDCBSource
 	// mirakurunSource はテスト用に差し替える Mirakurun API (nil なら config の mirakurun_url に接続する) 。
@@ -179,6 +182,8 @@ func (s *Server) Handler() http.Handler {
 	// POST /api/programs/search は EDCB バックエンド専用のため、Go 側ではバックエンドのチェックのみ行う
 	mux.HandleFunc("POST /api/programs/search", s.handleProgramSearch)
 	mux.HandleFunc("GET /api/programs/timetable", s.handleProgramTimeTable)
+	mux.HandleFunc("GET /api/programs/toru-counts", s.handleToruCounts)
+	mux.HandleFunc("GET /api/programs/toru-ranking", s.handleToruRanking)
 
 	// シリーズ番組
 	mux.HandleFunc("GET /api/series", s.handleSeriesList)

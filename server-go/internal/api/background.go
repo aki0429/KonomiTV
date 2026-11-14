@@ -15,14 +15,29 @@ func (s *Server) RunBackgroundUpdates(ctx context.Context) {
 		interval = 15
 	}
 	var workers sync.WaitGroup
-	workers.Add(2)
+	workers.Add(3)
+	catalogReady := make(chan struct{})
 	go func() {
 		defer workers.Done()
-		runPeriodicUpdate(ctx, time.Duration(interval*float64(time.Minute)), true, s.updateDatabaseNative)
+		if ctx.Err() == nil {
+			s.updateDatabaseNative(ctx)
+		}
+		close(catalogReady)
+		runPeriodicUpdate(ctx, time.Duration(interval*float64(time.Minute)), false, s.updateDatabaseNative)
 	}()
 	go func() {
 		defer workers.Done()
 		runPeriodicUpdate(ctx, 30*time.Second, false, s.updateJikkyoStatus)
+	}()
+	go func() {
+		defer workers.Done()
+		// 新規 DB でも地域を選べるよう、初回チャンネル取得の完了を待つ。
+		select {
+		case <-ctx.Done():
+			return
+		case <-catalogReady:
+		}
+		runPeriodicUpdate(ctx, 3*time.Hour, true, s.updateToruCounts)
 	}()
 	workers.Wait()
 }

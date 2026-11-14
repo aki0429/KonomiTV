@@ -399,6 +399,11 @@ func (s *Server) jikkyoChannelMap() *jikkyo.ChannelMap {
 // interlacedClientSecret は難読化されたニコニコ OAuth のクライアントシークレットを復号する。
 // server/app/utils/__init__.py の Interlaced() の移植 (static/interlaced.dat を参照する) 。
 func interlacedClientSecret(staticDir string) (string, error) {
+	return interlacedValue(staticDir, 3)
+}
+
+// interlacedValue は本家 Interlaced(n) と同じ添字で静的な API 認証情報を読み込む。
+func interlacedValue(staticDir string, index int) (string, error) {
 	value, err := os.ReadFile(filepath.Join(staticDir, "interlaced.dat"))
 	if err != nil {
 		return "", err
@@ -411,11 +416,11 @@ func interlacedClientSecret(staticDir string) (string, error) {
 	shifted := new(big.Int).Lsh(secret, 8)
 	shifted.Rsh(shifted, 43)
 	parts := strings.Split(shifted.Text(16), "abf01d")
-	if len(parts) < 3 {
+	if index < 1 || len(parts) < index {
 		return "", fmt.Errorf("failed to decode interlaced.dat")
 	}
 	// 16 進数文字列を反転してからデコードする
-	reversed := reverseString(parts[2])
+	reversed := reverseString(parts[index-1])
 	decoded, err := hex.DecodeString(reversed)
 	if err != nil {
 		return "", err

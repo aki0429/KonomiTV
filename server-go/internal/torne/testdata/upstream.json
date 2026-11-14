@@ -1,0 +1,705 @@
+{
+  "upstream_commit": "687b904bb0a2cbb329596fd7b0368c09afe19a6c",
+  "cases": [
+    {
+      "name": "regions-and-duplicates",
+      "channels": [
+        {
+          "Type": "GR",
+          "NetworkID": 10,
+          "ServiceID": 31744
+        },
+        {
+          "Type": "GR",
+          "NetworkID": 11,
+          "ServiceID": 32768
+        },
+        {
+          "Type": "BS",
+          "NetworkID": 4,
+          "ServiceID": 101
+        }
+      ],
+      "responses": {
+        "31": "0002000000000000100000000000000420000000000000027c0000010000000a7c0000000000005a7c000000000003e78000000100000002006500010000006400650002000003e8",
+        "32": "0002000000000000100000000000000320000000000000027c000001000000038000000100000014800000020000003c006500010000006400650002000003e8"
+      },
+      "expected": {
+        "NID10-SID31744-EID1": {
+          "count": 10,
+          "highlight_base": 90
+        },
+        "NID11-SID32768-EID1": {
+          "count": 20,
+          "highlight_base": 60
+        },
+        "NID4-SID101-EID1": {
+          "count": 100,
+          "highlight_base": 1000
+        },
+        "NID4-SID101-EID2": {
+          "count": 1000,
+          "highlight_base": 1000
+        },
+        "NID11-SID32768-EID2": {
+          "count": 60,
+          "highlight_base": 60
+        }
+      }
+    },
+    {
+      "name": "population-deviation",
+      "channels": [
+        {
+          "Type": "BS",
+          "NetworkID": 4,
+          "ServiceID": 101
+        }
+      ],
+      "responses": {
+        "23": "0001000000000000200000000000009600650001000020ce0065000200007b580065000300011b690065000400012c84006500050000f7fc00650006000102c00065000700004207006500080000fe8f0065000900000c920065000a0000e00a0065000b000079070065000c0000dc180065000d00017aec0065000e00004ebf0065000f00000d93006500100000d7630065001100013a3f0065001200014e9c0065001300011487006500140000c206006500150000cb4c00650016000164610065001700008ad000650018000070ce0065001900007a4d0065001a0000e9000065001b00004c910065001c00014f170065001d00010b9b0065001e0001217d0065001f00006c0d006500200000bc1a00650021000062fd006500220000ca10006500230000f635006500240000950500650025000177b10065002600003ff200650027000147d00065002800005e7c006500290001209d0065002a0000b6e70065002b00005ad80065002c0000ea2d0065002d000148920065002e0000d6f60065002f000144e60065003000014276006500310000483c006500320001384f00650033000025f2006500340000707e0065003500005df600650036000039c8006500370000ba1f0065003800010d8a0065003900005b760065003a0001476e0065003b0000ab080065003c00015c0d0065003d000047bd0065003e0000e01d0065003f000090330065004000005a350065004100004c5d006500420000c073006500430001780e00650044000087950065004500004bee00650046000073970065004700005c1f0065004800001f240065004900004cfa0065004a0000d85c0065004b0000f46b0065004c0001029c0065004d0000d96e0065004e0000b69e0065004f0000c80700650050000135470065005100004d1c006500520000aa4a0065005300013ae8006500540000b4f9006500550001360e0065005600018689006500570000b9730065005800010d9800650059000069390065005a0000f95f0065005b0000fc8f0065005c00004f0b0065005d0000a4a10065005e0000fc530065005f00003f2700650060000163690065006100010654006500620001453e0065006300017edc006500640000ebad0065006500007c60006500660000e056006500670001096f006500680000bda000650069000082300065006a000068200065006b000137110065006c000121ff0065006d0000fd670065006e0000e8dc0065006f0001323c006500700001594d0065007100006425006500720001535e0065007300000e7500650074000166220065007500016b98006500760000c490006500770000a6e900650078000061c5006500790000dd4f0065007a00015a8a0065007b0000d9760065007c00004f070065007d0001002e0065007e000083be0065007f000111fa006500800000b375006500810000be30006500820000582c006500830000060b0065008400003817006500850000cf7c0065008600005a1300650087000150d8006500880000e0b0006500890000dd8f0065008a00003bd50065008b00003fcc0065008c000170610065008d000078a60065008e0000e1640065008f00004b02006500900001099800650091000069810065009200017b05006500930000567000650094000104060065009500013a490065009600016700"
+      },
+      "expected": {
+        "NID4-SID101-EID1": {
+          "count": 8398,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID2": {
+          "count": 31576,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID3": {
+          "count": 72553,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID4": {
+          "count": 76932,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID5": {
+          "count": 63484,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID6": {
+          "count": 66240,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID7": {
+          "count": 16903,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID8": {
+          "count": 65167,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID9": {
+          "count": 3218,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID10": {
+          "count": 57354,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID11": {
+          "count": 30983,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID12": {
+          "count": 56344,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID13": {
+          "count": 97004,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID14": {
+          "count": 20159,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID15": {
+          "count": 3475,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID16": {
+          "count": 55139,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID17": {
+          "count": 80447,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID18": {
+          "count": 85660,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID19": {
+          "count": 70791,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID20": {
+          "count": 49670,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID21": {
+          "count": 52044,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID22": {
+          "count": 91233,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID23": {
+          "count": 35536,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID24": {
+          "count": 28878,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID25": {
+          "count": 31309,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID26": {
+          "count": 59648,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID27": {
+          "count": 19601,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID28": {
+          "count": 85783,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID29": {
+          "count": 68507,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID30": {
+          "count": 74109,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID31": {
+          "count": 27661,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID32": {
+          "count": 48154,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID33": {
+          "count": 25341,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID34": {
+          "count": 51728,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID35": {
+          "count": 63029,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID36": {
+          "count": 38149,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID37": {
+          "count": 96177,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID38": {
+          "count": 16370,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID39": {
+          "count": 83920,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID40": {
+          "count": 24188,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID41": {
+          "count": 73885,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID42": {
+          "count": 46823,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID43": {
+          "count": 23256,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID44": {
+          "count": 59949,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID45": {
+          "count": 84114,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID46": {
+          "count": 55030,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID47": {
+          "count": 83174,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID48": {
+          "count": 82550,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID49": {
+          "count": 18492,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID50": {
+          "count": 79951,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID51": {
+          "count": 9714,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID52": {
+          "count": 28798,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID53": {
+          "count": 24054,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID54": {
+          "count": 14792,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID55": {
+          "count": 47647,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID56": {
+          "count": 69002,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID57": {
+          "count": 23414,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID58": {
+          "count": 83822,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID59": {
+          "count": 43784,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID60": {
+          "count": 89101,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID61": {
+          "count": 18365,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID62": {
+          "count": 57373,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID63": {
+          "count": 36915,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID64": {
+          "count": 23093,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID65": {
+          "count": 19549,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID66": {
+          "count": 49267,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID67": {
+          "count": 96270,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID68": {
+          "count": 34709,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID69": {
+          "count": 19438,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID70": {
+          "count": 29591,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID71": {
+          "count": 23583,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID72": {
+          "count": 7972,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID73": {
+          "count": 19706,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID74": {
+          "count": 55388,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID75": {
+          "count": 62571,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID76": {
+          "count": 66204,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID77": {
+          "count": 55662,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID78": {
+          "count": 46750,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID79": {
+          "count": 51207,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID80": {
+          "count": 79175,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID81": {
+          "count": 19740,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID82": {
+          "count": 43594,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID83": {
+          "count": 80616,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID84": {
+          "count": 46329,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID85": {
+          "count": 79374,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID86": {
+          "count": 99977,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID87": {
+          "count": 47475,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID88": {
+          "count": 69016,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID89": {
+          "count": 26937,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID90": {
+          "count": 63839,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID91": {
+          "count": 64655,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID92": {
+          "count": 20235,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID93": {
+          "count": 42145,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID94": {
+          "count": 64595,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID95": {
+          "count": 16167,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID96": {
+          "count": 90985,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID97": {
+          "count": 67156,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID98": {
+          "count": 83262,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID99": {
+          "count": 98012,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID100": {
+          "count": 60333,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID101": {
+          "count": 31840,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID102": {
+          "count": 57430,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID103": {
+          "count": 67951,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID104": {
+          "count": 48544,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID105": {
+          "count": 33328,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID106": {
+          "count": 26656,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID107": {
+          "count": 79633,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID108": {
+          "count": 74239,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID109": {
+          "count": 64871,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID110": {
+          "count": 59612,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID111": {
+          "count": 78396,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID112": {
+          "count": 88397,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID113": {
+          "count": 25637,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID114": {
+          "count": 86878,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID115": {
+          "count": 3701,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID116": {
+          "count": 91682,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID117": {
+          "count": 93080,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID118": {
+          "count": 50320,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID119": {
+          "count": 42729,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID120": {
+          "count": 25029,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID121": {
+          "count": 56655,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID122": {
+          "count": 88714,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID123": {
+          "count": 55670,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID124": {
+          "count": 20231,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID125": {
+          "count": 65582,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID126": {
+          "count": 33726,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID127": {
+          "count": 70138,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID128": {
+          "count": 45941,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID129": {
+          "count": 48688,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID130": {
+          "count": 22572,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID131": {
+          "count": 1547,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID132": {
+          "count": 14359,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID133": {
+          "count": 53116,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID134": {
+          "count": 23059,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID135": {
+          "count": 86232,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID136": {
+          "count": 57520,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID137": {
+          "count": 56719,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID138": {
+          "count": 15317,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID139": {
+          "count": 16332,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID140": {
+          "count": 94305,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID141": {
+          "count": 30886,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID142": {
+          "count": 57700,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID143": {
+          "count": 19202,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID144": {
+          "count": 67992,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID145": {
+          "count": 27009,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID146": {
+          "count": 97029,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID147": {
+          "count": 22128,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID148": {
+          "count": 66566,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID149": {
+          "count": 80457,
+          "highlight_base": 99977
+        },
+        "NID4-SID101-EID150": {
+          "count": 91904,
+          "highlight_base": 99977
+        }
+      }
+    },
+    {
+      "name": "low-counts",
+      "channels": [
+        {
+          "Type": "CS",
+          "NetworkID": 6,
+          "ServiceID": 333
+        }
+      ],
+      "responses": {
+        "23": "00010000000000005000000000000003014d000100000000014d000200000001014d000300000001"
+      },
+      "expected": {
+        "NID6-SID333-EID1": {
+          "count": 0,
+          "highlight_base": null
+        },
+        "NID6-SID333-EID2": {
+          "count": 1,
+          "highlight_base": null
+        },
+        "NID6-SID333-EID3": {
+          "count": 1,
+          "highlight_base": null
+        }
+      }
+    },
+    {
+      "name": "unsupported",
+      "channels": [
+        {
+          "Type": "CATV",
+          "NetworkID": 20,
+          "ServiceID": 1
+        }
+      ],
+      "responses": {},
+      "expected": {}
+    }
+  ]
+}

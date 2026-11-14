@@ -14,6 +14,30 @@ type ProgramDateRange struct {
 	Latest   *time.Time
 }
 
+// ListUnfinishedPrograms はトル数ランキングの対象番組を本家の DB 順序で返す。
+func ListUnfinishedPrograms(ctx context.Context, db *sql.DB, now time.Time, channelType string) ([]*Program, error) {
+	query := `SELECT` + programColumns + `FROM programs WHERE end_time > ?`
+	args := []any{FormatDBTime(now)}
+	if channelType != "" {
+		query += ` AND channel_id IN (SELECT id FROM channels WHERE type = ?)`
+		args = append(args, channelType)
+	}
+	rows, err := db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list unfinished programs: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	programs := []*Program{}
+	for rows.Next() {
+		program, err := scanProgram(rows.Scan)
+		if err != nil {
+			return nil, fmt.Errorf("scan unfinished program: %w", err)
+		}
+		programs = append(programs, program)
+	}
+	return programs, rows.Err()
+}
+
 // GetProgramDateRange は番組データの最も早い開始日時と最も遅い終了日時を取得する。
 // 番組がない場合は nil になる。
 func GetProgramDateRange(ctx context.Context, db *sql.DB) (*ProgramDateRange, error) {

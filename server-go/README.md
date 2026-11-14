@@ -22,6 +22,7 @@ KonomiTV のバックエンド (Python / FastAPI) を段階的に Go へ移行�
 | `GET /api/channels/{channel_id}/jikkyo` (ニコニコ実況 WebSocket URL) | ✅ Go 実装済み (ニコニコアカウント連携時のニコ生セッション取得・トークン更新含む) |
 | `GET /api/channels` (チャンネル一覧、現在/次の番組・IPTV 疑似チャンネル含む) | ✅ Go 実装済み |
 | `GET /api/programs/timetable` (番組表) | ✅ Go 実装済み (EDCB の録画中・無効・競合状態、EID 不一致時の時間照合を含む) |
+| `GET /api/programs/toru-counts`・`GET /api/programs/toru-ranking` | Go 実装済み (本家 TorneClient の合成実行結果と照合。初回 EPG 更新後と 3 時間ごとに取得) |
 | `POST /api/programs/search` (番組検索) | 🚧 Go native 完成候補 (EDCB 以外は 422。`-no-proxy` 時は SearchPg 1025、有効時は既存 Python 転送を維持。実機・親受入れ未実施) |
 | `GET /api/series`・`GET /api/series/search`・`GET /api/series/{series_id}` (シリーズ番組) | ✅ Go 実装済み (録画番組・録画ファイル・チャンネルまで展開) |
 | `GET /api/iptv/channels`・`/countries`・`/groups`・`/playlist.m3u` (IPTV チャンネル一覧・国・グループ・プレイリスト出力) | ✅ Go 実装済み (実データ 11152 チャンネルで Python 版と完全一致を検証済み) |
