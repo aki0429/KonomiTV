@@ -3,7 +3,11 @@
 対象: `tsukumijima/KonomiTV` master `687b904bb0a2cbb329596fd7b0368c09afe19a6c` (2026-11-14)。
 完全移植は作業中。README の過去の「実装済み」は実機確認・現行本家との機能一致を保証しない。
 
-## EDCB のローカルパイプ受信
+## EDCB のローカルパイプ受信 (a9d40ba4)
+
+ソース `a9d40ba4c746b29261314213381823da6b335ebe` は GitHub へ push し、Linux 実機へ導入した。
+バイナリ SHA-256 は `30905fa48a4acd7141af8fc235655636ce18facba094a3a0e36c9a2c369d213a`。
+revision・`CGO_ENABLED=0`・`vcs.modified=false` を照合した。
 
 本家の EDCBUtil.openPipeStream、PipeStreamReader、EDCBTuner.connect/disconnect と
 CtrlCmdUtil.__sendAndReceive を読み、Windows の名前付きパイプと Linux の FIFO を実装した。
@@ -24,6 +28,13 @@ Windows の制御パイプにも期限と中止を適用し、分割ヘッダー
 - 実機上の専用65秒 BDAV映像 10,166,016bytes を FIFO 経由で転送した。転送前後の SHA-256 は
   `81fba087c48711a7dbb8bd41286fc40a6b3364ec511b6527da3d27befc8d1c7a` で一致し、実FFmpegで映像・音声をデコードした。
 - 実際の EDCB アプリとのローカルパイプ接続は未確認。稼働中の設定は既存の TCP モードを維持する。
+- コピーDBの425チャンネル・5,087録画・1ユーザーを保持し、680予約を確認した。
+  反映前後で録画10PID・10ファイルを保持し、全ファイルの増加を確認した。
+  バックアップは `/home/akki/konomitv-go/backups/native-updates-20261114172423`。
+  Go PID2466286、HTTPS PID3416、証明書検証付きHTTPS200、2キャプチャのハッシュ・保守状態APIは正常。
+  再起動直後は一時的に負荷制限scope外だったが、既存の自動適用後に本体・補助プロセスと
+  両録画ディスクの10MB/秒制限を照合した。設定変更による再適用は行っていない。
+  起動時走査203/5,087の時点で継続中であり完了ではない。Missing1,009とAnalysisFailed4は不変。
 
 Twitter ブラウザーbackend、本家クライアントと導入手順、残りの実機検証は継続する。
 過去の各節に記載した未対応項目は当該リリース時点の記録であり、現在の進捗は冒頭の新しい節を優先する。
