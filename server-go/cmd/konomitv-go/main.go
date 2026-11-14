@@ -106,22 +106,29 @@ func main() {
 		accessLogWriters = append(accessLogWriters, accessLogWriter)
 	}
 
-	// ***** データベースのオープン (読み取り専用) *****
-
-	db, err := database.OpenReadOnly(paths.DatabasePath)
-	if err != nil {
-		logger.Error("failed to open database", slog.Any("error", err))
+	// ***** 本家互換 DB の作成・追加項目の移行 *****
+	if err := os.MkdirAll(paths.DataDir, 0o755); err != nil {
+		logger.Error("failed to create data directory", slog.Any("error", err))
 		os.Exit(1)
 	}
-	defer func() { _ = db.Close() }()
-
-	// 書き込み用接続 (ユーザーの作成・更新・削除などで使う) 。SQLite の書き込みは直列化する。
 	writeDB, err := database.OpenReadWrite(paths.DatabasePath)
 	if err != nil {
 		logger.Error("failed to open database for writing", slog.Any("error", err))
 		os.Exit(1)
 	}
 	defer func() { _ = writeDB.Close() }()
+	if err := database.EnsureSchema(context.Background(), writeDB); err != nil {
+		logger.Error("failed to initialize upstream database schema", slog.Any("error", err))
+		os.Exit(1)
+	}
+
+	// 読み取り専用接続を分離し、通常の API から誤って書き込めないようにする。
+	db, err := database.OpenReadOnly(paths.DatabasePath)
+	if err != nil {
+		logger.Error("failed to open database", slog.Any("error", err))
+		os.Exit(1)
+	}
+	defer func() { _ = db.Close() }()
 
 	// ***** 認証マネージャーの初期化 *****
 
@@ -251,7 +258,7 @@ func main() {
 //  1. -server-dir フラグ
 //  2. KONOMITV_SERVER_DIR 環境変数
 //  3. カレントディレクトリまたは実行ファイルのディレクトリから上方に辿り、
-//     config.yaml と server/app/ の両方が存在するリポジトリルートを探す
+//     config.yaml と server/ の両方が存在する配布ルートを探す
 func detectServerDir(flagValue string) (string, error) {
 	if flagValue != "" {
 		absolute, err := filepath.Abs(flagValue)
@@ -295,7 +302,7 @@ func detectServerDir(flagValue string) (string, error) {
 	)
 }
 
-// findRepoRoot は start から上方に辿り、リポジトリルート (config.yaml と server/app/ が存在するディレクトリ) を探す。
+// findRepoRoot は設定と server/ を持つ配布ルートを探す。Python ソースの存在は要求しない。
 func findRepoRoot(start string) string {
 	directory, err := filepath.Abs(start)
 	if err != nil {
@@ -303,7 +310,7 @@ func findRepoRoot(start string) string {
 	}
 	for depth := 0; depth < 6; depth++ {
 		hasConfig := isRegularFile(filepath.Join(directory, "config.yaml"))
-		hasServer := isDirectory(filepath.Join(directory, "server", "app"))
+		hasServer := isDirectory(filepath.Join(directory, "server"))
 		if hasConfig && hasServer {
 			return directory
 		}

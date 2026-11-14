@@ -471,7 +471,7 @@ func TestProxyTargetErrorsDoNotExposeCredentials(t *testing.T) {
 }
 
 // -no-proxy は明示 backend より優先され、自己転送 guard を通過して DB に到達する。
-// DB を用意しない fixture で必ず終了させ、本物のサーバーや実機にはアクセスしない。
+// DB と同名のディレクトリを置く fixture で必ず終了させ、本物のサーバーや実機にはアクセスしない。
 func TestMainNoProxyOverridesExplicitBackend(t *testing.T) {
 	const childFlag = "KONOMITV_TEST_NO_PROXY_MAIN"
 	if os.Getenv(childFlag) == "1" {
@@ -488,6 +488,10 @@ func TestMainNoProxyOverridesExplicitBackend(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "config.yaml"), []byte("server:\n  port: 7000\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	// 空 DB は Go が新規作成できるため、開けないパスを明示して検証後に停止させる。
+	if err := os.MkdirAll(filepath.Join(serverDir, "data", "database.sqlite"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestMainNoProxyOverridesExplicitBackend$")
@@ -497,7 +501,7 @@ func TestMainNoProxyOverridesExplicitBackend(t *testing.T) {
 		t.Fatalf("isolated main did not terminate at database initialization: %s", output)
 	}
 	if err == nil {
-		t.Fatalf("fixture without a database must stop at database initialization: %s", output)
+		t.Fatalf("fixture with an unopenable database path must stop at database initialization: %s", output)
 	}
 	if strings.Contains(string(output), "Invalid proxy configuration") || strings.Contains(string(output), "points to this Go listener") {
 		t.Fatalf("-no-proxy did not override explicit self backend: %s", output)
