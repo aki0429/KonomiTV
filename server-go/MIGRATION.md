@@ -3,9 +3,12 @@
 対象: `tsukumijima/KonomiTV` master `687b904bb0a2cbb329596fd7b0368c09afe19a6c` (2026-11-14)。
 完全移植は作業中。README の過去の「実装済み」は実機確認・現行本家との機能一致を保証しない。
 
-## Twitter の実ブラウザー処理
+## Twitter の実ブラウザー処理 (766f3300)
 
-既定の `UnavailableBackend` を実ブラウザーへ置き換えた完成候補。
+ソース `766f330051abbea930aa656cd168a56ef807f161` は GitHub へ push し、Linux 実機へ導入した。
+バイナリSHA-256は `ad4af780144eb4249b59566f895e3dc78035248dd7c2fb2cd319ce5903d68dd3`。
+revision・`CGO_ENABLED=0`・`vcs.modified=false` を照合した。
+既定の `UnavailableBackend` を実ブラウザーへ置き換えた。
 Go の CDP 通信で Chrome / Brave を起動し、一時プロファイル・Cookie復号・UA/言語/時差の復元、
 main.js のブレークポイントと本家 `zendriver_setup.js` の注入、GraphQL呼び出しを実装した。
 投稿は本家から抽出した9個のJS式と、モーダル・paste・画像・返信先・Ctrl+Enterの手順を使う。
@@ -34,6 +37,14 @@ PythonのRuffは成功。Windowsのtaskipy区切り文字問題と既存Pyright4
 計算したSHA-256は `9223832977a13db3646201b1341c1f9cf08afa3ceae92540116d7b0c062364fb`。
 不足していたUbuntuのライブラリ2種と日本語フォントも専用ディレクトリに展開した。
 既存のChrome用AppArmorプロファイルで起動し、Chromeのサンドボックスは有効なまま。
+
+コピーDBの425チャンネル・5,106録画・1ユーザーを保持し、680予約を確認した。
+反映前後で録画10PID・10ファイルを保持し、全ファイルの増加を確認した。
+バックアップは `/home/akki/konomitv-go/backups/native-updates-20261114185035`。
+Go PID2508306、HTTPS PID3416、両録画ディスクの読取10MB/秒制限を本体と補助プロセスで確認した。
+証明書検証付きHTTPS200、未認証のTwitter取得401、2キャプチャのハッシュと保守状態APIは正常。
+起動時走査102/5,106・背景解析2,634/4,067の時点で継続中であり完了ではない。
+Missing1,021とAnalysisFailed4は反映直後の確認前後で不変。Recording14→15は進行中の録画の追加。
 
 本家クライアントと導入手順の更新、残りの実機確認と全体監査は継続する。
 
