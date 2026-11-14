@@ -17,18 +17,18 @@ func (s *Server) handleClientSettings(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	// Python 版は response_model (Pydantic の ClientSettings) を通してから返すため、DB に保存された
-	// JSON が空でも既定値で補完された完全な設定が返る。Go 版も同じ形にするため、保存値を
-	// 既定値とマージし、Python 版のフィールド定義順・数値形式で出力する。
-	stored := map[string]any{}
-	if err := json.Unmarshal([]byte(currentUser.ClientSettings), &stored); err != nil {
-		// Python 版 (Tortoise の JSONField) は壊れた値・空文字を空の設定として扱うため、同じく空にする
-		stored = map[string]any{}
+	// 保存済みの値も本家の response_model と同じ型検査・既定値補完を通す。
+	// 壊れた保存値を黙って既定値へ戻さず、サーバー側のエラーとして返す。
+	stored, details := config.ValidateClientSettingsJSON([]byte(currentUser.ClientSettings))
+	if len(details) > 0 {
+		s.logger.Error("[ClientSettingsAPI] Stored client settings are invalid.")
+		writeSettingsInternalError(w)
+		return
 	}
-	serialized, err := config.MarshalClientSettings(config.MergeClientSettings(stored))
-	if err != nil {
+	serialized, err := config.MarshalClientSettingsResponse(stored)
+	if err != nil || !json.Valid([]byte(serialized)) {
 		s.logger.Error("[ClientSettingsAPI] Failed to serialize the client settings.", "error", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		writeSettingsInternalError(w)
 		return
 	}
 	writeRawJSON(w, http.StatusOK, serialized)
@@ -37,51 +37,77 @@ func (s *Server) handleClientSettings(w http.ResponseWriter, r *http.Request) {
 // handleClientSettingsUpdate はクライアント設定更新 API (PUT /api/settings/client) を処理する。
 // 現在ログイン中のユーザーアカウントのクライアント設定を更新する。
 func (s *Server) handleClientSettingsUpdate(w http.ResponseWriter, r *http.Request) {
+	// ボディを JSON として読み込む
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "There was an error parsing the body")
+		return
+	}
+	clientSettings, details := config.ValidateClientSettingsBody(body, r.Header.Get("Content-Type"))
+	// FastAPI は JSON の構文エラーを依存関係より先に返し、型検査は認証の後で返す。
+	if len(details) > 0 && details[0].Type == "body_error" {
+		writeError(w, http.StatusBadRequest, details[0].Msg)
+		return
+	}
+	if len(details) > 0 && details[0].Type == "json_invalid" {
+		s.writeSettingsValidation(w, details)
+		return
+	}
 	currentUser, ok := s.requireCurrentUser(w, r)
 	if !ok {
 		return
 	}
-
-	// ボディを JSON として読み込む
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		writeError(w, http.StatusUnprocessableEntity, "Invalid JSON body")
+	if len(details) > 0 {
+		s.writeSettingsValidation(w, details)
 		return
 	}
-	var requestBody map[string]any
-	if err := json.Unmarshal(body, &requestBody); err != nil {
-		writeError(w, http.StatusUnprocessableEntity, "Invalid JSON body")
-		return
-	}
-
-	// Pydantic の ClientSettings と同じく、不足している項目をデフォルト値で補完し、未知の項目は無視する
-	clientSettings := config.MergeClientSettings(requestBody)
 
 	// 現在サーバーに保存されているクライアント設定の最終同期時刻よりも古いクライアント設定が送られてきた場合、エラーを返す。
 	lastSyncedAt, _ := numberField(clientSettings, "last_synced_at")
-	var stored map[string]any
-	if err := json.Unmarshal([]byte(currentUser.ClientSettings), &stored); err == nil {
-		if storedLastSyncedAt, ok := numberField(config.MergeClientSettings(stored), "last_synced_at"); ok && lastSyncedAt < storedLastSyncedAt {
-			s.logger.Error("[ClientSettingsUpdateAPI] Client settings are outdated!",
-				"last_synced_at", lastSyncedAt, "stored_last_synced_at", storedLastSyncedAt)
-			writeError(w, http.StatusUnprocessableEntity,
-				"The client settings are outdated. Please update the client settings from the server.")
-			return
-		}
+	stored, storedDetails := config.ValidateClientSettingsJSON([]byte(currentUser.ClientSettings))
+	if len(storedDetails) > 0 {
+		s.logger.Error("[ClientSettingsUpdateAPI] Stored client settings are invalid.")
+		writeSettingsInternalError(w)
+		return
+	}
+	if storedLastSyncedAt, ok := numberField(stored, "last_synced_at"); ok && lastSyncedAt < storedLastSyncedAt {
+		s.logger.Error("[ClientSettingsUpdateAPI] Client settings are outdated!",
+			"last_synced_at", lastSyncedAt, "stored_last_synced_at", storedLastSyncedAt)
+		writeError(w, http.StatusUnprocessableEntity,
+			"The client settings are outdated. Please update the client settings from the server.")
+		return
 	}
 
 	// クライアント設定を保存する (Tortoise の JSONField と同じくコンパクトな JSON として保存する) 。
 	serialized, err := config.MarshalClientSettings(clientSettings)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		writeSettingsInternalError(w)
 		return
 	}
 	if err := database.UpdateUserClientSettings(r.Context(), s.writeDB, currentUser.ID, serialized); err != nil {
 		s.logger.Error("[ClientSettingsUpdateAPI] Failed to save the client settings.", "error", err)
-		writeError(w, http.StatusInternalServerError, "Internal Server Error")
+		writeSettingsInternalError(w)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// writeSettingsValidation は全項目の検証エラーを本家と同じ detail 配列で返す。
+func (s *Server) writeSettingsValidation(w http.ResponseWriter, details []config.SettingsValidationError) {
+	data, err := config.SettingsValidationJSON(details)
+	if err != nil {
+		s.logger.Error("Failed to encode settings validation errors.", "error", err)
+		writeSettingsInternalError(w)
+		return
+	}
+	writeRawJSON(w, http.StatusUnprocessableEntity, string(data))
+}
+
+// writeSettingsInternalError は本家の未処理例外・応答モデル検証失敗と同じ 500 応答を返す。
+func writeSettingsInternalError(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusInternalServerError)
+	_, _ = io.WriteString(w, "Internal Server Error")
 }
 
 // handleServerSettings はサーバー設定取得 API (GET /api/settings/server) を処理する。

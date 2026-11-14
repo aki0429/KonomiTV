@@ -764,6 +764,21 @@ func encodePythonJSON(value any, keyOrder map[string][]string, path string) (str
 // writePythonJSON は encodePythonJSON の実装。
 func writePythonJSON(builder *strings.Builder, value any, keyOrder map[string][]string, path string) error {
 	switch typed := value.(type) {
+	case settingsResponseFloat:
+		builder.WriteString(formatSettingsResponseFloat(float64(typed)))
+	case settingsOrderedObject:
+		builder.WriteByte('{')
+		for index, key := range typed.keys {
+			if index > 0 {
+				builder.WriteByte(',')
+			}
+			builder.WriteString(encodeJSONString(key))
+			builder.WriteByte(':')
+			if err := writePythonJSON(builder, typed.values[key], keyOrder, path+"."+key); err != nil {
+				return err
+			}
+		}
+		builder.WriteByte('}')
 	case nil:
 		builder.WriteString("null")
 	case bool:

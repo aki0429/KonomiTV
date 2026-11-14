@@ -1,0 +1,876 @@
+{
+  "upstream_commit": "687b904bb0a2cbb329596fd7b0368c09afe19a6c",
+  "source_sha256": "3baf9b79644eb64475cd547861e7b552758f055dd5f85668602207a83f11fc24",
+  "runtime": {
+    "fastapi": "0.162.0",
+    "pydantic": "2.14.3",
+    "starlette": "1.10.0",
+    "tortoise-orm": "1.1.9",
+    "httpx": "0.28.1",
+    "python": "3.13.16"
+  },
+  "models": {
+    "ClientSettings": {
+      "schema": {
+        "properties": {
+          "last_synced_at": {
+            "default": 0.0,
+            "title": "Last Synced At",
+            "type": "number"
+          },
+          "saved_twitter_hashtags": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Saved Twitter Hashtags",
+            "type": "array"
+          },
+          "mylist": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Mylist",
+            "type": "array"
+          },
+          "watched_history": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Watched History",
+            "type": "array"
+          },
+          "pinned_channel_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Pinned Channel Ids",
+            "type": "array"
+          },
+          "timetable_channel_width": {
+            "default": "Normal",
+            "enum": [
+              "Wide",
+              "Normal",
+              "Narrow"
+            ],
+            "title": "Timetable Channel Width",
+            "type": "string"
+          },
+          "timetable_hour_height": {
+            "default": "Normal",
+            "enum": [
+              "Wide",
+              "Normal",
+              "Narrow"
+            ],
+            "title": "Timetable Hour Height",
+            "type": "string"
+          },
+          "timetable_hover_expand": {
+            "default": false,
+            "title": "Timetable Hover Expand",
+            "type": "boolean"
+          },
+          "timetable_dim_shopping_programs": {
+            "default": true,
+            "title": "Timetable Dim Shopping Programs",
+            "type": "boolean"
+          },
+          "timetable_genre_colors": {
+            "additionalProperties": {
+              "enum": [
+                "White",
+                "Pink",
+                "Red",
+                "Orange",
+                "Yellow",
+                "Lime",
+                "Teal",
+                "Cyan",
+                "Blue",
+                "Ochre",
+                "Brown"
+              ],
+              "type": "string"
+            },
+            "default": {
+              "ニュース・報道": "White",
+              "情報・ワイドショー": "White",
+              "ドキュメンタリー・教養": "Blue",
+              "スポーツ": "Cyan",
+              "ドラマ": "Pink",
+              "アニメ・特撮": "Yellow",
+              "バラエティ": "Lime",
+              "音楽": "Orange",
+              "映画": "Brown",
+              "劇場・公演": "Ochre",
+              "趣味・教育": "Teal",
+              "福祉": "White",
+              "その他": "White"
+            },
+            "title": "Timetable Genre Colors",
+            "type": "object"
+          },
+          "show_player_background_image": {
+            "default": true,
+            "title": "Show Player Background Image",
+            "type": "boolean"
+          },
+          "use_pure_black_player_background": {
+            "default": false,
+            "title": "Use Pure Black Player Background",
+            "type": "boolean"
+          },
+          "tv_channel_sort_by_jikkyo_force": {
+            "default": false,
+            "title": "Tv Channel Sort By Jikkyo Force",
+            "type": "boolean"
+          },
+          "tv_channel_up_down_buttons_reverse": {
+            "default": false,
+            "title": "Tv Channel Up Down Buttons Reverse",
+            "type": "boolean"
+          },
+          "tv_channel_selection_requires_alt_key": {
+            "default": false,
+            "title": "Tv Channel Selection Requires Alt Key",
+            "type": "boolean"
+          },
+          "use_28hour_clock": {
+            "default": false,
+            "title": "Use 28Hour Clock",
+            "type": "boolean"
+          },
+          "show_original_broadcast_time_during_playback": {
+            "default": false,
+            "title": "Show Original Broadcast Time During Playback",
+            "type": "boolean"
+          },
+          "panel_display_state": {
+            "default": "RestorePreviousState",
+            "enum": [
+              "RestorePreviousState",
+              "AlwaysDisplay",
+              "AlwaysFold"
+            ],
+            "title": "Panel Display State",
+            "type": "string"
+          },
+          "tv_panel_active_tab": {
+            "default": "Program",
+            "enum": [
+              "Program",
+              "Channel",
+              "Comment",
+              "Twitter"
+            ],
+            "title": "Tv Panel Active Tab",
+            "type": "string"
+          },
+          "video_panel_active_tab": {
+            "default": "RecordedProgram",
+            "enum": [
+              "RecordedProgram",
+              "Series",
+              "Comment",
+              "Twitter"
+            ],
+            "title": "Video Panel Active Tab",
+            "type": "string"
+          },
+          "video_watched_history_max_count": {
+            "default": 50,
+            "title": "Video Watched History Max Count",
+            "type": "integer"
+          },
+          "caption_font": {
+            "default": "Windows TV MaruGothic",
+            "title": "Caption Font",
+            "type": "string"
+          },
+          "always_border_caption_text": {
+            "default": true,
+            "title": "Always Border Caption Text",
+            "type": "boolean"
+          },
+          "specify_caption_opacity": {
+            "default": false,
+            "title": "Specify Caption Opacity",
+            "type": "boolean"
+          },
+          "caption_opacity": {
+            "default": 1.0,
+            "title": "Caption Opacity",
+            "type": "number"
+          },
+          "tv_show_superimpose": {
+            "default": true,
+            "title": "Tv Show Superimpose",
+            "type": "boolean"
+          },
+          "video_show_superimpose": {
+            "default": false,
+            "title": "Video Show Superimpose",
+            "type": "boolean"
+          },
+          "capture_save_mode": {
+            "default": "UploadServer",
+            "enum": [
+              "Browser",
+              "UploadServer",
+              "Both"
+            ],
+            "title": "Capture Save Mode",
+            "type": "string"
+          },
+          "capture_caption_mode": {
+            "default": "Both",
+            "enum": [
+              "VideoOnly",
+              "CompositingCaption",
+              "Both"
+            ],
+            "title": "Capture Caption Mode",
+            "type": "string"
+          },
+          "capture_filename_pattern": {
+            "default": "Capture_%date%-%time%",
+            "title": "Capture Filename Pattern",
+            "type": "string"
+          },
+          "prefer_posting_to_nicolive": {
+            "default": true,
+            "title": "Prefer Posting To Nicolive",
+            "type": "boolean"
+          },
+          "comment_speed_rate": {
+            "default": 1.0,
+            "title": "Comment Speed Rate",
+            "type": "number"
+          },
+          "comment_font_size": {
+            "default": 34,
+            "title": "Comment Font Size",
+            "type": "integer"
+          },
+          "close_comment_form_after_sending": {
+            "default": true,
+            "title": "Close Comment Form After Sending",
+            "type": "boolean"
+          },
+          "mute_vulgar_comments": {
+            "default": true,
+            "title": "Mute Vulgar Comments",
+            "type": "boolean"
+          },
+          "mute_abusive_discriminatory_prejudiced_comments": {
+            "default": true,
+            "title": "Mute Abusive Discriminatory Prejudiced Comments",
+            "type": "boolean"
+          },
+          "mute_big_size_comments": {
+            "default": true,
+            "title": "Mute Big Size Comments",
+            "type": "boolean"
+          },
+          "mute_fixed_comments": {
+            "default": false,
+            "title": "Mute Fixed Comments",
+            "type": "boolean"
+          },
+          "mute_colored_comments": {
+            "default": false,
+            "title": "Mute Colored Comments",
+            "type": "boolean"
+          },
+          "mute_consecutive_same_characters_comments": {
+            "default": false,
+            "title": "Mute Consecutive Same Characters Comments",
+            "type": "boolean"
+          },
+          "mute_comment_keywords_normalize_alphanumeric_width_case": {
+            "default": true,
+            "title": "Mute Comment Keywords Normalize Alphanumeric Width Case",
+            "type": "boolean"
+          },
+          "muted_comment_keywords": {
+            "default": [],
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Muted Comment Keywords",
+            "type": "array"
+          },
+          "muted_niconico_user_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Muted Niconico User Ids",
+            "type": "array"
+          },
+          "fold_panel_after_sending_tweet": {
+            "default": false,
+            "title": "Fold Panel After Sending Tweet",
+            "type": "boolean"
+          },
+          "reset_hashtag_when_program_switches": {
+            "default": true,
+            "title": "Reset Hashtag When Program Switches",
+            "type": "boolean"
+          },
+          "auto_add_watching_channel_hashtag": {
+            "default": true,
+            "title": "Auto Add Watching Channel Hashtag",
+            "type": "boolean"
+          },
+          "twitter_reply_thread_mode": {
+            "default": "PerHashtag",
+            "enum": [
+              "PerHashtag",
+              "PerDay",
+              "Disabled"
+            ],
+            "title": "Twitter Reply Thread Mode",
+            "type": "string"
+          },
+          "bluesky_reply_thread_mode": {
+            "default": "Disabled",
+            "enum": [
+              "PerHashtag",
+              "PerDay",
+              "Disabled"
+            ],
+            "title": "Bluesky Reply Thread Mode",
+            "type": "string"
+          },
+          "twitter_active_tab": {
+            "default": "Capture",
+            "enum": [
+              "Search",
+              "Timeline",
+              "Capture"
+            ],
+            "title": "Twitter Active Tab",
+            "type": "string"
+          },
+          "tweet_hashtag_position": {
+            "default": "Append",
+            "enum": [
+              "Prepend",
+              "Append",
+              "PrependWithLineBreak",
+              "AppendWithLineBreak"
+            ],
+            "title": "Tweet Hashtag Position",
+            "type": "string"
+          },
+          "tweet_capture_watermark_position": {
+            "default": "None",
+            "enum": [
+              "None",
+              "TopLeft",
+              "TopRight",
+              "BottomLeft",
+              "BottomRight"
+            ],
+            "title": "Tweet Capture Watermark Position",
+            "type": "string"
+          }
+        },
+        "title": "ClientSettings",
+        "type": "object"
+      },
+      "field_order": {
+        "ClientSettings": [
+          "last_synced_at",
+          "saved_twitter_hashtags",
+          "mylist",
+          "watched_history",
+          "pinned_channel_ids",
+          "timetable_channel_width",
+          "timetable_hour_height",
+          "timetable_hover_expand",
+          "timetable_dim_shopping_programs",
+          "timetable_genre_colors",
+          "show_player_background_image",
+          "use_pure_black_player_background",
+          "tv_channel_sort_by_jikkyo_force",
+          "tv_channel_up_down_buttons_reverse",
+          "tv_channel_selection_requires_alt_key",
+          "use_28hour_clock",
+          "show_original_broadcast_time_during_playback",
+          "panel_display_state",
+          "tv_panel_active_tab",
+          "video_panel_active_tab",
+          "video_watched_history_max_count",
+          "caption_font",
+          "always_border_caption_text",
+          "specify_caption_opacity",
+          "caption_opacity",
+          "tv_show_superimpose",
+          "video_show_superimpose",
+          "capture_save_mode",
+          "capture_caption_mode",
+          "capture_filename_pattern",
+          "prefer_posting_to_nicolive",
+          "comment_speed_rate",
+          "comment_font_size",
+          "close_comment_form_after_sending",
+          "mute_vulgar_comments",
+          "mute_abusive_discriminatory_prejudiced_comments",
+          "mute_big_size_comments",
+          "mute_fixed_comments",
+          "mute_colored_comments",
+          "mute_consecutive_same_characters_comments",
+          "mute_comment_keywords_normalize_alphanumeric_width_case",
+          "muted_comment_keywords",
+          "muted_niconico_user_ids",
+          "fold_panel_after_sending_tweet",
+          "reset_hashtag_when_program_switches",
+          "auto_add_watching_channel_hashtag",
+          "twitter_reply_thread_mode",
+          "bluesky_reply_thread_mode",
+          "twitter_active_tab",
+          "tweet_hashtag_position",
+          "tweet_capture_watermark_position"
+        ],
+        "_ServerSettingsGeneral": [
+          "backend",
+          "always_receive_tv_from_mirakurun",
+          "edcb_url",
+          "mirakurun_url",
+          "encoder",
+          "program_update_interval",
+          "debug",
+          "debug_encoder"
+        ],
+        "_ServerSettingsServer": [
+          "port",
+          "custom_https_certificate",
+          "custom_https_private_key"
+        ],
+        "_ServerSettingsTV": [
+          "preferred_terrestrial_region",
+          "max_alive_time",
+          "debug_mode_ts_path"
+        ],
+        "_ServerSettingsVideo": [
+          "recorded_folders",
+          "exclude_scan_paths",
+          "recorded_folders_polling_interval"
+        ],
+        "_ServerSettingsCapture": [
+          "upload_folders",
+          "upload_folders_polling_interval"
+        ],
+        "ServerSettings": [
+          "general",
+          "server",
+          "tv",
+          "video",
+          "capture"
+        ]
+      }
+    },
+    "ServerSettings": {
+      "schema": {
+        "$defs": {
+          "_ServerSettingsCapture": {
+            "properties": {
+              "upload_folders": {
+                "default": [],
+                "items": {
+                  "format": "directory-path",
+                  "type": "string"
+                },
+                "title": "Upload Folders",
+                "type": "array"
+              },
+              "upload_folders_polling_interval": {
+                "default": 0.0,
+                "minimum": 0,
+                "title": "Upload Folders Polling Interval",
+                "type": "number",
+                "x-strict": true,
+                "x-allow-inf-nan": false
+              }
+            },
+            "title": "_ServerSettingsCapture",
+            "type": "object"
+          },
+          "_ServerSettingsGeneral": {
+            "properties": {
+              "backend": {
+                "default": "EDCB",
+                "enum": [
+                  "EDCB",
+                  "Mirakurun"
+                ],
+                "title": "Backend",
+                "type": "string"
+              },
+              "always_receive_tv_from_mirakurun": {
+                "default": false,
+                "title": "Always Receive Tv From Mirakurun",
+                "type": "boolean"
+              },
+              "edcb_url": {
+                "default": "tcp://127.0.0.1:4510/",
+                "format": "uri",
+                "minLength": 1,
+                "title": "Edcb Url",
+                "type": "string"
+              },
+              "mirakurun_url": {
+                "default": "http://127.0.0.1:40772/",
+                "format": "uri",
+                "minLength": 1,
+                "title": "Mirakurun Url",
+                "type": "string"
+              },
+              "encoder": {
+                "default": "FFmpeg",
+                "enum": [
+                  "FFmpeg",
+                  "QSVEncC",
+                  "NVEncC",
+                  "VCEEncC",
+                  "rkmppenc"
+                ],
+                "title": "Encoder",
+                "type": "string"
+              },
+              "program_update_interval": {
+                "default": 5.0,
+                "title": "Program Update Interval",
+                "type": "number"
+              },
+              "debug": {
+                "default": false,
+                "title": "Debug",
+                "type": "boolean"
+              },
+              "debug_encoder": {
+                "default": false,
+                "title": "Debug Encoder",
+                "type": "boolean"
+              }
+            },
+            "title": "_ServerSettingsGeneral",
+            "type": "object"
+          },
+          "_ServerSettingsServer": {
+            "properties": {
+              "port": {
+                "default": 7000,
+                "exclusiveMinimum": 0,
+                "title": "Port",
+                "type": "integer"
+              },
+              "custom_https_certificate": {
+                "anyOf": [
+                  {
+                    "format": "file-path",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Custom Https Certificate"
+              },
+              "custom_https_private_key": {
+                "anyOf": [
+                  {
+                    "format": "file-path",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Custom Https Private Key"
+              }
+            },
+            "title": "_ServerSettingsServer",
+            "type": "object"
+          },
+          "_ServerSettingsTV": {
+            "properties": {
+              "preferred_terrestrial_region": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "北海道（札幌）",
+                      "北海道（函館）",
+                      "北海道（旭川）",
+                      "北海道（帯広）",
+                      "北海道（釧路）",
+                      "北海道（北見）",
+                      "北海道（室蘭）",
+                      "青森県",
+                      "岩手県",
+                      "宮城県",
+                      "秋田県",
+                      "山形県",
+                      "福島県",
+                      "茨城県",
+                      "栃木県",
+                      "群馬県",
+                      "埼玉県",
+                      "千葉県",
+                      "東京都",
+                      "神奈川県",
+                      "新潟県",
+                      "富山県",
+                      "石川県",
+                      "福井県",
+                      "山梨県",
+                      "長野県",
+                      "岐阜県",
+                      "静岡県",
+                      "愛知県",
+                      "三重県",
+                      "滋賀県",
+                      "京都府",
+                      "大阪府",
+                      "兵庫県",
+                      "奈良県",
+                      "和歌山県",
+                      "鳥取県",
+                      "島根県",
+                      "岡山県",
+                      "広島県",
+                      "山口県",
+                      "徳島県",
+                      "香川県",
+                      "愛媛県",
+                      "高知県",
+                      "福岡県",
+                      "佐賀県",
+                      "長崎県",
+                      "熊本県",
+                      "大分県",
+                      "宮崎県",
+                      "鹿児島県",
+                      "沖縄県"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Preferred Terrestrial Region"
+              },
+              "max_alive_time": {
+                "default": 10,
+                "exclusiveMinimum": 0,
+                "title": "Max Alive Time",
+                "type": "integer"
+              },
+              "debug_mode_ts_path": {
+                "anyOf": [
+                  {
+                    "format": "file-path",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Debug Mode Ts Path"
+              }
+            },
+            "title": "_ServerSettingsTV",
+            "type": "object"
+          },
+          "_ServerSettingsVideo": {
+            "properties": {
+              "recorded_folders": {
+                "default": [],
+                "items": {
+                  "format": "directory-path",
+                  "type": "string"
+                },
+                "title": "Recorded Folders",
+                "type": "array"
+              },
+              "exclude_scan_paths": {
+                "default": [],
+                "items": {
+                  "type": "string"
+                },
+                "title": "Exclude Scan Paths",
+                "type": "array"
+              },
+              "recorded_folders_polling_interval": {
+                "default": 5.0,
+                "minimum": 0.1,
+                "title": "Recorded Folders Polling Interval",
+                "type": "number",
+                "x-strict": true,
+                "x-allow-inf-nan": false
+              }
+            },
+            "title": "_ServerSettingsVideo",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "general": {
+            "$ref": "#/$defs/_ServerSettingsGeneral",
+            "default": {
+              "backend": "EDCB",
+              "always_receive_tv_from_mirakurun": false,
+              "edcb_url": "tcp://127.0.0.1:4510/",
+              "mirakurun_url": "http://127.0.0.1:40772/",
+              "encoder": "FFmpeg",
+              "program_update_interval": 5.0,
+              "debug": false,
+              "debug_encoder": false
+            }
+          },
+          "server": {
+            "$ref": "#/$defs/_ServerSettingsServer",
+            "default": {
+              "port": 7000,
+              "custom_https_certificate": null,
+              "custom_https_private_key": null
+            }
+          },
+          "tv": {
+            "$ref": "#/$defs/_ServerSettingsTV",
+            "default": {
+              "preferred_terrestrial_region": null,
+              "max_alive_time": 10,
+              "debug_mode_ts_path": null
+            }
+          },
+          "video": {
+            "$ref": "#/$defs/_ServerSettingsVideo",
+            "default": {
+              "recorded_folders": [],
+              "exclude_scan_paths": [],
+              "recorded_folders_polling_interval": 5.0
+            }
+          },
+          "capture": {
+            "$ref": "#/$defs/_ServerSettingsCapture",
+            "default": {
+              "upload_folders": [],
+              "upload_folders_polling_interval": 0.0
+            }
+          }
+        },
+        "title": "ServerSettings",
+        "type": "object"
+      },
+      "field_order": {
+        "ClientSettings": [
+          "last_synced_at",
+          "saved_twitter_hashtags",
+          "mylist",
+          "watched_history",
+          "pinned_channel_ids",
+          "timetable_channel_width",
+          "timetable_hour_height",
+          "timetable_hover_expand",
+          "timetable_dim_shopping_programs",
+          "timetable_genre_colors",
+          "show_player_background_image",
+          "use_pure_black_player_background",
+          "tv_channel_sort_by_jikkyo_force",
+          "tv_channel_up_down_buttons_reverse",
+          "tv_channel_selection_requires_alt_key",
+          "use_28hour_clock",
+          "show_original_broadcast_time_during_playback",
+          "panel_display_state",
+          "tv_panel_active_tab",
+          "video_panel_active_tab",
+          "video_watched_history_max_count",
+          "caption_font",
+          "always_border_caption_text",
+          "specify_caption_opacity",
+          "caption_opacity",
+          "tv_show_superimpose",
+          "video_show_superimpose",
+          "capture_save_mode",
+          "capture_caption_mode",
+          "capture_filename_pattern",
+          "prefer_posting_to_nicolive",
+          "comment_speed_rate",
+          "comment_font_size",
+          "close_comment_form_after_sending",
+          "mute_vulgar_comments",
+          "mute_abusive_discriminatory_prejudiced_comments",
+          "mute_big_size_comments",
+          "mute_fixed_comments",
+          "mute_colored_comments",
+          "mute_consecutive_same_characters_comments",
+          "mute_comment_keywords_normalize_alphanumeric_width_case",
+          "muted_comment_keywords",
+          "muted_niconico_user_ids",
+          "fold_panel_after_sending_tweet",
+          "reset_hashtag_when_program_switches",
+          "auto_add_watching_channel_hashtag",
+          "twitter_reply_thread_mode",
+          "bluesky_reply_thread_mode",
+          "twitter_active_tab",
+          "tweet_hashtag_position",
+          "tweet_capture_watermark_position"
+        ],
+        "_ServerSettingsGeneral": [
+          "backend",
+          "always_receive_tv_from_mirakurun",
+          "edcb_url",
+          "mirakurun_url",
+          "encoder",
+          "program_update_interval",
+          "debug",
+          "debug_encoder"
+        ],
+        "_ServerSettingsServer": [
+          "port",
+          "custom_https_certificate",
+          "custom_https_private_key"
+        ],
+        "_ServerSettingsTV": [
+          "preferred_terrestrial_region",
+          "max_alive_time",
+          "debug_mode_ts_path"
+        ],
+        "_ServerSettingsVideo": [
+          "recorded_folders",
+          "exclude_scan_paths",
+          "recorded_folders_polling_interval"
+        ],
+        "_ServerSettingsCapture": [
+          "upload_folders",
+          "upload_folders_polling_interval"
+        ],
+        "ServerSettings": [
+          "general",
+          "server",
+          "tv",
+          "video",
+          "capture"
+        ]
+      }
+    }
+  }
+}

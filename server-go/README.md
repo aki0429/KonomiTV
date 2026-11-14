@@ -52,7 +52,7 @@ Go 単独運転 (`-no-proxy`) では、Python を起動せずに DB を作成で
 | `GET /api/videos/{video_id}/jikkyo` (ニコニコ実況の過去ログコメント) | ✅ Go 実装済み |
 | `DELETE /api/videos/{video_id}` (録画ファイルの削除、管理者のみ) | ✅ Go 実装済み |
 | `POST /api/videos/{video_id}/reanalyze`・`/thumbnail/regenerate` | 🔁 Python 版へプロキシ |
-| `GET /api/settings/client`・`PUT /api/settings/client` (クライアント設定の取得・更新) | ✅ Go 実装済み |
+| `GET /api/settings/client`・`PUT /api/settings/client` (クライアント設定の取得・更新) | ✅ Go 実装済み (51 項目の型・選択肢・入れ子の検証と同期時刻の照合を含む) |
 | `GET /api/settings/server`・`PUT /api/settings/server` (サーバー設定の取得・更新) | ✅ Go 実装済み (PUT は config.yaml をコメントを保持したまま行単位で書き換える) |
 | `GET /api/maintenance/logs/{log_type}` (サーバーログ・アクセスログの SSE 配信) | ✅ Go 実装済み |
 | `POST /api/maintenance/restart`・`POST /api/maintenance/shutdown` (再起動・終了) | ✅ Go 実装済み (ローカルホストからのアクセスは認証不要) |
@@ -198,10 +198,18 @@ curl http://127.0.0.77:7002/api/version
 チューナーの起動までは行うがストリーム接続でエラーになる (`E-03E`) 。
 (IPTV バックエンドと Mirakurun / mirakc バックエンドは従来どおり動作する) 。
 
+### クライアント設定 API
+
+本家 `ClientSettings` の 51 項目を型・選択肢・配列内の要素まで検証する。
+真偽値や数値の文字列は Pydantic と同じ規則で変換し、複数のエラーをフィールドの定義順と要素の位置付きで返す。
+未指定項目は既定値で補完し、未知の項目は無視する。不正な入力や古い同期データでは保存値を変更しない。
+ジャンル色・マイリスト・視聴履歴内の辞書は入力順を保持する。整数の精度、DB 保存と応答の数値表現も分けて扱う。
+取得時には保存値を再検証し、不正な値を既定値として隠さない。
+
 ### サーバー設定 API
 
-`GET /api/settings/server` は `config.yaml` を Python 版 `ServerSettings` のデフォルト値で補完して返す
-(応答は Python 版と完全に一致することを検証済み) 。
+`GET /api/settings/server` は `config.yaml` を既定値で補完して返す。
+既存フィクスチャは以前の Python 版が対象であり、現行本家のモデルとの照合は継続中。
 `PUT /api/settings/server` は Pydantic 相当のバリデーション (列挙値・数値の範囲・URL のスキーム) を行ったうえで、
 `config.yaml` を**コメントを保持したまま行単位で書き換える** (ruamel.yaml の代替) 。
 
