@@ -2,7 +2,7 @@
 
 ## OpenCV thumbnail image processing and face detection
 
-The Go thumbnail cascade evaluator, rectangle grouping, exact linear resize and
+The Go thumbnail cascade evaluator, rectangle grouping, exact linear and area resize and
 Canny edge detector are adapted from OpenCV / OpenCV Contrib:
 
 - https://github.com/opencv/opencv_contrib/tree/5.x/modules/xobjdetect/src
@@ -76,3 +76,23 @@ NASA photograph of Eileen Collins, distributed by scikit-image v0.25.2 as
 
 - https://github.com/scikit-image/scikit-image/blob/v0.25.2/skimage/data/_fetchers.py
 - https://flic.kr/p/r9qvLn
+
+## purego
+
+The thumbnail worker uses github.com/ebitengine/purego v0.10.2 to call the public
+FFmpeg API without a C compiler. Copyright the Ebitengine authors.
+The Apache License 2.0 is reproduced in licenses/purego-Apache-2.0.txt.
+Source: https://github.com/ebitengine/purego/tree/v0.10.2
+
+## Thumbnail FFmpeg libraries
+
+The optional thumbnail-assets command downloads the pinned PyAV 19.0.2 wheel
+listed in cmd/thumbnail-assets/libraries.json and verifies its SHA-256. It extracts
+only av.libs and the original distribution metadata and notices. No Python module
+is executed or installed. The source bundle is downloaded directly from PyPI;
+shared libraries are not checked into this repository. Keep the extracted notices
+and assets-manifest.json with a redistributed installation.
+
+PyAV source and wheel build configuration: https://github.com/PyAV-Org/PyAV/tree/v19.0.2
+FFmpeg source matching these libraries: https://github.com/FFmpeg/FFmpeg/tree/n9.0.2
+FFmpeg licensing and component information: https://ffmpeg.org/legal.html

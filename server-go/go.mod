@@ -3,6 +3,7 @@ module github.com/aki0429/KonomiTV/server-go
 go 1.26.2
 
 require (
+	github.com/ebitengine/purego v0.10.2
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0

@@ -45,18 +45,19 @@ type Paths struct {
 }
 
 // libraryBinaryPaths はサードパーティーライブラリの名前から、LibraryDir からの相対パスへの対応表。
-// server/app/constants.py の LIBRARY_PATH と一致させること。
+// ThumbnailWorker は Go 版専用。他の項目は server/app/constants.py の LIBRARY_PATH と一致させること。
 var libraryBinaryPaths = map[string]string{
-	"Akebi":    "Akebi/akebi-https-server",
-	"FFmpeg":   "FFmpeg/ffmpeg",
-	"FFprobe":  "FFmpeg/ffprobe",
-	"QSVEncC":  "QSVEncC/QSVEncC",
-	"NVEncC":   "NVEncC/NVEncC",
-	"VCEEncC":  "VCEEncC/VCEEncC",
-	"rkmppenc": "rkmppenc/rkmppenc",
-	"tsreadex": "tsreadex/tsreadex",
-	"psisiarc": "psisiarc/psisiarc",
-	"psisimux": "psisimux/psisimux",
+	"Akebi":           "Akebi/akebi-https-server",
+	"FFmpeg":          "FFmpeg/ffmpeg",
+	"FFprobe":         "FFmpeg/ffprobe",
+	"QSVEncC":         "QSVEncC/QSVEncC",
+	"NVEncC":          "NVEncC/NVEncC",
+	"VCEEncC":         "VCEEncC/VCEEncC",
+	"rkmppenc":        "rkmppenc/rkmppenc",
+	"tsreadex":        "tsreadex/tsreadex",
+	"psisiarc":        "psisiarc/psisiarc",
+	"psisimux":        "psisimux/psisimux",
+	"ThumbnailWorker": "FFmpeg-Thumbnail/thumbnail-worker",
 }
 
 // libraryExtension はサードパーティーライブラリの拡張子 (Windows は .exe、それ以外は .elf) 。

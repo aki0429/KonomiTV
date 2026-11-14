@@ -62,7 +62,7 @@ func ExecCommandRunner(ctx context.Context, name string, args []string, env []st
 
 // FFMpegThumbnailRenderer は FFmpeg を呼び出して実際にサムネイル画像を生成する ThumbnailRenderer 実装。
 // 移植元: ThumbnailGenerator._generateAndSaveThumbnails() 以降の画像生成部分
-// (Python 版の PyAV / OpenCV による処理を、Go 版では FFmpeg の CLI に置き換える) 。
+// 通常の抽出は専用 Go ワーカーで FFmpeg の公開 API を呼び、画像エンコードには CLI を使う。
 //
 // タイル画像は各候補位置から 1 フレームずつ抽出した 320x180 の画像を、tile フィルタで
 // TileCols x TileRows の格子に並べて 1 枚の WebP として保存する。
@@ -70,6 +70,11 @@ func ExecCommandRunner(ctx context.Context, name string, args []string, env []st
 //
 // 映像ストリームが変化する MPEG-TS は tsreadex 経由で順次デコードする。
 type FFMpegThumbnailRenderer struct {
+	// FrameWorkerPath は通常抽出専用の Go 実行ファイル。API サーバーでは必ず設定する。
+	// 空の場合の CLI 抽出は、従来の単独 Renderer 呼び出しとの互換用。
+	FrameWorkerPath string
+	// FrameLibraryPath は専用ワーカー用 FFmpeg 9 共有ライブラリのディレクトリ。
+	FrameLibraryPath string
 	// FFmpegPath は FFmpeg 実行ファイルのパス (空の場合は PATH 上の "ffmpeg" を使う) 。
 	FFmpegPath string
 	// TSReadExPath は MPEG-TS の前処理ツール。空の場合は PATH 上の "tsreadex" を使う。
@@ -133,6 +138,10 @@ func (r *FFMpegThumbnailRenderer) Render(ctx context.Context, params ThumbnailRe
 		if err := r.extractTSReadExFrames(ctx, params, offsets, temporaryDirectory); err != nil {
 			return fmt.Errorf("failed to extract frames through tsreadex: %w", err)
 		}
+	} else if r.FrameWorkerPath != "" {
+		if err := r.extractWorkerFrames(ctx, params, offsets, temporaryDirectory); err != nil {
+			return fmt.Errorf("failed to extract frames through Go worker: %w", err)
+		}
 	}
 	for index, offset := range offsets {
 		if err := ctx.Err(); err != nil {
@@ -148,7 +157,7 @@ func (r *FFMpegThumbnailRenderer) Render(ctx context.Context, params ThumbnailRe
 			"-f", "image2",
 			"-start_number", strconv.Itoa(index + 1),
 		}
-		if !sequential {
+		if !sequential && r.FrameWorkerPath == "" {
 			if err := r.extractFrame(ctx, params.FilePath, offset, framePath, options); err != nil {
 				if errors.Is(err, errThumbnailFrameUnavailable) {
 					// 本家と同じく、読めなかった候補だけを黒画像にして他の候補を使う。
