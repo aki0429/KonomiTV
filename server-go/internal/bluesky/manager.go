@@ -17,6 +17,8 @@ type ManagerOptions struct {
 	Fernet *Fernet
 	// HTTPClient は XRPC に使う HTTP クライアント (テストで差し替え可能) 。
 	HTTPClient *http.Client
+	// ImageConverter は上限を超える画像の変換処理 (省略時は PATH 上の FFmpeg を使う) 。
+	ImageConverter ImageConverter
 	// Logf はログ出力に使う関数。
 	Logf func(format string, values ...any)
 }
@@ -26,11 +28,12 @@ type ManagerOptions struct {
 // Python 版 BlueskyAPI がアカウント ID ごとにシングルトンインスタンスを保持し、
 // SDK クライアントとセッション更新ロックを共有するのと同じ役割を持つ。
 type Manager struct {
-	db         *sql.DB
-	writeDB    *sql.DB
-	fernet     *Fernet
-	httpClient *http.Client
-	logf       func(format string, values ...any)
+	db             *sql.DB
+	writeDB        *sql.DB
+	fernet         *Fernet
+	httpClient     *http.Client
+	logf           func(format string, values ...any)
+	imageConverter ImageConverter
 
 	// services はアカウント ID ごとの共有 Service 。
 	services map[int64]*Service
@@ -46,13 +49,18 @@ func NewManager(options ManagerOptions) *Manager {
 	if logf == nil {
 		logf = func(string, ...any) {}
 	}
+	converter := options.ImageConverter
+	if converter == nil {
+		converter = (&FFMpegImageConverter{}).Convert
+	}
 	return &Manager{
-		db:         options.DB,
-		writeDB:    writeDB,
-		fernet:     options.Fernet,
-		httpClient: options.HTTPClient,
-		logf:       logf,
-		services:   map[int64]*Service{},
+		db:             options.DB,
+		writeDB:        writeDB,
+		fernet:         options.Fernet,
+		httpClient:     options.HTTPClient,
+		logf:           logf,
+		imageConverter: converter,
+		services:       map[int64]*Service{},
 	}
 }
 

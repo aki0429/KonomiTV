@@ -40,6 +40,10 @@ func newBlueskyManager(s *Server) (*bluesky.Manager, error) {
 		DB:      s.db,
 		WriteDB: s.writeDB,
 		Fernet:  bluesky.NewFernetWithJWTSecret(secret),
+		ImageConverter: (&bluesky.FFMpegImageConverter{
+			FFmpegPath:  s.paths.LibraryPath("FFmpeg"),
+			LibraryPath: filepath.Dir(s.paths.LibraryPath("FFmpeg")),
+		}).Convert,
 		Logf: func(format string, values ...any) {
 			s.logger.Info("bluesky: "+format, values...)
 		},

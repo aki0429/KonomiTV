@@ -1,0 +1,1225 @@
+{
+  "upstream_commit": "687b904bb0a2cbb329596fd7b0368c09afe19a6c",
+  "source_sha256": "0a283ba115f89889d81f27684195a1c4513ab8d5fdd06dcad76ca29041f3414a",
+  "attempts": [
+    {
+      "name": "first quality",
+      "width": 3840,
+      "height": 2160,
+      "calls": [
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 85
+        }
+      ],
+      "error": false
+    },
+    {
+      "name": "full resolution lowest quality",
+      "width": 3840,
+      "height": 2160,
+      "calls": [
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 85
+        },
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 80
+        },
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 70
+        },
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 60
+        },
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 50
+        }
+      ],
+      "error": false
+    },
+    {
+      "name": "first resize",
+      "width": 3840,
+      "height": 2160,
+      "calls": [
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 85
+        },
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 80
+        },
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 70
+        },
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 60
+        },
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 50
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "quality": 85
+        }
+      ],
+      "error": false
+    },
+    {
+      "name": "portrait ratio",
+      "width": 1101,
+      "height": 3304,
+      "calls": [
+        {
+          "width": 1101,
+          "height": 3304,
+          "quality": 85
+        },
+        {
+          "width": 1101,
+          "height": 3304,
+          "quality": 80
+        },
+        {
+          "width": 1101,
+          "height": 3304,
+          "quality": 70
+        },
+        {
+          "width": 1101,
+          "height": 3304,
+          "quality": 60
+        },
+        {
+          "width": 1101,
+          "height": 3304,
+          "quality": 50
+        },
+        {
+          "width": 639,
+          "height": 1919,
+          "quality": 85
+        },
+        {
+          "width": 639,
+          "height": 1919,
+          "quality": 80
+        }
+      ],
+      "error": false
+    },
+    {
+      "name": "small no upscale",
+      "width": 640,
+      "height": 360,
+      "calls": [
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 85
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 80
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 70
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 60
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 50
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 85
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 80
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 70
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 60
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 50
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 85
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 80
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 70
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 60
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 50
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 85
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 80
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 70
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 60
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 50
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 85
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 80
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 70
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 60
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 50
+        },
+        {
+          "width": 640,
+          "height": 360,
+          "quality": 85
+        }
+      ],
+      "error": false
+    },
+    {
+      "name": "small odd ratio",
+      "width": 3,
+      "height": 101,
+      "calls": [
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 85
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 80
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 70
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 60
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 50
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 85
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 80
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 70
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 60
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 50
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 85
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 80
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 70
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 60
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 50
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 85
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 80
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 70
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 60
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 50
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 85
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 80
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 70
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 60
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 50
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 85
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 80
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 70
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 60
+        },
+        {
+          "width": 3,
+          "height": 101,
+          "quality": 50
+        }
+      ],
+      "error": false
+    },
+    {
+      "name": "all attempts too large",
+      "width": 3840,
+      "height": 2160,
+      "calls": [
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 85
+        },
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 80
+        },
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 70
+        },
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 60
+        },
+        {
+          "width": 3840,
+          "height": 2160,
+          "quality": 50
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "quality": 85
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "quality": 80
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "quality": 70
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "quality": 60
+        },
+        {
+          "width": 1920,
+          "height": 1080,
+          "quality": 50
+        },
+        {
+          "width": 1600,
+          "height": 900,
+          "quality": 85
+        },
+        {
+          "width": 1600,
+          "height": 900,
+          "quality": 80
+        },
+        {
+          "width": 1600,
+          "height": 900,
+          "quality": 70
+        },
+        {
+          "width": 1600,
+          "height": 900,
+          "quality": 60
+        },
+        {
+          "width": 1600,
+          "height": 900,
+          "quality": 50
+        },
+        {
+          "width": 1280,
+          "height": 720,
+          "quality": 85
+        },
+        {
+          "width": 1280,
+          "height": 720,
+          "quality": 80
+        },
+        {
+          "width": 1280,
+          "height": 720,
+          "quality": 70
+        },
+        {
+          "width": 1280,
+          "height": 720,
+          "quality": 60
+        },
+        {
+          "width": 1280,
+          "height": 720,
+          "quality": 50
+        },
+        {
+          "width": 1024,
+          "height": 576,
+          "quality": 85
+        },
+        {
+          "width": 1024,
+          "height": 576,
+          "quality": 80
+        },
+        {
+          "width": 1024,
+          "height": 576,
+          "quality": 70
+        },
+        {
+          "width": 1024,
+          "height": 576,
+          "quality": 60
+        },
+        {
+          "width": 1024,
+          "height": 576,
+          "quality": 50
+        },
+        {
+          "width": 800,
+          "height": 450,
+          "quality": 85
+        },
+        {
+          "width": 800,
+          "height": 450,
+          "quality": 80
+        },
+        {
+          "width": 800,
+          "height": 450,
+          "quality": 70
+        },
+        {
+          "width": 800,
+          "height": 450,
+          "quality": 60
+        },
+        {
+          "width": 800,
+          "height": 450,
+          "quality": 50
+        }
+      ],
+      "error": true
+    }
+  ],
+  "images": [
+    {
+      "name": "RGB",
+      "data": "iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAIAAADwyuo0AAAAFElEQVR4nGM0SjnBAANMcBYDAwMAIIgBYq7PdZYAAAAASUVORK5CYII=",
+      "expected": {
+        "width": 4,
+        "height": 2,
+        "pixels": [
+          [
+            50,
+            100,
+            200,
+            255
+          ],
+          [
+            50,
+            100,
+            200,
+            255
+          ],
+          [
+            50,
+            100,
+            200,
+            255
+          ],
+          [
+            50,
+            100,
+            200,
+            255
+          ],
+          [
+            50,
+            100,
+            200,
+            255
+          ],
+          [
+            50,
+            100,
+            200,
+            255
+          ],
+          [
+            50,
+            100,
+            200,
+            255
+          ],
+          [
+            50,
+            100,
+            200,
+            255
+          ]
+        ]
+      }
+    },
+    {
+      "name": "RGBA",
+      "data": "iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAYAAAB/qH1jAAAAFElEQVR4nGM0SjlRwYAEmJA5IDYAOaAB2qHNdIIAAAAASUVORK5CYII=",
+      "expected": {
+        "width": 4,
+        "height": 2,
+        "pixels": [
+          [
+            50,
+            100,
+            200,
+            120
+          ],
+          [
+            50,
+            100,
+            200,
+            120
+          ],
+          [
+            50,
+            100,
+            200,
+            120
+          ],
+          [
+            50,
+            100,
+            200,
+            120
+          ],
+          [
+            50,
+            100,
+            200,
+            120
+          ],
+          [
+            50,
+            100,
+            200,
+            120
+          ],
+          [
+            50,
+            100,
+            200,
+            120
+          ],
+          [
+            50,
+            100,
+            200,
+            120
+          ]
+        ]
+      }
+    },
+    {
+      "name": "palette transparency",
+      "data": "iVBORw0KGgoAAAANSUhEUgAAAAQAAAACCAMAAABIdo1RAAADAFBMVEX/AAAA/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADmyjLsAAAAAnRSTlP/AOW3MEoAAAAPSURBVHicY2BkZGRkABEAADIACVjy3IUAAAAASUVORK5CYII=",
+      "expected": {
+        "width": 4,
+        "height": 2,
+        "pixels": [
+          [
+            0,
+            255,
+            0,
+            0
+          ],
+          [
+            0,
+            255,
+            0,
+            0
+          ],
+          [
+            0,
+            255,
+            0,
+            0
+          ],
+          [
+            0,
+            255,
+            0,
+            0
+          ],
+          [
+            0,
+            255,
+            0,
+            0
+          ],
+          [
+            0,
+            255,
+            0,
+            0
+          ],
+          [
+            0,
+            255,
+            0,
+            0
+          ],
+          [
+            0,
+            255,
+            0,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "name": "16 bit gray",
+      "data": "iVBORw0KGgoAAAANSUhEUgAAAAQAAAABEAAAAACMx4xSAAAAEUlEQVR4nGNgYGBIYWT4/x8ABP4CZEAf9foAAAAASUVORK5CYII=",
+      "expected": {
+        "width": 4,
+        "height": 1,
+        "pixels": [
+          [
+            0,
+            0,
+            0,
+            255
+          ],
+          [
+            100,
+            100,
+            100,
+            255
+          ],
+          [
+            255,
+            255,
+            255,
+            255
+          ],
+          [
+            255,
+            255,
+            255,
+            255
+          ]
+        ]
+      }
+    },
+    {
+      "name": "CMYK",
+      "data": "/9j/7gAOQWRvYmUAZAAAAAAA/9sAQwAIBgYHBgUIBwcHCQkICgwUDQwLCwwZEhMPFB0aHx4dGhwcICQuJyAiLCMcHCg3KSwwMTQ0NB8nOT04MjwuMzQy/8AAFAgAAgAEBEMRAE0RAFkRAEsRAP/EAB8AAAEFAQEBAQEBAAAAAAAAAAABAgMEBQYHCAkKC//EALUQAAIBAwMCBAMFBQQEAAABfQECAwAEEQUSITFBBhNRYQcicRQygZGhCCNCscEVUtHwJDNicoIJChYXGBkaJSYnKCkqNDU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6g4SFhoeIiYqSk5SVlpeYmZqio6Slpqeoqaqys7S1tre4ubrCw8TFxsfIycrS09TV1tfY2drh4uPk5ebn6Onq8fLz9PX29/j5+v/aAA4EQwBNAFkASwAAPwD2uvV69Drr6//Z",
+      "expected": {
+        "width": 4,
+        "height": 2,
+        "pixels": [
+          [
+            161,
+            148,
+            134,
+            255
+          ],
+          [
+            161,
+            148,
+            134,
+            255
+          ],
+          [
+            161,
+            148,
+            134,
+            255
+          ],
+          [
+            161,
+            148,
+            134,
+            255
+          ],
+          [
+            161,
+            148,
+            134,
+            255
+          ],
+          [
+            161,
+            148,
+            134,
+            255
+          ],
+          [
+            161,
+            148,
+            134,
+            255
+          ],
+          [
+            161,
+            148,
+            134,
+            255
+          ]
+        ]
+      }
+    },
+    {
+      "name": "partial GIF logical screen",
+      "data": "R0lGODdhCgAGAIcAAP8AAAD/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACwCAAEABAADAAAICAADCBxIUGBAADs=",
+      "expected": {
+        "width": 10,
+        "height": 6,
+        "pixels": [
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            0,
+            255,
+            0,
+            255
+          ],
+          [
+            0,
+            255,
+            0,
+            255
+          ],
+          [
+            0,
+            255,
+            0,
+            255
+          ],
+          [
+            0,
+            255,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            0,
+            255,
+            0,
+            255
+          ],
+          [
+            0,
+            255,
+            0,
+            255
+          ],
+          [
+            0,
+            255,
+            0,
+            255
+          ],
+          [
+            0,
+            255,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            0,
+            255,
+            0,
+            255
+          ],
+          [
+            0,
+            255,
+            0,
+            255
+          ],
+          [
+            0,
+            255,
+            0,
+            255
+          ],
+          [
+            0,
+            255,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ],
+          [
+            255,
+            0,
+            0,
+            255
+          ]
+        ]
+      }
+    }
+  ]
+}
