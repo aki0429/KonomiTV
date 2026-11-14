@@ -3,7 +3,10 @@ package metadata
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"image"
+	"image/png"
 	"io"
 	"log/slog"
 	"os"
@@ -129,21 +132,21 @@ func (r *FFMpegThumbnailRenderer) Render(ctx context.Context, params ThumbnailRe
 			offset = 0
 		}
 		framePath := filepath.Join(temporaryDirectory, frameFileName(index+1))
-		args := []string{
-			"-hide_banner", "-loglevel", "error", "-nostdin", "-y",
-			"-ss", formatSeconds(offset),
-			"-i", params.FilePath,
+		options := []string{
 			"-frames:v", "1",
 			"-vf", fmt.Sprintf("scale=%d:%d", TileWidth, TileHeight),
 			"-f", "image2",
 			"-start_number", strconv.Itoa(index + 1),
-			framePath,
 		}
-		if err := r.runCommand(ctx, args); err != nil {
-			return fmt.Errorf("failed to extract frame %d/%d at %.3f sec: %w", index+1, len(offsets), offset, err)
-		}
-		// FFmpeg が正常終了しても画像が出力されていない場合 (シーク位置が動画長を超えているなど) はエラーにする
-		if _, err := os.Stat(framePath); err != nil {
+		if err := r.extractFrame(ctx, params.FilePath, offset, framePath, options); err != nil {
+			if errors.Is(err, errThumbnailFrameUnavailable) {
+				// 本家と同じく、読めなかった候補だけを黒画像にして他の候補を使う。
+				if err := writeBlackThumbnailFrame(framePath); err != nil {
+					return err
+				}
+				r.logger().Warn("Thumbnail frame unavailable; using black frame.", "offset", offset)
+				continue
+			}
 			return fmt.Errorf("failed to extract frame %d/%d at %.3f sec: %w", index+1, len(offsets), offset, err)
 		}
 	}
@@ -181,24 +184,82 @@ func (r *FFMpegThumbnailRenderer) Render(ctx context.Context, params ThumbnailRe
 	if representativeSec < 0 {
 		representativeSec = 0
 	}
-	representativeArgs := []string{
-		"-hide_banner", "-loglevel", "error", "-nostdin", "-y",
-		"-ss", formatSeconds(representativeSec),
-		"-i", params.FilePath,
+	representativeOptions := []string{
 		"-frames:v", "1",
 		"-vf", fmt.Sprintf("scale=%d:%d", ScoringWidth, ScoringHeight),
 		"-c:v", "libwebp",
 		"-quality", strconv.Itoa(webpQualityRepresentative),
 		"-compression_level", strconv.Itoa(webpCompressionLevel),
-		params.RepresentativePath,
 	}
-	if err := r.runCommand(ctx, representativeArgs); err != nil {
-		return fmt.Errorf("failed to generate representative thumbnail at %.3f sec: %w", representativeSec, err)
+	if err := r.extractFrame(ctx, params.FilePath, representativeSec, params.RepresentativePath, representativeOptions); err != nil {
+		if !errors.Is(err, errThumbnailFrameUnavailable) {
+			return fmt.Errorf("failed to generate representative thumbnail at %.3f sec: %w", representativeSec, err)
+		}
+		black := filepath.Join(temporaryDirectory, "representative_black.png")
+		if err := writeBlackThumbnailFrame(black); err != nil {
+			return err
+		}
+		args := append([]string{"-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", black}, representativeOptions...)
+		args = append(args, params.RepresentativePath)
+		if err := r.runCommand(ctx, args); err != nil {
+			return fmt.Errorf("failed to generate representative thumbnail: %w", err)
+		}
 	}
 	if _, err := os.Stat(params.RepresentativePath); err != nil {
 		return fmt.Errorf("failed to generate representative thumbnail at %.3f sec: %w", representativeSec, err)
 	}
 	return nil
+}
+
+var errThumbnailFrameUnavailable = errors.New("thumbnail frame unavailable")
+
+// extractFrame は高速シークで末尾の I フレームを通り過ぎた場合、前からデコードして指定時刻へ進む。
+func (r *FFMpegThumbnailRenderer) extractFrame(ctx context.Context, input string, offset float64, output string, options []string) error {
+	prefix := []string{"-hide_banner", "-loglevel", "error", "-nostdin", "-y"}
+	starts := []float64{offset}
+	if offset > 0 {
+		starts = append(starts, max(0, offset-10))
+		if offset > 10 {
+			starts = append(starts, 0)
+		}
+	}
+	for attempt, start := range starts {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		args := append([]string{}, prefix...)
+		if attempt == 0 {
+			args = append(args, "-ss", formatSeconds(offset), "-i", input)
+		} else {
+			if start > 0 {
+				args = append(args, "-ss", formatSeconds(start))
+			}
+			args = append(args, "-i", input, "-ss", formatSeconds(offset-start))
+		}
+		args = append(args, options...)
+		args = append(args, output)
+		if err := r.runCommand(ctx, args); err != nil {
+			return err
+		}
+		if info, err := os.Stat(output); err == nil && info.Size() > 0 {
+			return nil
+		} else if err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+	return errThumbnailFrameUnavailable
+}
+
+func writeBlackThumbnailFrame(path string) error {
+	frame := image.NewNRGBA(image.Rect(0, 0, TileWidth, TileHeight))
+	for index := 3; index < len(frame.Pix); index += 4 {
+		frame.Pix[index] = 255
+	}
+	var data bytes.Buffer
+	if err := png.Encode(&data, frame); err != nil {
+		return err
+	}
+	return os.WriteFile(path, data.Bytes(), 0600)
 }
 
 // runCommand は FFmpeg を実行する (RunCommand が未設定の場合は ExecCommandRunner を使う) 。

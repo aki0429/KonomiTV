@@ -62,6 +62,16 @@ func OpenReadWrite(path string) (*sql.DB, error) {
 		_ = db.Close()
 		return nil, fmt.Errorf("failed to connect to database (%s): %w", path, err)
 	}
+	// 番組表の大量更新と一覧取得を並行させる。スキーマ作成前の新規 DB にも適用する。
+	var journalMode string
+	if err := db.QueryRow(`PRAGMA journal_mode=WAL`).Scan(&journalMode); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("failed to enable WAL mode (%s): %w", path, err)
+	}
+	if journalMode != "wal" && journalMode != "memory" {
+		_ = db.Close()
+		return nil, fmt.Errorf("unexpected SQLite journal mode: %s", journalMode)
+	}
 	return db, nil
 }
 

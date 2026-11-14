@@ -4,11 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"image"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"golang.org/x/image/webp"
 )
 
 // recordedCommand は偽の CommandRunner が記録した 1 回分のコマンド実行。
@@ -374,10 +378,157 @@ func TestFFMpegThumbnailRendererRenderDetectsMissingOutput(t *testing.T) {
 	runner := &recordingRunner{
 		onCall: func(index int, name string, args []string, env []string) error { return nil },
 	}
-	renderer := &FFMpegThumbnailRenderer{FFmpegPath: "ffmpeg-test", RunCommand: runner.run}
+	renderer := &FFMpegThumbnailRenderer{FFmpegPath: "ffmpeg-test", RunCommand: runner.run, Logger: testLogger(t)}
 	err := renderer.Render(context.Background(), params)
-	if err == nil || !strings.Contains(err.Error(), "failed to extract frame") {
-		t.Fatalf("Render error = %v, want an error about the frame extraction stage", err)
+	if err == nil || !strings.Contains(err.Error(), "failed to generate tile image") {
+		t.Fatalf("Render error = %v, want an error for the missing final tile after frame fallback", err)
+	}
+}
+
+func TestFFMpegThumbnailRendererRecoversLateFrame(t *testing.T) {
+	params := testThumbnailRenderParams(t.TempDir())
+	params.CandidateOffsets = []float64{60}
+	params.DurationSec = 65
+	params.CandidateTimeRanges = nil
+	recovered := false
+	runner := newRecordingRunner()
+	runner.onCall = func(index int, name string, args, env []string) error {
+		output := args[len(args)-1]
+		if strings.HasSuffix(output, ".png") {
+			inputIndex, seekIndex := -1, -1
+			for i, arg := range args {
+				if arg == "-i" {
+					inputIndex = i
+				}
+				if arg == "-ss" {
+					seekIndex = i
+				}
+			}
+			if seekIndex < inputIndex {
+				return nil
+			}
+			recovered = true
+			frame := image.NewNRGBA(image.Rect(0, 0, TileWidth, TileHeight))
+			for i := 0; i < len(frame.Pix); i += 4 {
+				frame.Pix[i] = 255
+				frame.Pix[i+3] = 255
+			}
+			file, err := os.Create(output)
+			if err != nil {
+				return err
+			}
+			defer func() { _ = file.Close() }()
+			return png.Encode(file, frame)
+		}
+		if output == params.TilePath {
+			source := strings.Replace(argAfter(args, "-i"), "%05d", "00001", 1)
+			file, err := os.Open(source)
+			if err != nil {
+				return err
+			}
+			defer func() { _ = file.Close() }()
+			frame, err := png.Decode(file)
+			if err != nil {
+				return err
+			}
+			red, _, _, alpha := frame.At(0, 0).RGBA()
+			if red != 65535 || alpha != 65535 {
+				return fmt.Errorf("recovered frame was replaced with black")
+			}
+		}
+		return os.WriteFile(output, []byte("RIFF....WEBPVP8 "), 0600)
+	}
+	renderer := &FFMpegThumbnailRenderer{RunCommand: runner.run, Logger: testLogger(t)}
+	if err := renderer.Render(context.Background(), params); err != nil {
+		t.Fatal(err)
+	}
+	if !recovered {
+		t.Fatal("late frame was not retried from an earlier point")
+	}
+}
+
+func TestFFMpegThumbnailRendererUsesBlackForUnavailableFrame(t *testing.T) {
+	params := testThumbnailRenderParams(t.TempDir())
+	params.CandidateOffsets = []float64{60}
+	params.DurationSec = 65
+	params.CandidateTimeRanges = nil
+	blackVerified := false
+	runner := newRecordingRunner()
+	runner.onCall = func(index int, name string, args, env []string) error {
+		output := args[len(args)-1]
+		if strings.HasSuffix(output, ".png") {
+			return nil
+		}
+		if output == params.TilePath {
+			source := strings.Replace(argAfter(args, "-i"), "%05d", "00001", 1)
+			file, err := os.Open(source)
+			if err != nil {
+				return err
+			}
+			defer func() { _ = file.Close() }()
+			frame, err := png.Decode(file)
+			if err != nil {
+				return err
+			}
+			r, g, b, a := frame.At(0, 0).RGBA()
+			if r != 0 || g != 0 || b != 0 || a != 65535 {
+				return fmt.Errorf("unavailable frame is not opaque black")
+			}
+			blackVerified = true
+		}
+		return os.WriteFile(output, []byte("RIFF....WEBPVP8 "), 0600)
+	}
+	if err := (&FFMpegThumbnailRenderer{RunCommand: runner.run, Logger: testLogger(t)}).Render(context.Background(), params); err != nil {
+		t.Fatal(err)
+	}
+	if !blackVerified {
+		t.Fatal("unavailable tile was omitted")
+	}
+}
+
+func TestFFMpegThumbnailRendererLateGOPWithRealFFmpeg(t *testing.T) {
+	ffmpegPath := os.Getenv("KONOMITV_TEST_FFMPEG")
+	if ffmpegPath == "" {
+		t.Skip("KONOMITV_TEST_FFMPEG is not set")
+	}
+	directory := t.TempDir()
+	source := filepath.Join(directory, "long-gop.ts")
+	if err := ExecCommandRunner(context.Background(), ffmpegPath, []string{"-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=30:duration=65", "-c:v", "libx264", "-threads", "2", "-preset", "ultrafast", "-g", "250", "-keyint_min", "250", "-sc_threshold", "0", "-pix_fmt", "yuv420p", "-f", "mpegts", source}, nil); err != nil {
+		t.Fatal(err)
+	}
+	params := testThumbnailRenderParams(directory)
+	params.FilePath = source
+	params.DurationSec = 65
+	params.CandidateOffsets = []float64{60}
+	params.CandidateTimeRanges = [][2]float64{{60, 61}}
+	if err := (&FFMpegThumbnailRenderer{FFmpegPath: ffmpegPath, Logger: testLogger(t)}).Render(context.Background(), params); err != nil {
+		t.Fatal(err)
+	}
+	assertWebPFile(t, params.TilePath, params.Layout.TileImageWidth, params.Layout.TileImageHeight)
+	assertWebPFile(t, params.RepresentativePath, ScoringWidth, ScoringHeight)
+	for _, path := range []string{params.TilePath, params.RepresentativePath} {
+		file, err := os.Open(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		frame, err := webp.Decode(file)
+		_ = file.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		nonBlack := false
+		for y := frame.Bounds().Min.Y; y < frame.Bounds().Max.Y && !nonBlack; y++ {
+			for x := frame.Bounds().Min.X; x < frame.Bounds().Max.X; x++ {
+				r, g, b, _ := frame.At(x, y).RGBA()
+				if r+g+b > 1000 {
+					nonBlack = true
+					break
+				}
+			}
+		}
+		if !nonBlack {
+			t.Fatalf("healthy long-GOP video produced a black thumbnail: %s", path)
+		}
 	}
 }
 
