@@ -163,9 +163,10 @@ func (s *Service) RunBatchScan(ctx context.Context) (bool, error) {
 		s.logger().Info("No duplicate records found.")
 	}
 
-	// 旧 key_frames を segment_map へ移行する処理 (__migrateKeyFramesToSegmentMap) は
-	// videostream パッケージ側の関数に依存するため Go 版では未移植。
-	// 既存レコードの key_frames はそのまま保持される。
+	// 旧 key_frames を再生開始位置キャッシュへ移す。ファイル全体の解析は不要。
+	if err := s.migrateKeyFramesToSegmentMap(ctx); err != nil {
+		return false, err
+	}
 
 	// 保持すると判断されたレコードのみを使い、ファイルパスを正規化する
 	existingDBRecordedVideos := map[string]VideoSummary{}
