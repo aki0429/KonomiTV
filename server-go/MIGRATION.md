@@ -309,3 +309,21 @@ Windows の全体 vet/test が成功した。実際の IPv4/IPv6 の待ち受け
 ```console
 uv run --no-project --python 3.13 --with fastapi==0.162.0 --with pydantic==2.14.3 --with starlette==1.10.0 --with tortoise-orm==1.1.9 --with httpx==0.28.1 python ../server-go/tools/generate_server_settings_validation_fixture.py
 ```
+
+`327ceb0eba4b719fba711f27c9cc7aa5667cf4f8` を Linux 実機の隔離環境で検証した。
+SHA-256: `faa455f3324371617b29807733fea887956ebb4ec9d331e2938fa187682c0020`。
+本番 DB のコピーはチャンネル 425・録画 4,991・ユーザー 1 を保持し、予約 693 件を確認した。
+専用管理者を API で作成してログインし、本家の期待値 438 件と追加の機器・保存検査を通した。
+受理 70・拒否 379 の送信で、拒否時のファイル保持を確認した。
+EDCB はローカルの模擬 TCP 機器へ実コマンド 2200 を送り、四状態の応答を照合した。実 EpgTimerSrv の確認とは区別する。
+Mirakurun の模擬 HTTP 機器への `/api/tuners`、同梱 FFmpeg、既存 HTTPS ポートの使用検出も確認した。
+設定保存直後は起動時の値を保持し、隔離サーバーの再起動後に保存内容と一致した。
+同じ候補版でクライアント設定 14 件と、本番コピーから取り出した一人分の設定の取得も再確認した。
+Linux の config・設定 API・EDCB 状態取得の対象 race 試験が成功した。
+
+本番は引き続き `37149c58` で稼働しており、候補版には切り替えていない。
+録画 10 本すべてで PID とファイルサイズの増加を維持し、Go と HTTPS の PID も保持した。
+本番の初回スキャンは 19:46:42 に完了ログを確認した。解析失敗は 4 件として残っている。
+進捗の 1,643 / 4,961 は保存先内で列挙した対象数と開始時の DB 登録数であり、両者が同じ分母ではない。完了判定には終了ログと非実行状態を使った。
+この時点の DB は AnalysisFailed 4・Missing 912・Recorded 4,063・Recording 12、WAL、表示 4,079 件だった。
+背景解析は 2,620 / 4,075 件で継続していた。この結果を背景解析全件の完了とはしない。
